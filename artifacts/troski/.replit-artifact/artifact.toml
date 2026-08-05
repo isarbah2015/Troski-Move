@@ -1,0 +1,28 @@
+kind = "web"
+previewPath = "/"
+title = "Troski"
+description = "A cross-platform government transportation app for Ghana that helps commuters plan trips, track public transport, book journeys, manage payments, and report safety issues."
+version = "1.0.0"
+id = "artifacts/troski"
+router = "path"
+
+[[services]]
+name = "web"
+paths = [ "/" ]
+localPort = 21515
+
+[services.development]
+run = "pnpm --filter @workspace/troski run dev"
+
+[services.production]
+build = [ "pnpm", "--filter", "@workspace/troski", "run", "build" ]
+serve = "static"
+publicDir = "artifacts/troski/dist/public"
+
+[[services.production.rewrites]]
+from = "/*"
+to = "/index.html"
+
+[services.env]
+PORT = "21515"
+BASE_PATH = "/"

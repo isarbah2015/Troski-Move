@@ -1,0 +1,1 @@
+- [Commuter client architecture](commuter-client-architecture.md) — Web and Expo share the commuter API; native-first persistence remains local until accounts and durable storage are added.

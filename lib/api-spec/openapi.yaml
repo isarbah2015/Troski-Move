@@ -10,6 +10,8 @@ servers:
 tags:
   - name: health
     description: Health operations
+  - name: commuter
+    description: Commuter trip planning and account operations
 paths:
   /healthz:
     get:
@@ -24,6 +26,111 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/HealthStatus"
+  /commuter/summary:
+    get:
+      operationId: getCommuterSummary
+      tags: [commuter]
+      summary: Get commuter dashboard summary
+      responses:
+        "200":
+          description: Dashboard summary
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CommuterSummary"
+  /routes:
+    get:
+      operationId: listRoutes
+      tags: [commuter]
+      summary: List available transport routes
+      parameters:
+        - name: search
+          in: query
+          required: false
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Available routes
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Route"
+  /trips/search:
+    get:
+      operationId: searchTrips
+      tags: [commuter]
+      summary: Search trips between two locations
+      parameters:
+        - name: origin
+          in: query
+          required: true
+          schema:
+            type: string
+        - name: destination
+          in: query
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Matching trips
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/TripOption"
+  /bookings:
+    post:
+      operationId: createBooking
+      tags: [commuter]
+      summary: Create a commuter booking
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/BookingInput"
+      responses:
+        "201":
+          description: Booking created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Booking"
+  /wallet:
+    get:
+      operationId: getWallet
+      tags: [commuter]
+      summary: Get commuter wallet
+      responses:
+        "200":
+          description: Wallet details
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Wallet"
+  /reports:
+    post:
+      operationId: createReport
+      tags: [commuter]
+      summary: Submit a safety or service report
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ReportInput"
+      responses:
+        "201":
+          description: Report submitted
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Report"
 components:
   schemas:
     HealthStatus:
@@ -33,4 +140,147 @@ components:
           type: string
       required:
         - status
+    Route:
+      type: object
+      required: [id, name, from, to, mode, durationMinutes, fare, status]
+      properties:
+        id: { type: string }
+        name: { type: string }
+        from: { type: string }
+        to: { type: string }
+        mode: { type: string }
+        durationMinutes: { type: number }
+        fare: { type: number }
+        status: { type: string }
+        nextDeparture: { type: string }
+        color: { type: string }
+    TripOption:
+      type: object
+      required: [id, routeName, mode, durationMinutes, fare, departure, arrival, occupancy]
+      properties:
+        id: { type: string }
+        routeName: { type: string }
+        mode: { type: string }
+        durationMinutes: { type: number }
+        fare: { type: number }
+        departure: { type: string }
+        arrival: { type: string }
+        occupancy: { type: number }
+        stops: { type: number }
+        status: { type: string }
+    CommuterSummary:
+      type: object
+      required: [firstName, walletBalance, activeTrip, recentTrips, savedRoutes, impact]
+      properties:
+        firstName: { type: string }
+        walletBalance: { type: number }
+        activeTrip:
+          anyOf:
+            - $ref: "#/components/schemas/ActiveTrip"
+            - type: "null"
+        recentTrips:
+          type: array
+          items:
+            $ref: "#/components/schemas/RecentTrip"
+        savedRoutes:
+          type: array
+          items:
+            $ref: "#/components/schemas/Route"
+        impact:
+          $ref: "#/components/schemas/Impact"
+    ActiveTrip:
+      type: object
+      required: [id, routeName, destination, etaMinutes, progress, status]
+      properties:
+        id: { type: string }
+        routeName: { type: string }
+        destination: { type: string }
+        etaMinutes: { type: number }
+        progress: { type: number }
+        status: { type: string }
+        vehicle: { type: string }
+    RecentTrip:
+      type: object
+      required: [id, routeName, date, fare, status]
+      properties:
+        id: { type: string }
+        routeName: { type: string }
+        date: { type: string }
+        fare: { type: number }
+        status: { type: string }
+    Impact:
+      type: object
+      required: [minutesSaved, carbonReduced, tripsCompleted]
+      properties:
+        minutesSaved: { type: number }
+        carbonReduced: { type: number }
+        tripsCompleted: { type: number }
+    BookingInput:
+      type: object
+      required: [tripId, passengerCount, paymentMethod]
+      properties:
+        tripId: { type: string }
+        passengerCount: { type: number, minimum: 1, maximum: 20 }
+        paymentMethod: { type: string }
+    Booking:
+      type: object
+      required: [id, tripId, routeName, passengerCount, totalFare, paymentMethod, status, createdAt]
+      properties:
+        id: { type: string }
+        tripId: { type: string }
+        routeName: { type: string }
+        passengerCount: { type: number }
+        totalFare: { type: number }
+        paymentMethod: { type: string }
+        status: { type: string }
+        createdAt: { type: string }
+    Wallet:
+      type: object
+      required: [balance, currency, autoTopup, methods, transactions]
+      properties:
+        balance: { type: number }
+        currency: { type: string }
+        autoTopup: { type: boolean }
+        methods:
+          type: array
+          items:
+            $ref: "#/components/schemas/PaymentMethod"
+        transactions:
+          type: array
+          items:
+            $ref: "#/components/schemas/Transaction"
+    PaymentMethod:
+      type: object
+      required: [id, label, type, isDefault]
+      properties:
+        id: { type: string }
+        label: { type: string }
+        type: { type: string }
+        isDefault: { type: boolean }
+    Transaction:
+      type: object
+      required: [id, description, date, amount, status]
+      properties:
+        id: { type: string }
+        description: { type: string }
+        date: { type: string }
+        amount: { type: number }
+        status: { type: string }
+    ReportInput:
+      type: object
+      required: [reportType, title, description]
+      properties:
+        reportType: { type: string }
+        title: { type: string, minLength: 3 }
+        description: { type: string, minLength: 5 }
+    Report:
+      type: object
+      required: [id, reportType, title, description, status, createdAt]
+      properties:
+        id: { type: string }
+        reportType: { type: string }
+        title: { type: string }
+        description: { type: string }
+        status: { type: string }
+        createdAt: { type: string }
 
