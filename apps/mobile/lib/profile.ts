@@ -2,12 +2,13 @@ import type { TripRecord } from '@trotrolink/shared';
 
 export const GUEST_USER = { name: 'Guest', phone: '+233••••••', verified: false } as const;
 
-export type Tier = 'Bronze' | 'Silver' | 'Gold';
+export type Tier = 'Bronze' | 'Silver' | 'Gold' | 'Platinum';
 
-/** Loyalty tier from lifetime trips: Bronze < 10, Silver 10–49, Gold 50+. */
+/** Loyalty tier from lifetime trips: Bronze 0–19, Silver 20–99, Gold 100–499, Platinum 500+. */
 export function tierFor(tripCount: number): Tier {
-  if (tripCount >= 50) return 'Gold';
-  if (tripCount >= 10) return 'Silver';
+  if (tripCount >= 500) return 'Platinum';
+  if (tripCount >= 100) return 'Gold';
+  if (tripCount >= 20) return 'Silver';
   return 'Bronze';
 }
 
