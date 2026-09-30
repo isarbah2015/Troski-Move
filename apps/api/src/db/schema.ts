@@ -91,8 +91,10 @@ export const ratingsTable = pgTable(
     driverRating: smallint("driver_rating").notNull(),
     conductorRating: smallint("conductor_rating").notNull(),
     comment: text("comment"),
+    ratedAt: timestamp("rated_at", { withTimezone: true }).notNull().defaultNow(),
   },
   (t) => [
+    index("ratings_vehicle_rated_at_idx").on(t.vehicleId, t.ratedAt),
     check("ratings_driver_range", sql`${t.driverRating} between 1 and 5`),
     check("ratings_conductor_range", sql`${t.conductorRating} between 1 and 5`),
   ],

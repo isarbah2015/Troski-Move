@@ -78,3 +78,32 @@ export type TripRecord = z.infer<typeof TripRecord>;
 
 export const APP_LANGUAGES = ['English', 'Twi', 'Ewe'] as const;
 export type AppLanguage = (typeof APP_LANGUAGES)[number];
+
+export const LeaderboardEntry = z.object({
+  rank: z.number().int().positive(),
+  shortCode: z.string(),
+  driverName: z.string(),
+  avgRating: z.number(),
+  totalRatings: z.number().int(),
+});
+export type LeaderboardEntry = z.infer<typeof LeaderboardEntry>;
+
+export const LeaderboardResponse = z.object({
+  /** True while ratings do not exist yet and the API is returning sample data. */
+  mock: z.boolean(),
+  updatedAt: z.string(),
+  entries: z.array(LeaderboardEntry),
+  /** The asking vehicle's standing, or null if it has fewer than 3 ratings. */
+  you: z
+    .object({ rank: z.number().int().positive(), shortCode: z.string(), avgRating: z.number(), ratingsThisWeek: z.number().int() })
+    .nullable(),
+});
+export type LeaderboardResponse = z.infer<typeof LeaderboardResponse>;
+
+export const DriverRatingsResponse = z.object({
+  mock: z.boolean(),
+  shortCode: z.string(),
+  driverName: z.string(),
+  entries: z.array(z.object({ rating: z.number().int().min(1).max(5), comment: z.string().nullable(), ratedAt: z.string() })),
+});
+export type DriverRatingsResponse = z.infer<typeof DriverRatingsResponse>;
