@@ -1,23 +1,27 @@
-import { useColorScheme } from 'react-native';
-import colors from '@/constants/colors';
+import { colors, radii } from '@/lib/colors';
 
 /**
- * Returns the design tokens for the current color scheme.
- *
- * The returned object contains all color tokens for the active palette
- * plus scheme-independent values like `radius`.
- *
- * Falls back to the light palette when no dark key is defined in
- * constants/colors.ts (the scaffold ships light-only by default).
- * When a sibling web artifact's dark tokens are synced into a `dark`
- * key, this hook will automatically switch palettes based on the
- * device's appearance setting.
+ * Semantic names over the locked tokens in @trotrolink/shared (design.ts).
+ * Dark is the only palette defined so far; light mode needs tokens added there first.
  */
 export function useColors() {
-  const scheme = useColorScheme();
-  const palette =
-    scheme === 'dark' && 'dark' in colors
-      ? (colors as typeof colors & { dark: typeof colors.light }).dark
-      : colors.light;
-  return { ...palette, radius: colors.radius };
+  return {
+    background: colors.background,
+    foreground: colors.textPrimary,
+    card: colors.surface,
+    cardForeground: colors.textPrimary,
+    primary: colors.accentEmerald,
+    primaryForeground: colors.primaryNavy,
+    secondary: colors.primaryNavy,
+    secondaryForeground: colors.textPrimary,
+    muted: colors.border,
+    mutedForeground: colors.textSecondary,
+    accent: colors.highlightGold,
+    destructive: colors.error,
+    destructiveForeground: colors.textPrimary,
+    border: colors.border,
+    radius: radii.card,
+    radiusModal: radii.modal,
+    radiusPill: radii.pill,
+  };
 }
