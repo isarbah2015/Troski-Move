@@ -31,3 +31,23 @@ export const ResolvedVehicle = z.object({
   }),
 });
 export type ResolvedVehicle = z.infer<typeof ResolvedVehicle>;
+
+export const TripStopStatus = z.enum(['passed', 'current', 'upcoming']);
+export type TripStopStatus = z.infer<typeof TripStopStatus>;
+
+/** The passenger's live trip, persisted on-device until real tracking and payments land. */
+export const ActiveTrip = z.object({
+  tripId: z.string(),
+  vehicleShortCode: z.string(),
+  driverName: z.string(),
+  routeName: z.string(),
+  boardingStop: z.string(),
+  alightingStop: z.string(),
+  currentStop: z.string(),
+  stopsRemaining: z.number().int().nonnegative(),
+  etaMinutes: z.number().nonnegative(),
+  amountPaid: z.number(),
+  startedAt: z.string(),
+  stops: z.array(z.object({ name: z.string(), status: TripStopStatus })),
+});
+export type ActiveTrip = z.infer<typeof ActiveTrip>;

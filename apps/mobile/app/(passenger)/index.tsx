@@ -3,7 +3,7 @@ import { Linking, Platform, Pressable, ScrollView, StyleSheet, Text, View } from
 import { Feather } from '@expo/vector-icons';
 import { CameraView, useCameraPermissions } from 'expo-camera';
 import * as Haptics from 'expo-haptics';
-import { useFocusEffect } from 'expo-router';
+import { useFocusEffect, useRouter } from 'expo-router';
 import type { ResolvedVehicle } from '@trotrolink/shared';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { CodeEntrySheet } from '@/components/CodeEntrySheet';
@@ -11,6 +11,9 @@ import { StopSheet } from '@/components/StopSheet';
 import { useColors } from '@/hooks/useColors';
 import { colors as tokens } from '@/lib/colors';
 import { api, VehicleNotFoundError } from '@/lib/api';
+import { saveActiveTrip } from '@/lib/storage';
+import { showToast } from '@/lib/toast';
+import { buildTrip } from '@/lib/trip';
 
 const FRAME = 260;
 // Demo codes for web / simulators that have no camera.
@@ -20,6 +23,7 @@ const SHOW_DEMO = Platform.OS === 'web' || __DEV__;
 export default function ScanScreen() {
   const colors = useColors();
   const insets = useSafeAreaInsets();
+  const router = useRouter();
   const [focused, setFocused] = useState(false);
   useFocusEffect(
     useCallback(() => {
@@ -131,9 +135,14 @@ export default function ScanScreen() {
       <StopSheet
         resolved={resolved}
         onClose={() => setResolved(null)}
-        onPay={() => {
-          // MTN MoMo sandbox lands in build step 6; the fare flow ends here for now.
-          Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
+        onPay={async (stop) => {
+          if (!resolved) return;
+          // TODO: Wire to MTN MoMo sandbox — see apps/api/src/services/momo.ts
+          await saveActiveTrip(buildTrip(resolved, stop));
+          Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+          setResolved(null);
+          showToast('Payment successful');
+          router.navigate('/trip');
         }}
       />
     </View>

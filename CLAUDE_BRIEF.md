@@ -90,29 +90,36 @@ Monorepo scaffold per §3 · `pnpm-workspace.yaml` (`apps/*`, `packages/*`) · `
 ## PROJECT STATUS
 
 ### Completed
-- Monorepo restructure (apps/ + packages/), Replit + legacy files removed
-- Drizzle schema (9 tables) and seed data (Circle → Kasoa, CIR01–CIR03)
+- Monorepo restructure (apps/ + packages/)
+- Drizzle schema + seed (Circle→Kasoa, Madina→Accra Central, Tema Station→Community 1)
 - Shared design tokens
 - API health endpoint and `GET /api/vehicles/resolve`
-- Scan tab ported into `(passenger)` (camera viewfinder, short-code sheet, stop picker + fare, demo chips)
+- Scan tab: QR viewfinder, short-code sheet, demo chips, stop selection, fare display
+- Trip tab: active trip view + empty state (trip stored in AsyncStorage under `activeTrip`)
 
 ### In Progress
-- Nothing (awaiting sign-off on the Scan port before the Trip tab)
+- Nothing (awaiting sign-off on the Trip tab before the Profile tab)
 
 ### Not Started
-- Trip tab, Profile tab
+- Profile tab
 - Conductor app (4 tabs)
 - Union web dashboard
-- MTN MoMo integration (the Pay button is a stub)
-- Push notifications (FCM)
+- MoMo integration (Pay button is a stub; see `apps/api/src/services/momo.ts`)
+- Push notifications
 - USSD fallback
 - Ratings + leaderboard backend
-- GTFS import from GhanaAPI
+- GTFS import
 
-### Deviations from brief (accepted)
-- `apps/web` is a placeholder (Next.js app pending)
-- API has no build step (uses tsx; add tsup before deploy)
-- This brief is condensed, not verbatim
-- Scan screen file is `(passenger)/index.tsx` (not `scan.tsx`) so the Scan tab owns `/`; route groups add no URL segment
-- Demo chips include MAD05 and TEM03, which are not seeded and return "not found"
-- Only the dark palette exists in `design.ts`; light mode needs tokens first
+### Known Issues
+- Light mode deferred to v1.1 (dark-only; `userInterfaceStyle` is `dark`)
+- Status bar is now light on dark in Expo Go (fixed by `userInterfaceStyle: dark`); still verify on a real device before launch
+- Camera scan path untested (the simulator has no camera)
+- MAD05 and TEM03 are seeded and resolve via the API, but are not tested end-to-end in the app
+- Trip progress is mocked: the vehicle is placed one stop past the origin until conductor-driven tracking exists; the Report sheet does not yet save anything
+- The "Clear trip (dev only)" link on the Trip tab is `__DEV__`-only
+
+### Deviations
+- `(passenger)/index.tsx` is the Scan screen (not `scan.tsx`): route group `/` needs an index
+- API uses tsx in dev; add tsup before deploy
+- `apps/web` is a placeholder (Next.js union dashboard pending)
+- Trip is built from the real resolved vehicle and route (not a hardcoded mock), so the driver is the seeded name (e.g. Kwame Mensah for CIR01)
