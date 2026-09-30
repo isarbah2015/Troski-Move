@@ -1,16 +1,10 @@
 import { Router, type IRouter } from "express";
 import { eq, or } from "drizzle-orm";
+import { parseScannedCode } from "@trotrolink/shared";
 import { db } from "../db";
 import { routesTable, vehiclesTable } from "../db/schema";
 
 const router: IRouter = Router();
-
-/** Accepts a short code (`CIR01`), a raw QR id, or a scanned `trotrolink://v/<qr id>` payload. */
-function parseCode(raw: string): string {
-  const trimmed = raw.trim();
-  const match = trimmed.match(/^trotrolink:\/\/v\/(.+)$/i);
-  return match ? match[1]! : trimmed;
-}
 
 /** Passengers pay whole cedis: the official fare rounded up. Free (origin) stops stay 0. */
 export function roundUpFare(fare: number): number {
@@ -19,7 +13,7 @@ export function roundUpFare(fare: number): number {
 
 router.get("/vehicles/resolve", async (req, res): Promise<void> => {
   const raw = typeof req.query["code"] === "string" ? req.query["code"] : "";
-  const code = parseCode(raw);
+  const code = parseScannedCode(raw);
   if (!code) {
     res.status(400).json({ error: "Missing code" });
     return;

@@ -94,46 +94,57 @@ Monorepo scaffold per §3 · `pnpm-workspace.yaml` (`apps/*`, `packages/*`) · `
 - Drizzle schema + seed (Circle→Kasoa, Madina, Tema)
 - Shared design tokens
 - API health endpoint and `GET /api/vehicles/resolve`
-- Scan tab (QR, short code, stop select, fare)
-- Trip tab (active trip, empty state, report sheet)
-- Profile tab (user card, stats, role switcher, trip history + detail, payment method, settings, sign out)
-- Conductor route group stubs (4 tabs)
+- Passenger: Scan, Trip, Profile
+- Conductor: Today (earnings, bonus, stop marking), My QR (display, download, print, regenerate)
+- Conductor Leaderboard and Earnings: stubs
 
 ### In Progress
-- Nothing (awaiting sign-off before the full conductor build)
+- Nothing (awaiting sign-off on Today + My QR)
 
 ### Not Started
-- Conductor tabs, full build (Today, My QR, Leaderboard, Earnings)
+- Conductor Leaderboard tab (full)
+- Conductor Earnings tab (full)
+- Conductor Profile tab (with role switcher; move "Switch to Passenger" there)
 - Union web dashboard (Next.js)
 - MoMo integration (Pay is a stub)
 - Push notifications (FCM)
 - USSD fallback
 - Ratings + leaderboard backend
-- GTFS import from GhanaAPI
+- Arrival + rating sheet
 - Phone OTP auth and an `(auth)/login` screen
 
-### Formulas (locked)
+### Locked formulas
 - `stopsAway = index(alightingStop) - index(currentStop)`
 - `progress = stopsCovered / totalStopsOnRide`
-- Tier from lifetime trips: Bronze < 10, Silver 10–49, Gold 50+
+- Bonus unlock: 200+ scans AND avg rating ≥ 4.0 (GHS 10)
+
+### Tier cutoffs (locked)
+- Bronze: 0–19 trips
+- Silver: 20–99 trips
+- Gold: 100–499 trips
+- Platinum: 500+ trips
+
+### QR sticker payload
+JSON `{ vehicleId, shortCode, routeId, version }` (see `packages/shared/src/qr.ts`). `parseScannedCode` also accepts `trotrolink://v/<qr id>`, a raw QR id, or a short code. Resolution is by short code, so an old version keeps working until the server retires it (TODO: `POST /api/vehicles/:id/regenerate-qr`).
 
 ### Local storage keys (AsyncStorage)
-`activeTrip`, `user`, `tripHistory` (newest first, capped at 200), `role`, `language`, `notifications`. Sign-out clears everything.
+`activeTrip`, `user`, `tripHistory`, `role`, `language`, `notifications`, `conductorVehicle` (defaults to CIR01), `conductorQr` (`{ version, printedAt }`). Sign-out clears everything.
 
-### Known Issues
-- Status bar: fixed via `userInterfaceStyle: dark` (**verify on a real device before launch**)
-- Light mode: deferred to v1.1
-- MAD05 / TEM03 fares are placeholders (replace with real GPRTU fares when union data is available)
+### Known limitations (v1)
+- No real auth (guest state); the conductor is hard-wired to CIR01
+- Ratings show "Not rated" until arrival + rating sheet ship
+- Language choice stored but the UI stays English (real i18n later)
+- Light mode deferred to v1.1
+- Status bar: verify on a real device before launch
+- Conductor earnings, scans, rating, riders and on-board counts are mock data; the stop marker is local only (TODO: `POST /api/trips/stop`)
+- Dev-only links (Load demo data / Clear history / Clear trip) are `__DEV__`-guarded; confirm they do not render in a production build before launch
+- Download uses the OS share sheet (Save Image); the last-printed date updates when the sheet or print dialog opens, not when the user confirms saving or printing
+- MAD05 / TEM03 fares are placeholders (replace with real GPRTU fares)
 - Camera path untested (the simulator has no camera)
-- A trip is added to history at payment time; there is no arrival step, so history ratings stay "Not rated" until the rating sheet exists
-- Sign out has no `(auth)/login` to go to, so it clears local data and returns to Scan
-- Language choice is saved but the UI is English only; the Privacy page is a placeholder
-- "Load demo data", "Clear history" (Profile) and "Clear trip" (Trip) are `__DEV__`-only
 
 ### Deviations
-- `(passenger)/index.tsx` is the Scan screen (route groups don't add URL segments)
-- Trip tab uses a vertical timeline (not horizontal)
-- Conductor stubs include a "Switch to Passenger" button (there is no Profile tab in the conductor group)
-- "Ride again" opens the Scan short-code sheet pre-filled (it does not auto-resolve)
-- API uses tsx in dev; add tsup before deploy
-- `apps/web` is a placeholder
+- `(passenger)/index.tsx` is Scan
+- Vertical timeline in Trip
+- The My QR short code uses Inter (the locked font) instead of a monospace face, and sits inside the white sticker so the exported PNG is self-contained
+- API uses tsx in dev
+- `apps/web` placeholder
