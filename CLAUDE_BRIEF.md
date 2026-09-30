@@ -86,3 +86,33 @@ Font Inter 400/500/600/700 only. Radii: card 16, modal 24, pill 999. Feather ico
 
 ## 11. First task (scaffold only — no product features)
 Monorepo scaffold per §3 · `pnpm-workspace.yaml` (`apps/*`, `packages/*`) · `packages/shared` with design tokens · `packages/config` base tsconfig · `apps/api` skeleton (Express 5 + Drizzle + health) · `infra/docker-compose.yml` · this brief.
+
+## PROJECT STATUS
+
+### Completed
+- Monorepo restructure (apps/ + packages/), Replit + legacy files removed
+- Drizzle schema (9 tables) and seed data (Circle → Kasoa, CIR01–CIR03)
+- Shared design tokens
+- API health endpoint and `GET /api/vehicles/resolve`
+- Scan tab ported into `(passenger)` (camera viewfinder, short-code sheet, stop picker + fare, demo chips)
+
+### In Progress
+- Nothing (awaiting sign-off on the Scan port before the Trip tab)
+
+### Not Started
+- Trip tab, Profile tab
+- Conductor app (4 tabs)
+- Union web dashboard
+- MTN MoMo integration (the Pay button is a stub)
+- Push notifications (FCM)
+- USSD fallback
+- Ratings + leaderboard backend
+- GTFS import from GhanaAPI
+
+### Deviations from brief (accepted)
+- `apps/web` is a placeholder (Next.js app pending)
+- API has no build step (uses tsx; add tsup before deploy)
+- This brief is condensed, not verbatim
+- Scan screen file is `(passenger)/index.tsx` (not `scan.tsx`) so the Scan tab owns `/`; route groups add no URL segment
+- Demo chips include MAD05 and TEM03, which are not seeded and return "not found"
+- Only the dark palette exists in `design.ts`; light mode needs tokens first
