@@ -4,6 +4,7 @@ import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { KeyboardProvider } from 'react-native-keyboard-controller';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { ErrorBoundary } from '@/components/ErrorBoundary';
+import { colors } from '@/lib/colors';
 import { ToastHost } from '@/components/ToastHost';
 import {
   Inter_400Regular,
@@ -22,8 +23,18 @@ const queryClient = new QueryClient();
 
 function RootLayoutNav() {
   return (
-    <Stack screenOptions={{ headerBackTitle: 'Back' }}>
+    <Stack
+      screenOptions={{
+        headerBackTitle: 'Back',
+        headerStyle: { backgroundColor: colors.surface },
+        headerTintColor: colors.textPrimary,
+        headerTitleStyle: { fontFamily: 'Inter_600SemiBold' },
+        contentStyle: { backgroundColor: colors.background },
+      }}
+    >
       <Stack.Screen name="(passenger)" options={{ headerShown: false }} />
+      <Stack.Screen name="(conductor)" options={{ headerShown: false }} />
+      <Stack.Screen name="privacy" options={{ title: 'Privacy' }} />
     </Stack>
   );
 }

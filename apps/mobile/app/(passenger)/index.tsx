@@ -1,9 +1,9 @@
-import React, { useCallback, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { Linking, Platform, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { Feather } from '@expo/vector-icons';
 import { CameraView, useCameraPermissions } from 'expo-camera';
 import * as Haptics from 'expo-haptics';
-import { useFocusEffect, useRouter } from 'expo-router';
+import { useFocusEffect, useLocalSearchParams, useRouter } from 'expo-router';
 import type { ResolvedVehicle } from '@trotrolink/shared';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { CodeEntrySheet } from '@/components/CodeEntrySheet';
@@ -11,9 +11,9 @@ import { StopSheet } from '@/components/StopSheet';
 import { useColors } from '@/hooks/useColors';
 import { colors as tokens } from '@/lib/colors';
 import { api, VehicleNotFoundError } from '@/lib/api';
-import { saveActiveTrip } from '@/lib/storage';
+import { appendTripRecord, saveActiveTrip } from '@/lib/storage';
 import { showToast } from '@/lib/toast';
-import { buildTrip } from '@/lib/trip';
+import { buildTrip, buildTripRecord } from '@/lib/trip';
 
 const FRAME = 260;
 // Demo codes for web / simulators that have no camera.
@@ -24,6 +24,8 @@ export default function ScanScreen() {
   const colors = useColors();
   const insets = useSafeAreaInsets();
   const router = useRouter();
+  const { code: prefillCode, n: prefillNonce } = useLocalSearchParams<{ code?: string; n?: string }>();
+  const [initialCode, setInitialCode] = useState('');
   const [focused, setFocused] = useState(false);
   useFocusEffect(
     useCallback(() => {
@@ -57,6 +59,14 @@ export default function ScanScreen() {
       setTimeout(() => { busy.current = false; }, 1200);
     }
   }, []);
+
+  // "Ride again" from Profile arrives with ?code=CIR01&n=<timestamp>: open the short-code sheet pre-filled.
+  useEffect(() => {
+    if (!prefillCode) return;
+    setInitialCode(prefillCode);
+    setError(null);
+    setCodeOpen(true);
+  }, [prefillCode, prefillNonce]);
 
   const scanning = focused && !resolved && !codeOpen && permission?.granted;
 
@@ -131,14 +141,16 @@ export default function ScanScreen() {
         </Pressable>
       </View>
 
-      <CodeEntrySheet visible={codeOpen} loading={loading} error={error} onSubmit={resolve} onClose={() => setCodeOpen(false)} />
+      <CodeEntrySheet initialCode={initialCode} visible={codeOpen} loading={loading} error={error} onSubmit={resolve} onClose={() => setCodeOpen(false)} />
       <StopSheet
         resolved={resolved}
         onClose={() => setResolved(null)}
         onPay={async (stop) => {
           if (!resolved) return;
           // TODO: Wire to MTN MoMo sandbox — see apps/api/src/services/momo.ts
-          await saveActiveTrip(buildTrip(resolved, stop));
+          const trip = buildTrip(resolved, stop);
+          await saveActiveTrip(trip);
+          await appendTripRecord(buildTripRecord(resolved, stop, trip));
           Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
           setResolved(null);
           showToast('Payment successful');

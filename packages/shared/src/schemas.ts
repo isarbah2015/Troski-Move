@@ -51,3 +51,30 @@ export const ActiveTrip = z.object({
   stops: z.array(z.object({ name: z.string(), status: TripStopStatus })),
 });
 export type ActiveTrip = z.infer<typeof ActiveTrip>;
+
+/** The signed-in user as cached on-device (real auth arrives with phone OTP). */
+export const LocalUser = z.object({
+  name: z.string(),
+  phone: z.string(),
+  verified: z.boolean(),
+});
+export type LocalUser = z.infer<typeof LocalUser>;
+
+/** A completed-payment trip kept in on-device history. */
+export const TripRecord = z.object({
+  tripId: z.string(),
+  vehicleShortCode: z.string(),
+  routeName: z.string(),
+  boardingStop: z.string(),
+  alightingStop: z.string(),
+  startedAt: z.string(),
+  officialFare: z.number(),
+  amountPaid: z.number(),
+  /** 1–5, or null until the passenger rates the trip. */
+  rating: z.number().min(1).max(5).nullable(),
+  stops: z.array(z.object({ name: z.string(), officialFare: z.number(), etaMinutes: z.number() })),
+});
+export type TripRecord = z.infer<typeof TripRecord>;
+
+export const APP_LANGUAGES = ['English', 'Twi', 'Ewe'] as const;
+export type AppLanguage = (typeof APP_LANGUAGES)[number];

@@ -1,4 +1,4 @@
-import type { ActiveTrip, ResolvedVehicle, Stop } from '@trotrolink/shared';
+import type { ActiveTrip, ResolvedVehicle, Stop, TripRecord } from '@trotrolink/shared';
 
 /**
  * Builds the trip that starts after payment. Boarding is the route origin and live tracking does not
@@ -40,4 +40,19 @@ export function tripProgress(trip: ActiveTrip): number {
   const total = names.indexOf(trip.alightingStop) - names.indexOf(trip.boardingStop);
   if (total <= 0) return 1;
   return Math.min(1, Math.max(0, 1 - trip.stopsRemaining / total));
+}
+
+export function buildTripRecord(resolved: ResolvedVehicle, alighting: Stop, trip: ActiveTrip): TripRecord {
+  return {
+    tripId: trip.tripId,
+    vehicleShortCode: trip.vehicleShortCode,
+    routeName: trip.routeName,
+    boardingStop: trip.boardingStop,
+    alightingStop: trip.alightingStop,
+    startedAt: trip.startedAt,
+    officialFare: alighting.officialFare,
+    amountPaid: alighting.amountToPay,
+    rating: null,
+    stops: resolved.route.stops.map((s) => ({ name: s.name, officialFare: s.officialFare, etaMinutes: s.etaMinutes })),
+  };
 }

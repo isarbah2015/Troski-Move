@@ -7,6 +7,7 @@ import { routesTable, vehiclesTable, type RouteStop } from "./schema";
  * Official GHS fare is cumulative from the origin; etaMinutes is the leg time from the previous stop.
  * Each route has 5 stops and the first stop is the origin (fare 0, 0 min).
  */
+// TODO: Replace with real GPRTU fares when union data is provided
 const ROUTES: Array<{
   routeId: string;
   origin: string;

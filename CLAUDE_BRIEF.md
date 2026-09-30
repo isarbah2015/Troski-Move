@@ -91,35 +91,49 @@ Monorepo scaffold per §3 · `pnpm-workspace.yaml` (`apps/*`, `packages/*`) · `
 
 ### Completed
 - Monorepo restructure (apps/ + packages/)
-- Drizzle schema + seed (Circle→Kasoa, Madina→Accra Central, Tema Station→Community 1)
+- Drizzle schema + seed (Circle→Kasoa, Madina, Tema)
 - Shared design tokens
 - API health endpoint and `GET /api/vehicles/resolve`
-- Scan tab: QR viewfinder, short-code sheet, demo chips, stop selection, fare display
-- Trip tab: active trip view + empty state (trip stored in AsyncStorage under `activeTrip`)
+- Scan tab (QR, short code, stop select, fare)
+- Trip tab (active trip, empty state, report sheet)
+- Profile tab (user card, stats, role switcher, trip history + detail, payment method, settings, sign out)
+- Conductor route group stubs (4 tabs)
 
 ### In Progress
-- Nothing (awaiting sign-off on the Trip tab before the Profile tab)
+- Nothing (awaiting sign-off before the full conductor build)
 
 ### Not Started
-- Profile tab
-- Conductor app (4 tabs)
-- Union web dashboard
-- MoMo integration (Pay button is a stub; see `apps/api/src/services/momo.ts`)
-- Push notifications
+- Conductor tabs, full build (Today, My QR, Leaderboard, Earnings)
+- Union web dashboard (Next.js)
+- MoMo integration (Pay is a stub)
+- Push notifications (FCM)
 - USSD fallback
 - Ratings + leaderboard backend
-- GTFS import
+- GTFS import from GhanaAPI
+- Phone OTP auth and an `(auth)/login` screen
+
+### Formulas (locked)
+- `stopsAway = index(alightingStop) - index(currentStop)`
+- `progress = stopsCovered / totalStopsOnRide`
+- Tier from lifetime trips: Bronze < 10, Silver 10–49, Gold 50+
+
+### Local storage keys (AsyncStorage)
+`activeTrip`, `user`, `tripHistory` (newest first, capped at 200), `role`, `language`, `notifications`. Sign-out clears everything.
 
 ### Known Issues
-- Light mode deferred to v1.1 (dark-only; `userInterfaceStyle` is `dark`)
-- Status bar is now light on dark in Expo Go (fixed by `userInterfaceStyle: dark`); still verify on a real device before launch
-- Camera scan path untested (the simulator has no camera)
-- MAD05 and TEM03 are seeded and resolve via the API, but are not tested end-to-end in the app
-- Trip progress is mocked: the vehicle is placed one stop past the origin until conductor-driven tracking exists; the Report sheet does not yet save anything
-- The "Clear trip (dev only)" link on the Trip tab is `__DEV__`-only
+- Status bar: fixed via `userInterfaceStyle: dark` (**verify on a real device before launch**)
+- Light mode: deferred to v1.1
+- MAD05 / TEM03 fares are placeholders (replace with real GPRTU fares when union data is available)
+- Camera path untested (the simulator has no camera)
+- A trip is added to history at payment time; there is no arrival step, so history ratings stay "Not rated" until the rating sheet exists
+- Sign out has no `(auth)/login` to go to, so it clears local data and returns to Scan
+- Language choice is saved but the UI is English only; the Privacy page is a placeholder
+- "Load demo data", "Clear history" (Profile) and "Clear trip" (Trip) are `__DEV__`-only
 
 ### Deviations
-- `(passenger)/index.tsx` is the Scan screen (not `scan.tsx`): route group `/` needs an index
+- `(passenger)/index.tsx` is the Scan screen (route groups don't add URL segments)
+- Trip tab uses a vertical timeline (not horizontal)
+- Conductor stubs include a "Switch to Passenger" button (there is no Profile tab in the conductor group)
+- "Ride again" opens the Scan short-code sheet pre-filled (it does not auto-resolve)
 - API uses tsx in dev; add tsup before deploy
-- `apps/web` is a placeholder (Next.js union dashboard pending)
-- Trip is built from the real resolved vehicle and route (not a hardcoded mock), so the driver is the seeded name (e.g. Kwame Mensah for CIR01)
+- `apps/web` is a placeholder

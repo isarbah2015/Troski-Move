@@ -1,9 +1,10 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { ActivityIndicator, KeyboardAvoidingView, Modal, Platform, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 import { useColors } from '@/hooks/useColors';
 import { colors } from '@/lib/colors';
 
 type Props = {
+  initialCode?: string;
   visible: boolean;
   loading: boolean;
   error: string | null;
@@ -11,9 +12,12 @@ type Props = {
   onClose: () => void;
 };
 
-export function CodeEntrySheet({ visible, loading, error, onSubmit, onClose }: Props) {
+export function CodeEntrySheet({ initialCode = '', visible, loading, error, onSubmit, onClose }: Props) {
   const colors = useColors();
-  const [code, setCode] = useState('');
+  const [code, setCode] = useState(initialCode);
+  useEffect(() => {
+    if (visible) setCode(initialCode);
+  }, [visible, initialCode]);
   const ready = code.trim().length >= 3 && !loading;
 
   return (
