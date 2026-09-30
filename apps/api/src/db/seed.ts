@@ -1,5 +1,6 @@
 import { randomUUID } from "node:crypto";
-import { db, pool, routesTable, vehiclesTable, type RouteStop } from "./index";
+import { db, pool } from "./index";
+import { routesTable, vehiclesTable, type RouteStop } from "./schema";
 
 /** Official GHS fare is cumulative from the origin; etaMinutes is the leg time from the previous stop. */
 const CIRCLE_KASOA_STOPS: RouteStop[] = [

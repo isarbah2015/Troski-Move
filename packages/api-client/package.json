@@ -1,0 +1,11 @@
+{
+  "name": "@trotrolink/api-client",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "main": "./src/index.ts",
+  "types": "./src/index.ts",
+  "scripts": { "typecheck": "tsc -p tsconfig.json --noEmit" },
+  "dependencies": { "@trotrolink/shared": "workspace:*" },
+  "devDependencies": { "@trotrolink/config": "workspace:*", "typescript": "~5.9.3" }
+}

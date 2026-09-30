@@ -1,0 +1,35 @@
+services:
+  postgres:
+    image: postgres:16
+    container_name: trotrolink-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: trotrolink
+      POSTGRES_PASSWORD: trotrolink
+      POSTGRES_DB: trotrolink
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+      - ./sql/init.sql:/docker-entrypoint-initdb.d/init.sql:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U trotrolink"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  pgadmin:
+    image: dpage/pgadmin4:8
+    container_name: trotrolink-pgadmin
+    restart: unless-stopped
+    environment:
+      PGADMIN_DEFAULT_EMAIL: admin@trotrolink.local
+      PGADMIN_DEFAULT_PASSWORD: admin
+    ports:
+      - "5050:80"
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+volumes:
+  pgdata:
