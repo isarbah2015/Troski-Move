@@ -129,3 +129,34 @@ export async function getQrState(): Promise<QrState> {
 export async function saveQrState(state: QrState): Promise<void> {
   await AsyncStorage.setItem(CONDUCTOR_QR_KEY, JSON.stringify(state));
 }
+
+// ---- Daily splits ---------------------------------------------------------------------------------
+
+export type DailySplitRecord = {
+  date: string;
+  total: number;
+  ownerDrop: number;
+  conductorWage: number;
+  fuelCost: number;
+  net: number;
+  savedAt: string;
+};
+
+const DAILY_SPLITS_KEY = 'dailySplits';
+
+/** `dailySplits` is one object keyed by local YYYY-MM-DD. */
+export async function getDailySplits(): Promise<Record<string, DailySplitRecord>> {
+  try {
+    const raw = await AsyncStorage.getItem(DAILY_SPLITS_KEY);
+    const parsed = raw ? (JSON.parse(raw) as unknown) : {};
+    return parsed && typeof parsed === 'object' ? (parsed as Record<string, DailySplitRecord>) : {};
+  } catch {
+    return {};
+  }
+}
+
+export async function saveDailySplit(record: DailySplitRecord): Promise<void> {
+  const all = await getDailySplits();
+  all[record.date] = record;
+  await AsyncStorage.setItem(DAILY_SPLITS_KEY, JSON.stringify(all));
+}
