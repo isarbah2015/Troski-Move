@@ -103,3 +103,29 @@ export async function setNotifications(on: boolean): Promise<void> {
 export async function clearAllLocalData(): Promise<void> {
   await AsyncStorage.clear();
 }
+
+// ---- Conductor ----------------------------------------------------------------------------------
+
+const CONDUCTOR_VEHICLE_KEY = 'conductorVehicle';
+const CONDUCTOR_QR_KEY = 'conductorQr';
+
+/** The vehicle short code this conductor works on; CIR01 until conductor sign-in exists. */
+export async function getConductorVehicleCode(): Promise<string> {
+  return (await AsyncStorage.getItem(CONDUCTOR_VEHICLE_KEY)) ?? 'CIR01';
+}
+
+export type QrState = { version: number; printedAt: string | null };
+
+export async function getQrState(): Promise<QrState> {
+  try {
+    const raw = await AsyncStorage.getItem(CONDUCTOR_QR_KEY);
+    const v = raw ? (JSON.parse(raw) as Partial<QrState>) : {};
+    return { version: typeof v.version === 'number' ? v.version : 1, printedAt: typeof v.printedAt === 'string' ? v.printedAt : null };
+  } catch {
+    return { version: 1, printedAt: null };
+  }
+}
+
+export async function saveQrState(state: QrState): Promise<void> {
+  await AsyncStorage.setItem(CONDUCTOR_QR_KEY, JSON.stringify(state));
+}
