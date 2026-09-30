@@ -11,6 +11,12 @@ app.use(cors());
 app.use(express.json());
 app.use("/api", routes);
 
+// Async route errors land here (Express 5 forwards rejected promises): log and answer with JSON.
+app.use((err: unknown, _req: express.Request, res: express.Response, _next: express.NextFunction) => {
+  logger.error({ err }, "Unhandled error");
+  res.status(500).json({ error: "Internal error" });
+});
+
 const port = Number(process.env.PORT ?? 4000);
 
 app.listen(port, (err) => {

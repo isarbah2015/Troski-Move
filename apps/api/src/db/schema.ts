@@ -65,20 +65,33 @@ export const transactionsTable = pgTable(
     officialFare: numeric("official_fare", { precision: 8, scale: 2 }).notNull(),
     amountPaid: numeric("amount_paid", { precision: 8, scale: 2 }).notNull(),
     timestamp: timestamp("timestamp", { withTimezone: true }).notNull().defaultNow(),
+    /** Public trip reference (TRX-…). Clients may supply it so retries from the offline queue are idempotent. */
+    tripRef: text("trip_ref").unique(),
+    boardingStop: text("boarding_stop"),
+    arrivedAt: timestamp("arrived_at", { withTimezone: true }),
   },
   (t) => [index("transactions_vehicle_ts_idx").on(t.vehicleId, t.timestamp)],
 );
 
 export type Transaction = typeof transactionsTable.$inferSelect;
 
-export const activeTripsTable = pgTable("active_trips", {
-  id: serial("id").primaryKey(),
-  passengerId: integer("passenger_id").notNull().references(() => usersTable.id),
-  vehicleId: integer("vehicle_id").notNull().references(() => vehiclesTable.id),
-  alightingStop: text("alighting_stop").notNull(),
-  currentStop: text("current_stop").notNull(),
-  etaMinutes: integer("eta_minutes").notNull(),
-});
+export const activeTripsTable = pgTable(
+  "active_trips",
+  {
+    id: serial("id").primaryKey(),
+    passengerId: integer("passenger_id").notNull().references(() => usersTable.id),
+    vehicleId: integer("vehicle_id").notNull().references(() => vehiclesTable.id),
+    alightingStop: text("alighting_stop").notNull(),
+    currentStop: text("current_stop").notNull(),
+    etaMinutes: integer("eta_minutes").notNull(),
+    /** The payment that started this trip; one active row per transaction. */
+    transactionId: integer("transaction_id").notNull().unique().references(() => transactionsTable.id),
+    startedAt: timestamp("started_at", { withTimezone: true }).notNull().defaultNow(),
+    lastStopMarkedAt: timestamp("last_stop_marked_at", { withTimezone: true }),
+    conductorId: integer("conductor_id").references(() => usersTable.id),
+  },
+  (t) => [index("active_trips_vehicle_idx").on(t.vehicleId)],
+);
 
 export type ActiveTrip = typeof activeTripsTable.$inferSelect;
 
@@ -108,6 +121,7 @@ export const dailySplitsTable = pgTable(
     id: serial("id").primaryKey(),
     vehicleId: integer("vehicle_id").notNull().references(() => vehiclesTable.id),
     date: date("date").notNull(),
+    totalFares: numeric("total_fares", { precision: 10, scale: 2 }).notNull().default("0"),
     ownerDrop: numeric("owner_drop", { precision: 10, scale: 2 }).notNull().default("0"),
     conductorWage: numeric("conductor_wage", { precision: 10, scale: 2 }).notNull().default("0"),
     fuelCost: numeric("fuel_cost", { precision: 10, scale: 2 }).notNull().default("0"),
@@ -144,3 +158,24 @@ export const disputesTable = pgTable("disputes", {
 });
 
 export type Dispute = typeof disputesTable.$inferSelect;
+
+export const tripEventTypes = ["boarded", "stop_reached", "arrived", "alighted"] as const;
+
+/** Append-only log of what happened on a vehicle: the conductor's stop marks and each passenger's trip milestones. */
+export const tripEventsTable = pgTable(
+  "trip_events",
+  {
+    id: serial("id").primaryKey(),
+    vehicleId: integer("vehicle_id").notNull().references(() => vehiclesTable.id),
+    tripId: integer("trip_id").references(() => transactionsTable.id),
+    eventType: text("event_type").$type<(typeof tripEventTypes)[number]>().notNull(),
+    stopName: text("stop_name"),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [
+    index("trip_events_vehicle_created_idx").on(t.vehicleId, t.createdAt.desc()),
+    check("trip_events_type_chk", sql`${t.eventType} in ('boarded','stop_reached','arrived','alighted')`),
+  ],
+);
+
+export type TripEvent = typeof tripEventsTable.$inferSelect;

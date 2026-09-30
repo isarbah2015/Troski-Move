@@ -128,9 +128,101 @@ export type TripRating = z.infer<typeof TripRating>;
 /** Body of `POST /api/ratings`. */
 export const RatingSubmission = z.object({
   tripId: z.string().min(1),
-  vehicleId: z.number().int(),
+  /** Optional: the server takes the vehicle from the trip itself. */
+  vehicleId: z.number().int().optional(),
   driverRating: z.number().int().min(1).max(5),
   conductorRating: z.number().int().min(1).max(5),
   comment: z.string().max(500).optional(),
 });
 export type RatingSubmission = z.infer<typeof RatingSubmission>;
+
+// ---- Trip sync ----------------------------------------------------------------------------------
+
+const shortCode = z.string().trim().min(1).max(12).transform((v) => v.toUpperCase());
+
+/** `POST /api/trips/start`. Send `passengerId` or, for a guest with no account yet, `deviceId`. */
+export const StartTripBody = z
+  .object({
+    /** Optional client-made reference (TRX-…) so a retried request from the offline queue is idempotent. */
+    tripId: z.string().min(1).max(40).optional(),
+    passengerId: z.number().int().optional(),
+    deviceId: z.string().min(8).max(64).optional(),
+    vehicleCode: shortCode,
+    boardingStop: z.string().optional(),
+    alightingStop: z.string().min(1),
+    amountPaid: z.number().positive(),
+  })
+  .refine((b) => b.passengerId !== undefined || b.deviceId !== undefined, { message: 'passengerId or deviceId is required' });
+export type StartTripBody = z.infer<typeof StartTripBody>;
+
+export const StartTripResponse = z.object({ tripId: z.string(), startedAt: z.string(), passengerId: z.number().int() });
+export type StartTripResponse = z.infer<typeof StartTripResponse>;
+
+/** `POST /api/trips/stop`: the conductor marks the anchor the vehicle is at. */
+export const StopMarkBody = z.object({
+  vehicleCode: shortCode,
+  stopName: z.string().min(1),
+  conductorId: z.number().int().optional(),
+  deviceId: z.string().min(8).max(64).optional(),
+});
+export type StopMarkBody = z.infer<typeof StopMarkBody>;
+
+export const StopMarkResponse = z.object({ ok: z.literal(true), passengersNotified: z.number().int() });
+export type StopMarkResponse = z.infer<typeof StopMarkResponse>;
+
+/** `POST /api/trips/alight`: the passenger confirms they got off (rating is optional). */
+export const AlightBody = z.object({ tripId: z.string().min(1) });
+export type AlightBody = z.infer<typeof AlightBody>;
+
+export const ServerTrip = z.object({
+  tripId: z.string(),
+  passengerId: z.number().int(),
+  vehicleCode: z.string(),
+  boardingStop: z.string(),
+  alightingStop: z.string(),
+  currentStop: z.string(),
+  stopsRemaining: z.number().int(),
+  etaMinutes: z.number(),
+  startedAt: z.string(),
+  lastStopMarkedAt: z.string().nullable(),
+});
+export type ServerTrip = z.infer<typeof ServerTrip>;
+
+export const ActiveTripsResponse = z.object({ trips: z.array(ServerTrip) });
+export type ActiveTripsResponse = z.infer<typeof ActiveTripsResponse>;
+
+/** `POST /api/splits`. */
+export const SplitBody = z.object({
+  vehicleCode: shortCode,
+  date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
+  totalFares: z.number().nonnegative(),
+  ownerDrop: z.number().nonnegative(),
+  conductorWage: z.number().nonnegative(),
+  fuelCost: z.number().nonnegative(),
+});
+export type SplitBody = z.infer<typeof SplitBody>;
+
+export const SplitResponse = z.object({ ok: z.literal(true), driverNet: z.number() });
+export type SplitResponse = z.infer<typeof SplitResponse>;
+
+export const HistoryTrip = z.object({
+  tripId: z.string(),
+  vehicleCode: z.string(),
+  routeName: z.string(),
+  boardingStop: z.string(),
+  alightingStop: z.string(),
+  startedAt: z.string(),
+  officialFare: z.number(),
+  amountPaid: z.number(),
+  arrivedAt: z.string().nullable(),
+  rating: z.object({ driverRating: z.number().int(), conductorRating: z.number().int(), comment: z.string().nullable() }).nullable(),
+});
+export type HistoryTrip = z.infer<typeof HistoryTrip>;
+
+export const HistoryResponse = z.object({ trips: z.array(HistoryTrip) });
+export type HistoryResponse = z.infer<typeof HistoryResponse>;
+
+export const GuestBody = z.object({ deviceId: z.string().min(8).max(64), role: z.enum(['passenger', 'conductor']).default('passenger') });
+export type GuestBody = z.infer<typeof GuestBody>;
+export const GuestResponse = z.object({ userId: z.number().int() });
+export type GuestResponse = z.infer<typeof GuestResponse>;

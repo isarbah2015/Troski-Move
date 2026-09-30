@@ -25,8 +25,17 @@ function mockAllowed(req: { query: Record<string, unknown> }) {
   return process.env.NODE_ENV !== "production" && req.query["mock"] !== "off";
 }
 
-/** Top 5 vehicles by average driver rating in the last 24 hours (minimum 3 ratings). */
-router.get("/leaderboard/daily", async (req, res): Promise<void> => {
+const CACHE_MS = 5 * 60 * 1000;
+let cache: { at: number; ranked: LeaderboardEntry[] } | null = null;
+
+/** A new rating changes the standings, so the cache is dropped on every rating. */
+export function invalidateLeaderboardCache() {
+  cache = null;
+}
+
+/** Every vehicle with at least 3 ratings in the last 24 hours, best first. Cached for 5 minutes. */
+async function loadRanked(): Promise<LeaderboardEntry[]> {
+  if (cache && Date.now() - cache.at < CACHE_MS) return cache.ranked;
   const avg = sql<string>`round(avg(${ratingsTable.driverRating})::numeric, 1)`;
   const total = sql<number>`count(${ratingsTable.id})::int`;
   const rows = await db
@@ -37,22 +46,21 @@ router.get("/leaderboard/daily", async (req, res): Promise<void> => {
     .groupBy(vehiclesTable.id, vehiclesTable.shortCode, vehiclesTable.driverName)
     .having(sql`count(${ratingsTable.id}) >= ${MIN_RATINGS}`)
     .orderBy(desc(sql`avg(${ratingsTable.driverRating})`), desc(total));
+  const ranked = rows.map((r, i) => ({ rank: i + 1, shortCode: r.shortCode, driverName: r.driverName, avgRating: Number(r.avg), totalRatings: r.total }));
+  cache = { at: Date.now(), ranked };
+  return ranked;
+}
 
+/** Top 5 vehicles by average driver rating in the last 24 hours (minimum 3 ratings). */
+router.get("/leaderboard/daily", async (req, res): Promise<void> => {
+  const ranked = await loadRanked();
   const updatedAt = new Date().toISOString();
 
-  if (rows.length === 0 && mockAllowed(req)) {
+  if (ranked.length === 0 && mockAllowed(req)) {
     const body: LeaderboardResponse = { mock: true, updatedAt, entries: MOCK_ENTRIES, you: MOCK_YOU };
     res.json(body);
     return;
   }
-
-  const ranked: LeaderboardEntry[] = rows.map((r, i) => ({
-    rank: i + 1,
-    shortCode: r.shortCode,
-    driverName: r.driverName,
-    avgRating: Number(r.avg),
-    totalRatings: r.total,
-  }));
 
   const vehicle = typeof req.query["vehicle"] === "string" ? req.query["vehicle"].toUpperCase() : null;
   const mine = vehicle ? ranked.find((e) => e.shortCode === vehicle) : undefined;
