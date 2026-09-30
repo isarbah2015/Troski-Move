@@ -65,11 +65,11 @@ export default function HomeScreen() {
   const bookTrip = (trip: TripOption) => {
     setSelected(trip);
     booking.mutate(
-      { data: { tripId: trip.id, passengerCount: 1, paymentMethod: 'Troski wallet' } },
+      { data: { tripId: trip.id, passengerCount: 1, paymentMethod: 'MTN MoMo' } },
       {
         onSuccess: async (created) => {
-          const existing = JSON.parse((await AsyncStorage.getItem('troski-mobile-bookings')) || '[]') as unknown[];
-          await AsyncStorage.setItem('troski-mobile-bookings', JSON.stringify([created, ...existing]));
+          const existing = JSON.parse((await AsyncStorage.getItem('trotrolink-mobile-bookings')) || '[]') as unknown[];
+          await AsyncStorage.setItem('trotrolink-mobile-bookings', JSON.stringify([created, ...existing]));
           setNotice('Seat confirmed. Your booking is ready.');
           setSelected(null);
           void summary.refetch();

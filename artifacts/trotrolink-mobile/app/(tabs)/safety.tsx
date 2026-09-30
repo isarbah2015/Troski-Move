@@ -20,8 +20,8 @@ export default function SafetyScreen() {
     }
     report.mutate({ data: { reportType: 'service', title: title.trim(), description: description.trim() } }, {
       onSuccess: async (created) => {
-        const existing = JSON.parse((await AsyncStorage.getItem('troski-mobile-reports')) || '[]') as unknown[];
-        await AsyncStorage.setItem('troski-mobile-reports', JSON.stringify([created, ...existing]));
+        const existing = JSON.parse((await AsyncStorage.getItem('trotrolink-mobile-reports')) || '[]') as unknown[];
+        await AsyncStorage.setItem('trotrolink-mobile-reports', JSON.stringify([created, ...existing]));
         setTitle('');
         setDescription('');
         setNotice('Report received. Our team will review it.');

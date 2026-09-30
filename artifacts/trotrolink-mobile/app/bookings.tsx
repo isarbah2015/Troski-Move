@@ -12,7 +12,7 @@ export default function BookingsScreen() {
   const [bookings, setBookings] = useState<Booking[]>([]);
   const [loading, setLoading] = useState(true);
   useEffect(() => {
-    AsyncStorage.getItem('troski-mobile-bookings').then((value) => {
+    AsyncStorage.getItem('trotrolink-mobile-bookings').then((value) => {
       setBookings(value ? (JSON.parse(value) as Booking[]) : []);
       setLoading(false);
     }).catch(() => setLoading(false));
