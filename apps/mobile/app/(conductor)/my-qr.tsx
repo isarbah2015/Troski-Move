@@ -3,7 +3,7 @@ import { ActivityIndicator, Alert, Pressable, ScrollView, StyleSheet, Text, View
 import { Feather } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
 import * as Print from 'expo-print';
-import { useFocusEffect, useRouter } from 'expo-router';
+import { useFocusEffect } from 'expo-router';
 import * as Sharing from 'expo-sharing';
 import QRCode from 'react-native-qrcode-svg';
 import { captureRef } from 'react-native-view-shot';
@@ -12,7 +12,7 @@ import { encodeQrPayload } from '@trotrolink/shared';
 import { useColors } from '@/hooks/useColors';
 import { colors as tokens } from '@/lib/colors';
 import { useConductorVehicle } from '@/lib/conductor';
-import { getQrState, saveQrState, setRole, type QrState } from '@/lib/storage';
+import { getQrState, saveQrState, type QrState } from '@/lib/storage';
 import { showToast } from '@/lib/toast';
 
 const QR_SIZE = 240;
@@ -20,7 +20,6 @@ const QR_SIZE = 240;
 export default function MyQrScreen() {
   const colors = useColors();
   const insets = useSafeAreaInsets();
-  const router = useRouter();
   const { data, loading, error, reload } = useConductorVehicle();
   const [qr, setQr] = useState<QrState>({ version: 1, printedAt: null });
   const [busy, setBusy] = useState<'download' | 'print' | null>(null);
@@ -171,18 +170,6 @@ export default function MyQrScreen() {
         </>
       )}
 
-      <Pressable
-        onPress={async () => {
-          Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-          await setRole('passenger');
-          router.navigate('/');
-        }}
-        accessibilityRole="button"
-        style={styles.switchLink}
-      >
-        <Feather name="repeat" size={14} color={colors.mutedForeground} />
-        <Text style={[styles.switchText, { color: colors.mutedForeground }]}>Switch to Passenger</Text>
-      </Pressable>
     </ScrollView>
   );
 }
@@ -211,6 +198,4 @@ const styles = StyleSheet.create({
   regen: { marginTop: 28, height: 56, borderWidth: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 10 },
   regenText: { fontFamily: 'Inter_700Bold', fontSize: 16 },
   version: { fontFamily: 'Inter_500Medium', fontSize: 12, textAlign: 'center', marginTop: 12 },
-  switchLink: { alignSelf: 'center', flexDirection: 'row', alignItems: 'center', gap: 6, paddingVertical: 20 },
-  switchText: { fontFamily: 'Inter_500Medium', fontSize: 13 },
 });

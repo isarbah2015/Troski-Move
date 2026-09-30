@@ -1,28 +1,25 @@
 import React, { useCallback, useState } from 'react';
-import { Alert, Linking, Pressable, ScrollView, StyleSheet, Switch, Text, View } from 'react-native';
+import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { Feather } from '@expo/vector-icons';
 import { useFocusEffect, useRouter } from 'expo-router';
 import * as Haptics from 'expo-haptics';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import type { AppLanguage, LocalUser, TripRecord } from '@trotrolink/shared';
-import { LanguageSheet } from '@/components/LanguageSheet';
+import type { LocalUser, TripRecord } from '@trotrolink/shared';
+import { RoleSwitcher } from '@/components/RoleSwitcher';
 import { SectionHeader } from '@/components/SectionHeader';
+import { SettingsGroup } from '@/components/SettingsGroup';
 import { Stars } from '@/components/Stars';
 import { TripDetailSheet } from '@/components/TripDetailSheet';
 import { useColors } from '@/hooks/useColors';
 import { formatCedis } from '@/lib/api';
+import { confirmSignOut } from '@/lib/auth';
 import { loadDemoProfile } from '@/lib/demo';
 import { formatWhen, GUEST_USER, lifetimeStats, maskMomo, maskPhone } from '@/lib/profile';
 import {
-  clearAllLocalData,
   clearTripHistory,
-  getLanguage,
-  getNotifications,
   getRole,
   getTripHistory,
   getUser,
-  setLanguage as saveLanguage,
-  setNotifications as saveNotifications,
   setRole as saveRole,
   type Role,
 } from '@/lib/storage';
@@ -38,18 +35,13 @@ export default function ProfileScreen() {
   const [user, setUser] = useState<LocalUser | null>(null);
   const [trips, setTrips] = useState<TripRecord[]>([]);
   const [role, setRoleState] = useState<Role>('passenger');
-  const [language, setLanguageState] = useState<AppLanguage>('English');
-  const [notifications, setNotificationsState] = useState(true);
   const [selected, setSelected] = useState<TripRecord | null>(null);
-  const [languageOpen, setLanguageOpen] = useState(false);
 
   const load = useCallback(async () => {
-    const [u, t, r, l, n] = await Promise.all([getUser(), getTripHistory(), getRole(), getLanguage(), getNotifications()]);
+    const [u, t, r] = await Promise.all([getUser(), getTripHistory(), getRole()]);
     setUser(u);
     setTrips(t);
     setRoleState(r);
-    setLanguageState(l);
-    setNotificationsState(n);
   }, []);
 
   useFocusEffect(
@@ -71,23 +63,13 @@ export default function ProfileScreen() {
     if (next === 'conductor') router.navigate('/today');
   };
 
-  const signOut = () => {
-    Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
-    Alert.alert('Sign out?', 'This clears your trips, settings and any active trip from this device.', [
-      { text: 'Cancel', style: 'cancel' },
-      {
-        text: 'Sign out',
-        style: 'destructive',
-        onPress: async () => {
-          // No (auth)/login screen exists yet, so sign-out resets local state and returns to Scan.
-          await clearAllLocalData();
-          await load();
-          showToast('Signed out');
-          router.navigate('/');
-        },
-      },
-    ]);
-  };
+  const signOut = () =>
+    confirmSignOut(async () => {
+      // No (auth)/login screen exists yet, so sign-out resets local state and returns to Scan.
+      await load();
+      showToast('Signed out');
+      router.navigate('/');
+    });
 
   const card = { backgroundColor: colors.card, borderColor: colors.border, borderRadius: colors.radius };
 
@@ -126,22 +108,7 @@ export default function ProfileScreen() {
 
       {/* Role */}
       <SectionHeader>Role</SectionHeader>
-      <View style={[styles.segment, { backgroundColor: colors.card, borderColor: colors.border, borderRadius: colors.radiusPill }]} accessibilityRole="radiogroup">
-        {(['passenger', 'conductor'] as const).map((r) => {
-          const active = role === r;
-          return (
-            <Pressable
-              key={r}
-              onPress={() => void switchRole(r)}
-              accessibilityRole="radio"
-              accessibilityState={{ selected: active }}
-              style={[styles.segmentBtn, { backgroundColor: active ? colors.primary : 'transparent', borderRadius: colors.radiusPill }]}
-            >
-              <Text style={[styles.segmentText, { color: active ? colors.primaryForeground : colors.mutedForeground }]}>{r === 'passenger' ? 'Passenger' : 'Conductor'}</Text>
-            </Pressable>
-          );
-        })}
-      </View>
+      <RoleSwitcher role={role} onChange={(r) => void switchRole(r)} />
 
       {/* History */}
       <SectionHeader>Trip history</SectionHeader>
@@ -186,28 +153,7 @@ export default function ProfileScreen() {
 
       {/* Settings */}
       <SectionHeader>Settings</SectionHeader>
-      <View style={[styles.group, card]}>
-        <SettingRow icon="globe" label="Language" value={language} onPress={() => setLanguageOpen(true)} />
-        <View style={[styles.settingRow, styles.rowDivider, { borderTopColor: colors.border }]}>
-          <Feather name="bell" size={20} color={colors.mutedForeground} />
-          <Text style={[styles.settingLabel, { color: colors.foreground }]}>Notifications</Text>
-          <View style={styles.switchWrap}>
-          <Switch
-            value={notifications}
-            onValueChange={async (on) => {
-              Haptics.selectionAsync();
-              setNotificationsState(on);
-              await saveNotifications(on);
-            }}
-            trackColor={{ false: colors.border, true: colors.primary }}
-            thumbColor={colors.foreground}
-            accessibilityLabel="Notifications"
-          />
-          </View>
-        </View>
-        <SettingRow icon="lock" label="Privacy" onPress={() => router.push('/privacy')} divider />
-        <SettingRow icon="help-circle" label="Help" onPress={() => Linking.openURL('mailto:help@trotrolink.app')} divider />
-      </View>
+      <SettingsGroup />
 
       <Pressable onPress={signOut} accessibilityRole="button" style={[styles.signOut, { borderColor: colors.destructive, borderRadius: colors.radiusPill }]}>
         <Feather name="log-out" size={18} color={colors.destructive} />
@@ -233,29 +179,7 @@ export default function ProfileScreen() {
           router.navigate({ pathname: '/', params: { code, n: String(Date.now()) } });
         }}
       />
-      <LanguageSheet
-        visible={languageOpen}
-        selected={language}
-        onSelect={async (l) => {
-          setLanguageState(l);
-          await saveLanguage(l);
-          setLanguageOpen(false);
-        }}
-        onClose={() => setLanguageOpen(false)}
-      />
     </ScrollView>
-  );
-}
-
-function SettingRow({ icon, label, value, onPress, divider }: { icon: React.ComponentProps<typeof Feather>['name']; label: string; value?: string; onPress: () => void; divider?: boolean }) {
-  const colors = useColors();
-  return (
-    <Pressable onPress={onPress} accessibilityRole="button" style={[styles.settingRow, divider && styles.rowDivider, divider && { borderTopColor: colors.border }]}>
-      <Feather name={icon} size={20} color={colors.mutedForeground} />
-      <Text style={[styles.settingLabel, { color: colors.foreground }]}>{label}</Text>
-      {value ? <Text style={[styles.settingValue, { color: colors.mutedForeground }]}>{value}</Text> : null}
-      <Feather name="chevron-right" size={20} color={colors.mutedForeground} />
-    </Pressable>
   );
 }
 
@@ -273,9 +197,6 @@ const styles = StyleSheet.create({
   stat: { flex: 1, borderWidth: 1, paddingVertical: 16, paddingHorizontal: 8, alignItems: 'center' },
   statValue: { fontFamily: 'Inter_700Bold', fontSize: 22 },
   statLabel: { fontFamily: 'Inter_500Medium', fontSize: 12, marginTop: 4 },
-  segment: { flexDirection: 'row', borderWidth: 1, padding: 4 },
-  segmentBtn: { flex: 1, height: 44, alignItems: 'center', justifyContent: 'center' },
-  segmentText: { fontFamily: 'Inter_700Bold', fontSize: 15 },
   emptyHistory: { borderWidth: 1, padding: 24, alignItems: 'center', gap: 10 },
   emptyText: { fontFamily: 'Inter_500Medium', fontSize: 14, textAlign: 'center' },
   tripRow: { flexDirection: 'row', alignItems: 'center', borderWidth: 1, padding: 16, marginBottom: 10 },
@@ -286,12 +207,6 @@ const styles = StyleSheet.create({
   payIcon: { width: 44, height: 44, borderRadius: 14, alignItems: 'center', justifyContent: 'center' },
   payName: { fontFamily: 'Inter_700Bold', fontSize: 16 },
   payNumber: { fontFamily: 'Inter_500Medium', fontSize: 14, marginTop: 2 },
-  group: { borderWidth: 1, paddingHorizontal: 16 },
-  settingRow: { flexDirection: 'row', alignItems: 'center', gap: 14, minHeight: 56 },
-  rowDivider: { borderTopWidth: StyleSheet.hairlineWidth },
-  switchWrap: { height: 31, justifyContent: 'center' },
-  settingLabel: { flex: 1, fontFamily: 'Inter_600SemiBold', fontSize: 16 },
-  settingValue: { fontFamily: 'Inter_500Medium', fontSize: 14 },
   signOut: { marginTop: 28, height: 56, borderWidth: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 10 },
   signOutText: { fontFamily: 'Inter_700Bold', fontSize: 16 },
   devRow: { alignItems: 'center', gap: 14, paddingTop: 20 },

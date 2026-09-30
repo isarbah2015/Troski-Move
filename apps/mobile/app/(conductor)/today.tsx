@@ -12,7 +12,6 @@ import { useColors } from '@/hooks/useColors';
 import { formatCedis } from '@/lib/api';
 import { colors as tokens } from '@/lib/colors';
 import { bonusFor, formatOnline, MOCK_BONUS, MOCK_TODAY, useConductorVehicle } from '@/lib/conductor';
-import { setRole } from '@/lib/storage';
 
 const GUTTER = 24;
 const GAP = 12;
@@ -168,18 +167,6 @@ export default function TodayScreen() {
         </>
       )}
 
-      <Pressable
-        onPress={async () => {
-          Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-          await setRole('passenger');
-          router.navigate('/');
-        }}
-        accessibilityRole="button"
-        style={styles.switchLink}
-      >
-        <Feather name="repeat" size={14} color={colors.mutedForeground} />
-        <Text style={[styles.switchText, { color: colors.mutedForeground }]}>Switch to Passenger</Text>
-      </Pressable>
     </ScrollView>
   );
 }
@@ -220,6 +207,4 @@ const styles = StyleSheet.create({
   onBoardText: { fontFamily: 'Inter_500Medium', fontSize: 14 },
   endShift: { height: 56, borderWidth: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 10 },
   endShiftText: { fontFamily: 'Inter_700Bold', fontSize: 16 },
-  switchLink: { alignSelf: 'center', flexDirection: 'row', alignItems: 'center', gap: 6, paddingVertical: 20 },
-  switchText: { fontFamily: 'Inter_500Medium', fontSize: 13 },
 });

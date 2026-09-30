@@ -70,7 +70,7 @@ Database: Neon or Supabase. API: Fly.io or Railway. Web: Vercel. Mobile: Expo EA
 ## 9. Product spec
 **Passenger — exactly 3 tabs:** SCAN (camera-first QR viewfinder + "Enter short code", e.g. CIR01) · TRIP (current stop, stops away, ETA, progress bar, report button) · PROFILE (user card, trip history, ratings, MTN MoMo method, settings).
 
-**Conductor — exactly 4 tabs:** TODAY (stop buttons, daily scan counter, bonus progress: 200 scans + avg ≥ 4.0 = GHS 10) · MY QR (QR + short code, download/print, regenerate) · LEADERBOARD (Driver of the Day: top 5 vehicles by avg rating, past 24 h, min 3 ratings) · EARNINGS (owner drop + conductor wage + fuel → driver net).
+**Conductor — 4 core tabs plus Profile (5th, added for the role switcher; file `(conductor)/conductor-profile.tsx`):** TODAY (stop buttons, daily scan counter, bonus progress: 200 scans + avg ≥ 4.0 = GHS 10) · MY QR (QR + short code, download/print, regenerate) · LEADERBOARD (Driver of the Day: top 5 vehicles by avg rating, past 24 h, min 3 ratings) · EARNINGS (owner drop + conductor wage + fuel → driver net).
 
 **Union web dashboard:** transactions table, disputes, ratings analytics, overcharge reports.
 
@@ -105,61 +105,65 @@ Real trotros don't stop at fixed stations: passengers hail and alight anywhere. 
 ## PROJECT STATUS
 
 ### Completed
-- Monorepo restructure (apps/ + packages/)
-- Drizzle schema + seed (Circle→Kasoa, Madina, Tema)
-- Shared design tokens
-- API health endpoint and `GET /api/vehicles/resolve`
+- Monorepo + design tokens
+- Drizzle schema + seed (Circle→Kasoa, Madina, Tema); `ratings.rated_at`
+- API: health, `GET /api/vehicles/resolve`, `GET /api/leaderboard/daily`, `GET /api/leaderboard/:shortCode/ratings` (sample data until ratings exist)
 - Passenger: Scan, Trip, Profile
-- Conductor: Today (earnings, bonus, stop marking), My QR (display, download, print, regenerate)
-- Conductor Leaderboard and Earnings: stubs
+- Conductor: Today (stop marking, bonus, earnings card, online toggle)
+- Conductor: My QR (display, download, print, regenerate)
+- Conductor: Leaderboard (daily top 5, rating breakdown sheet, your rank)
+- Conductor: Earnings (editable split, live net, weekly view, save day)
+- Conductor: Profile (vehicle info, role switcher, settings, sign out)
+- Shared QR payload parser; shared SettingsGroup, RoleSwitcher and sign-out
 
 ### In Progress
-- Nothing (awaiting sign-off on Today + My QR)
+- Nothing (awaiting sign-off on Leaderboard, Earnings and conductor Profile)
+
+### Next
+- Rating sheet after arrival (closes the loop: ratings feed the leaderboard and bonus)
+- Anchor model follow-ups: custom alighting option on Scan, ETA interpolation by distance
 
 ### Not Started
-- Conductor Leaderboard tab (full)
-- Conductor Earnings tab (full)
-- Conductor Profile tab (with role switcher; move "Switch to Passenger" there)
-- Union web dashboard (Next.js)
+- Union web dashboard
 - MoMo integration (Pay is a stub)
 - Push notifications (FCM)
 - USSD fallback
-- Ratings + leaderboard backend
-- Arrival + rating sheet
+- Backend sync for stop marks + splits
+- Real QR regenerate endpoint
+- Arrival step for history
 - Phone OTP auth and an `(auth)/login` screen
+- GTFS / GhanaAPI landmark import
+
+### Known limitations (v1)
+- No real auth (guest state); the conductor is hard-wired to CIR01
+- Ratings show "Not rated" (arrival step pending)
+- Language choice stored, UI English
+- Light mode deferred to v1.1
+- Printed date updates on share-sheet / print-dialog open, not on save confirmation
+- Regenerate is local (old QR still resolves)
+- Stop marker and splits are local only (TODO: `POST /api/trips/stop`, `POST /api/splits`)
+- Conductor earnings, scans, rating, riders, on-board count and "total fares" are mock data
+- Leaderboard shows sample data (flagged "Sample data until ratings go live") while there are no ratings in non-production
+- Status bar: verify on a real device before launch
+- Dev-only links (Load demo data, Clear history, Clear trip, leaderboard real/empty toggle, Load demo week) are `__DEV__`-guarded; confirm they do not render in a production build before launch
+- Camera scan path untested (the simulator has no camera)
 
 ### Locked formulas
 - `stopsAway = index(alightingStop) - index(currentStop)`
 - `progress = stopsCovered / totalStopsOnRide`
 - Bonus unlock: 200+ scans AND avg rating ≥ 4.0 (GHS 10)
+- Net earnings = total fares − (owner drop + conductor wage + fuel cost); negative shows red
 
-### Tier cutoffs (locked)
-- Bronze: 0–19 trips
-- Silver: 20–99 trips
-- Gold: 100–499 trips
-- Platinum: 500+ trips
-
-### QR sticker payload
-JSON `{ vehicleId, shortCode, routeId, version }` (see `packages/shared/src/qr.ts`). `parseScannedCode` also accepts `trotrolink://v/<qr id>`, a raw QR id, or a short code. Resolution is by short code, so an old version keeps working until the server retires it (TODO: `POST /api/vehicles/:id/regenerate-qr`).
-
-### Local storage keys (AsyncStorage)
-`activeTrip`, `user`, `tripHistory`, `role`, `language`, `notifications`, `conductorVehicle` (defaults to CIR01), `conductorQr` (`{ version, printedAt }`). Sign-out clears everything.
-
-### Known limitations (v1)
-- No real auth (guest state); the conductor is hard-wired to CIR01
-- Ratings show "Not rated" until arrival + rating sheet ship
-- Language choice stored but the UI stays English (real i18n later)
-- Light mode deferred to v1.1
-- Status bar: verify on a real device before launch
-- Conductor earnings, scans, rating, riders and on-board counts are mock data; the stop marker is local only (TODO: `POST /api/trips/stop`)
-- Dev-only links (Load demo data / Clear history / Clear trip) are `__DEV__`-guarded; confirm they do not render in a production build before launch
-- Download uses the OS share sheet (Save Image); the last-printed date updates when the sheet or print dialog opens, not when the user confirms saving or printing
-- MAD05 / TEM03 fares are placeholders (replace with real GPRTU fares)
-- Camera path untested (the simulator has no camera)
+### Tier cutoffs
+- Bronze: 0–19
+- Silver: 20–99
+- Gold: 100–499
+- Platinum: 500+
 
 ### Deviations
 - `(passenger)/index.tsx` is Scan
 - Vertical timeline in Trip
-- The My QR short code uses Inter (the locked font) instead of a monospace face, and sits inside the white sticker so the exported PNG is self-contained
+- Conductor has a 5th tab, Profile; its file is `conductor-profile.tsx` because two route groups cannot both serve `/profile`
+- Leaderboard "crown" is Feather's `award` icon (Feather has no crown); bronze rank colour is muted gold (no bronze token)
 - API uses tsx in dev
 - `apps/web` placeholder

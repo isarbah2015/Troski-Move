@@ -4,7 +4,7 @@ import { Feather } from '@expo/vector-icons';
 import { Tabs } from 'expo-router';
 import { colors } from '@/lib/colors';
 
-// Conductor role: exactly 4 tabs (Today, My QR, Leaderboard, Earnings). Screens are stubs until built.
+// Conductor role: Today, My QR, Leaderboard, Earnings, plus Profile (the role switcher lives there).
 export default function ConductorLayout() {
   return (
     <Tabs
@@ -21,6 +21,7 @@ export default function ConductorLayout() {
       <Tabs.Screen name="my-qr" options={{ title: 'My QR', tabBarIcon: ({ color }) => <Feather name="grid" size={22} color={color} /> }} />
       <Tabs.Screen name="leaderboard" options={{ title: 'Leaderboard', tabBarIcon: ({ color }) => <Feather name="award" size={22} color={color} /> }} />
       <Tabs.Screen name="earnings" options={{ title: 'Earnings', tabBarIcon: ({ color }) => <Feather name="dollar-sign" size={22} color={color} /> }} />
+      <Tabs.Screen name="conductor-profile" options={{ title: 'Profile', tabBarIcon: ({ color }) => <Feather name="user" size={22} color={color} /> }} />
     </Tabs>
   );
 }
