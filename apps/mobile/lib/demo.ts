@@ -27,6 +27,9 @@ export async function loadDemoProfile() {
       officialFare: official,
       amountPaid: Math.ceil(official - 1e-9),
       rating: ratings[i] ?? null,
+      driverName: 'Kwame Mensah',
+      conductorName: 'Yaw Boateng',
+      arrivedAt: new Date(now - i * 26 * 3_600_000 + 25 * 60_000).toISOString(),
       stops: STOPS,
     };
   });

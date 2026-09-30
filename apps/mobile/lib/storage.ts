@@ -1,6 +1,6 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { z } from 'zod';
-import { ActiveTrip, APP_LANGUAGES, LocalUser, TripRecord, type AppLanguage } from '@trotrolink/shared';
+import { ActiveTrip, APP_LANGUAGES, LocalUser, TripRating, TripRecord, type AppLanguage } from '@trotrolink/shared';
 
 const ACTIVE_TRIP_KEY = 'activeTrip';
 
@@ -159,4 +159,39 @@ export async function saveDailySplit(record: DailySplitRecord): Promise<void> {
   const all = await getDailySplits();
   all[record.date] = record;
   await AsyncStorage.setItem(DAILY_SPLITS_KEY, JSON.stringify(all));
+}
+
+// ---- Trip ratings ---------------------------------------------------------------------------------
+
+const TRIP_RATINGS_KEY = 'tripRatings';
+
+/** `tripRatings` is one object keyed by tripId. */
+export async function getTripRatings(): Promise<Record<string, TripRating>> {
+  try {
+    const raw = await AsyncStorage.getItem(TRIP_RATINGS_KEY);
+    const parsed = raw ? (JSON.parse(raw) as unknown) : {};
+    const out: Record<string, TripRating> = {};
+    if (parsed && typeof parsed === 'object') {
+      for (const [id, value] of Object.entries(parsed)) {
+        const r = TripRating.safeParse(value);
+        if (r.success) out[id] = r.data;
+      }
+    }
+    return out;
+  } catch {
+    return {};
+  }
+}
+
+export async function saveTripRating(tripId: string, rating: TripRating): Promise<void> {
+  const all = await getTripRatings();
+  all[tripId] = rating;
+  await AsyncStorage.setItem(TRIP_RATINGS_KEY, JSON.stringify(all));
+}
+
+/** Stamps a history record with the time the passenger confirmed alighting. */
+export async function markTripArrived(tripId: string, arrivedAt: string): Promise<void> {
+  const list = await getTripHistory();
+  const next = list.map((t) => (t.tripId === tripId ? { ...t, arrivedAt } : t));
+  await saveTripHistory(next);
 }

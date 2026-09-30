@@ -48,7 +48,11 @@ export const ActiveTrip = z.object({
   etaMinutes: z.number().nonnegative(),
   amountPaid: z.number(),
   startedAt: z.string(),
-  stops: z.array(z.object({ name: z.string(), status: TripStopStatus })),
+  stops: z.array(z.object({ name: z.string(), status: TripStopStatus, etaMinutes: z.number().optional() })),
+  // Optional so trips saved before these fields existed still load.
+  vehicleId: z.number().optional(),
+  conductorName: z.string().optional(),
+  arrivedAt: z.string().optional(),
 });
 export type ActiveTrip = z.infer<typeof ActiveTrip>;
 
@@ -73,6 +77,10 @@ export const TripRecord = z.object({
   /** 1–5, or null until the passenger rates the trip. */
   rating: z.number().min(1).max(5).nullable(),
   stops: z.array(z.object({ name: z.string(), officialFare: z.number(), etaMinutes: z.number() })),
+  vehicleId: z.number().optional(),
+  driverName: z.string().optional(),
+  conductorName: z.string().optional(),
+  arrivedAt: z.string().optional(),
 });
 export type TripRecord = z.infer<typeof TripRecord>;
 
@@ -107,3 +115,22 @@ export const DriverRatingsResponse = z.object({
   entries: z.array(z.object({ rating: z.number().int().min(1).max(5), comment: z.string().nullable(), ratedAt: z.string() })),
 });
 export type DriverRatingsResponse = z.infer<typeof DriverRatingsResponse>;
+
+/** A passenger's rating of one trip, kept on-device under `tripRatings[tripId]`. */
+export const TripRating = z.object({
+  driverRating: z.number().int().min(1).max(5),
+  conductorRating: z.number().int().min(1).max(5),
+  comment: z.string().optional(),
+  ratedAt: z.string(),
+});
+export type TripRating = z.infer<typeof TripRating>;
+
+/** Body of `POST /api/ratings`. */
+export const RatingSubmission = z.object({
+  tripId: z.string().min(1),
+  vehicleId: z.number().int(),
+  driverRating: z.number().int().min(1).max(5),
+  conductorRating: z.number().int().min(1).max(5),
+  comment: z.string().max(500).optional(),
+});
+export type RatingSubmission = z.infer<typeof RatingSubmission>;

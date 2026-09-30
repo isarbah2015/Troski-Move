@@ -3,20 +3,20 @@ import { Modal, Pressable, ScrollView, StyleSheet, Text, View } from 'react-nati
 import { Feather } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
 import QRCode from 'react-native-qrcode-svg';
-import type { TripRecord } from '@trotrolink/shared';
+import type { TripRating, TripRecord } from '@trotrolink/shared';
 import { Stars } from '@/components/Stars';
 import { useColors } from '@/hooks/useColors';
 import { formatCedis } from '@/lib/api';
 import { colors as tokens } from '@/lib/colors';
 import { formatWhen } from '@/lib/profile';
 
-type Props = { trip: TripRecord | null; onClose: () => void; onRideAgain: (vehicleCode: string) => void };
+type Props = { trip: TripRecord | null; rating?: TripRating | null; onClose: () => void; onRideAgain: (vehicleCode: string) => void };
 
 function clock(iso: string, plusMinutes: number) {
   return new Date(new Date(iso).getTime() + plusMinutes * 60_000).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' });
 }
 
-export function TripDetailSheet({ trip, onClose, onRideAgain }: Props) {
+export function TripDetailSheet({ trip, rating, onClose, onRideAgain }: Props) {
   const colors = useColors();
 
   // Stop times: start time at boarding, then the cumulative leg times along the route.
@@ -44,7 +44,21 @@ export function TripDetailSheet({ trip, onClose, onRideAgain }: Props) {
             <ScrollView showsVerticalScrollIndicator={false}>
               <Text style={[styles.title, { color: colors.foreground }]}>{trip.boardingStop} → {trip.alightingStop}</Text>
               <Text style={[styles.sub, { color: colors.mutedForeground }]}>{trip.vehicleShortCode} · {formatWhen(trip.startedAt)}</Text>
-              <View style={styles.ratingRow}><Stars rating={trip.rating} /></View>
+              {rating ? (
+                <View style={styles.ratingBlock}>
+                  <View style={styles.ratingLine}>
+                    <Text style={[styles.ratingLabel, { color: colors.mutedForeground }]}>Driver</Text>
+                    <Stars rating={rating.driverRating} />
+                  </View>
+                  <View style={styles.ratingLine}>
+                    <Text style={[styles.ratingLabel, { color: colors.mutedForeground }]}>Conductor</Text>
+                    <Stars rating={rating.conductorRating} />
+                  </View>
+                  {rating.comment ? <Text style={[styles.comment, { color: colors.foreground }]}>&ldquo;{rating.comment}&rdquo;</Text> : null}
+                </View>
+              ) : (
+                <View style={styles.ratingRow}><Stars rating={trip.rating} /></View>
+              )}
 
               <View style={styles.qrWrap}>
                 <View style={[styles.qrBox, { borderRadius: colors.radius }]}>
@@ -103,6 +117,10 @@ const styles = StyleSheet.create({
   title: { fontFamily: 'Inter_700Bold', fontSize: 24 },
   sub: { fontFamily: 'Inter_500Medium', fontSize: 14, marginTop: 4 },
   ratingRow: { marginTop: 10 },
+  ratingBlock: { marginTop: 10, gap: 6 },
+  ratingLine: { flexDirection: 'row', alignItems: 'center', gap: 12 },
+  ratingLabel: { fontFamily: 'Inter_500Medium', fontSize: 13, width: 78 },
+  comment: { fontFamily: 'Inter_400Regular', fontSize: 14, lineHeight: 20, marginTop: 4 },
   qrWrap: { alignItems: 'center', marginVertical: 20 },
   qrBox: { padding: 12, backgroundColor: tokens.textPrimary },
   ref: { fontFamily: 'Inter_600SemiBold', fontSize: 13, letterSpacing: 0.5, marginTop: 10 },

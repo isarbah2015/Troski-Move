@@ -30,7 +30,10 @@ export function buildTrip(resolved: ResolvedVehicle, alighting: Stop, now = new 
     stops: names.map((name, i) => ({
       name,
       status: i < currentIdx ? 'passed' : i === currentIdx ? 'current' : 'upcoming',
+      etaMinutes: resolved.route.stops[i]!.etaMinutes,
     })),
+    vehicleId: resolved.vehicle.id,
+    conductorName: resolved.vehicle.conductorName,
   };
 }
 
@@ -53,6 +56,29 @@ export function buildTripRecord(resolved: ResolvedVehicle, alighting: Stop, trip
     officialFare: alighting.officialFare,
     amountPaid: alighting.amountToPay,
     rating: null,
+    vehicleId: trip.vehicleId,
+    driverName: trip.driverName,
+    conductorName: trip.conductorName,
     stops: resolved.route.stops.map((s) => ({ name: s.name, officialFare: s.officialFare, etaMinutes: s.etaMinutes })),
+  };
+}
+
+/**
+ * Moves the vehicle one stop along the route and recomputes stops away and ETA.
+ * Real current-stop updates will come from the conductor's stop marks once backend sync exists;
+ * until then this only backs the dev-only "Advance one stop" link.
+ */
+export function advanceTrip(trip: ActiveTrip): ActiveTrip {
+  const names = trip.stops.map((s) => s.name);
+  const alightIdx = names.indexOf(trip.alightingStop);
+  const currentIdx = names.indexOf(trip.currentStop);
+  if (currentIdx < 0 || currentIdx >= alightIdx) return trip;
+  const next = currentIdx + 1;
+  return {
+    ...trip,
+    currentStop: names[next]!,
+    stopsRemaining: alightIdx - next,
+    etaMinutes: trip.stops.slice(next + 1, alightIdx + 1).reduce((sum, s) => sum + (s.etaMinutes ?? 0), 0),
+    stops: trip.stops.map((s, i) => ({ ...s, status: i < next ? 'passed' : i === next ? 'current' : 'upcoming' })),
   };
 }

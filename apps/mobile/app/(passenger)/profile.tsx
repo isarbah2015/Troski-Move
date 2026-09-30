@@ -4,7 +4,8 @@ import { Feather } from '@expo/vector-icons';
 import { useFocusEffect, useRouter } from 'expo-router';
 import * as Haptics from 'expo-haptics';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import type { LocalUser, TripRecord } from '@trotrolink/shared';
+import type { LocalUser, TripRating, TripRecord } from '@trotrolink/shared';
+import { RatingSheet, type RatingTarget } from '@/components/RatingSheet';
 import { RoleSwitcher } from '@/components/RoleSwitcher';
 import { SectionHeader } from '@/components/SectionHeader';
 import { SettingsGroup } from '@/components/SettingsGroup';
@@ -14,11 +15,13 @@ import { useColors } from '@/hooks/useColors';
 import { formatCedis } from '@/lib/api';
 import { confirmSignOut } from '@/lib/auth';
 import { loadDemoProfile } from '@/lib/demo';
+import { submitTripRating } from '@/lib/ratings';
 import { formatWhen, GUEST_USER, lifetimeStats, maskMomo, maskPhone } from '@/lib/profile';
 import {
   clearTripHistory,
   getRole,
   getTripHistory,
+  getTripRatings,
   getUser,
   setRole as saveRole,
   type Role,
@@ -36,9 +39,12 @@ export default function ProfileScreen() {
   const [trips, setTrips] = useState<TripRecord[]>([]);
   const [role, setRoleState] = useState<Role>('passenger');
   const [selected, setSelected] = useState<TripRecord | null>(null);
+  const [ratings, setRatings] = useState<Record<string, TripRating>>({});
+  const [rateTarget, setRateTarget] = useState<RatingTarget | null>(null);
 
   const load = useCallback(async () => {
-    const [u, t, r] = await Promise.all([getUser(), getTripHistory(), getRole()]);
+    const [u, t, r, rt] = await Promise.all([getUser(), getTripHistory(), getRole(), getTripRatings()]);
+    setRatings(rt);
     setUser(u);
     setTrips(t);
     setRoleState(r);
@@ -132,7 +138,32 @@ export default function ProfileScreen() {
             <View style={styles.tripMain}>
               <Text style={[styles.tripRoute, { color: colors.foreground }]}>{t.boardingStop} → {t.alightingStop}</Text>
               <Text style={[styles.tripMeta, { color: colors.mutedForeground }]}>{formatWhen(t.startedAt)} · {formatCedis(t.amountPaid)}</Text>
-              <View style={{ marginTop: 6 }}><Stars rating={t.rating} /></View>
+              <View style={{ marginTop: 6 }}>
+                {(ratings[t.tripId]?.driverRating ?? t.rating) !== null && (ratings[t.tripId]?.driverRating ?? t.rating) !== undefined ? (
+                  <Stars rating={ratings[t.tripId]?.driverRating ?? t.rating} />
+                ) : (
+                  <Pressable
+                    onPress={() => {
+                      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                      setRateTarget({
+                        tripId: t.tripId,
+                        vehicleId: t.vehicleId,
+                        destination: t.alightingStop,
+                        driverName: t.driverName ?? 'Driver',
+                        conductorName: t.conductorName ?? 'Conductor',
+                        justArrived: false,
+                      });
+                    }}
+                    hitSlop={8}
+                    accessibilityRole="button"
+                    accessibilityLabel={`Rate trip to ${t.alightingStop}`}
+                    style={[styles.rateChip, { borderColor: colors.accent, borderRadius: colors.radiusPill }]}
+                  >
+                    <Feather name="star" size={12} color={colors.accent} />
+                    <Text style={[styles.rateChipText, { color: colors.accent }]}>Rate trip</Text>
+                  </Pressable>
+                )}
+              </View>
             </View>
             <Feather name="chevron-right" size={20} color={colors.mutedForeground} />
           </Pressable>
@@ -173,10 +204,21 @@ export default function ProfileScreen() {
 
       <TripDetailSheet
         trip={selected}
+        rating={selected ? ratings[selected.tripId] : undefined}
         onClose={() => setSelected(null)}
         onRideAgain={(code) => {
           setSelected(null);
           router.navigate({ pathname: '/', params: { code, n: String(Date.now()) } });
+        }}
+      />
+      <RatingSheet
+        target={rateTarget}
+        onSkip={() => setRateTarget(null)}
+        onSubmit={async (t, result) => {
+          await submitTripRating(t, result);
+          setRateTarget(null);
+          await load();
+          showToast('Thanks for rating!');
         }}
       />
     </ScrollView>
@@ -199,6 +241,8 @@ const styles = StyleSheet.create({
   statLabel: { fontFamily: 'Inter_500Medium', fontSize: 12, marginTop: 4 },
   emptyHistory: { borderWidth: 1, padding: 24, alignItems: 'center', gap: 10 },
   emptyText: { fontFamily: 'Inter_500Medium', fontSize: 14, textAlign: 'center' },
+  rateChip: { alignSelf: 'flex-start', flexDirection: 'row', alignItems: 'center', gap: 6, borderWidth: 1, paddingHorizontal: 10, height: 26 },
+  rateChipText: { fontFamily: 'Inter_700Bold', fontSize: 12 },
   tripRow: { flexDirection: 'row', alignItems: 'center', borderWidth: 1, padding: 16, marginBottom: 10 },
   tripMain: { flex: 1 },
   tripRoute: { fontFamily: 'Inter_700Bold', fontSize: 16 },

@@ -70,7 +70,7 @@ Database: Neon or Supabase. API: Fly.io or Railway. Web: Vercel. Mobile: Expo EA
 ## 9. Product spec
 **Passenger — exactly 3 tabs:** SCAN (camera-first QR viewfinder + "Enter short code", e.g. CIR01) · TRIP (current stop, stops away, ETA, progress bar, report button) · PROFILE (user card, trip history, ratings, MTN MoMo method, settings).
 
-**Conductor — 4 core tabs plus Profile (5th, added for the role switcher; file `(conductor)/conductor-profile.tsx`):** TODAY (stop buttons, daily scan counter, bonus progress: 200 scans + avg ≥ 4.0 = GHS 10) · MY QR (QR + short code, download/print, regenerate) · LEADERBOARD (Driver of the Day: top 5 vehicles by avg rating, past 24 h, min 3 ratings) · EARNINGS (owner drop + conductor wage + fuel → driver net).
+**Conductor tabs (locked): Today · My QR · Leaderboard · Earnings · Profile** (Profile holds the role switcher; file `(conductor)/conductor-profile.tsx` to avoid a `/profile` route collision): TODAY (stop buttons, daily scan counter, bonus progress: 200 scans + avg ≥ 4.0 = GHS 10) · MY QR (QR + short code, download/print, regenerate) · LEADERBOARD (Driver of the Day: top 5 vehicles by avg rating, past 24 h, min 3 ratings) · EARNINGS (owner drop + conductor wage + fuel → driver net).
 
 **Union web dashboard:** transactions table, disputes, ratings analytics, overcharge reports.
 
@@ -107,63 +107,74 @@ Real trotros don't stop at fixed stations: passengers hail and alight anywhere. 
 ### Completed
 - Monorepo + design tokens
 - Drizzle schema + seed (Circle→Kasoa, Madina, Tema); `ratings.rated_at`
-- API: health, `GET /api/vehicles/resolve`, `GET /api/leaderboard/daily`, `GET /api/leaderboard/:shortCode/ratings` (sample data until ratings exist)
-- Passenger: Scan, Trip, Profile
-- Conductor: Today (stop marking, bonus, earnings card, online toggle)
-- Conductor: My QR (display, download, print, regenerate)
-- Conductor: Leaderboard (daily top 5, rating breakdown sheet, your rank)
-- Conductor: Earnings (editable split, live net, weekly view, save day)
-- Conductor: Profile (vehicle info, role switcher, settings, sign out)
-- Shared QR payload parser; shared SettingsGroup, RoleSwitcher and sign-out
+- API: health, `GET /api/vehicles/resolve`, leaderboard endpoints (sample data until ratings exist), `POST /api/ratings` (validates and logs; not stored yet)
+- Passenger: Scan, Trip (incl. Confirm alighting), Profile (incl. Rate trip chip)
+- Conductor: Today, My QR, Leaderboard, Earnings, Profile
+- Shared components (SettingsGroup, RoleSwitcher, RatingSheet, confirmSignOut) and QR payload parser
+- Rating sheet after arrival + history integration
 
 ### In Progress
-- Nothing (awaiting sign-off on Leaderboard, Earnings and conductor Profile)
+- Nothing (awaiting sign-off on the rating sheet)
 
 ### Next
-- Rating sheet after arrival (closes the loop: ratings feed the leaderboard and bonus)
-- Anchor model follow-ups: custom alighting option on Scan, ETA interpolation by distance
+- Backend sync for stop marks + splits
+- Real ratings POST endpoint (insert into `ratings`, invalidate leaderboard cache)
+- MoMo sandbox integration (replace Pay stub)
+- Union web dashboard
 
 ### Not Started
-- Union web dashboard
-- MoMo integration (Pay is a stub)
 - Push notifications (FCM)
 - USSD fallback
-- Backend sync for stop marks + splits
-- Real QR regenerate endpoint
-- Arrival step for history
+- GTFS import from GhanaAPI
+- Custom alighting ("near Melcom") — deferred, not forgotten
+- ETA interpolation by distance — deferred
+- Real QR regeneration endpoint
 - Phone OTP auth and an `(auth)/login` screen
-- GTFS / GhanaAPI landmark import
-
-### Known limitations (v1)
-- No real auth (guest state); the conductor is hard-wired to CIR01
-- Ratings show "Not rated" (arrival step pending)
-- Language choice stored, UI English
-- Light mode deferred to v1.1
-- Printed date updates on share-sheet / print-dialog open, not on save confirmation
-- Regenerate is local (old QR still resolves)
-- Stop marker and splits are local only (TODO: `POST /api/trips/stop`, `POST /api/splits`)
-- Conductor earnings, scans, rating, riders, on-board count and "total fares" are mock data
-- Leaderboard shows sample data (flagged "Sample data until ratings go live") while there are no ratings in non-production
-- Status bar: verify on a real device before launch
-- Dev-only links (Load demo data, Clear history, Clear trip, leaderboard real/empty toggle, Load demo week) are `__DEV__`-guarded; confirm they do not render in a production build before launch
-- Camera scan path untested (the simulator has no camera)
 
 ### Locked formulas
 - `stopsAway = index(alightingStop) - index(currentStop)`
 - `progress = stopsCovered / totalStopsOnRide`
 - Bonus unlock: 200+ scans AND avg rating ≥ 4.0 (GHS 10)
-- Net earnings = total fares − (owner drop + conductor wage + fuel cost); negative shows red
+- Net earnings = total fares − (owner drop + conductor wage + fuel cost)
 
 ### Tier cutoffs
-- Bronze: 0–19
-- Silver: 20–99
-- Gold: 100–499
-- Platinum: 500+
+- Bronze: 0–19 · Silver: 20–99 · Gold: 100–499 · Platinum: 500+
+
+### Rating flow
+1. Trip tab shows **Confirm alighting** only when `currentStop === alightingStop`. Tapping it stamps `arrivedAt` (on `activeTrip` and the history record) and opens the rating sheet.
+2. The sheet needs ≥ 1 star for the driver **and** the conductor before Submit enables; the comment is optional (200 chars).
+3. **Submit:** saves `tripRatings[tripId]`, POSTs `/api/ratings` (best effort), ends the trip (removes `activeTrip`), toasts "Thanks for rating!", returns to Scan.
+4. **Skip for now:** ends the trip without a rating. The trip stays in history with a **Rate trip** chip, and the Trip tab shows a "How was your trip to X?" prompt for 24 hours after `arrivedAt` (fallback trigger; a card, not a forced popup).
+5. The **Rate trip** chip in Profile history reopens the same sheet for that trip (driver and conductor names come from the history record).
+
+### Local storage keys (AsyncStorage)
+`activeTrip`, `user`, `tripHistory` (newest first, capped at 200; a trip is added at payment and stamped with `arrivedAt` on arrival), `tripRatings` (`{ [tripId]: { driverRating, conductorRating, comment?, ratedAt } }`), `role`, `language`, `notifications`, `conductorVehicle` (defaults to CIR01), `conductorQr`, `dailySplits` (`{ [YYYY-MM-DD]: … }`). Sign-out clears everything.
+
+### Stops are anchors (locked)
+- Pre-load named landmarks only
+- Passenger picks nearest anchor
+- Custom alighting (text note) for between-anchor stops
+- Conductor can skip anchors
+
+### Known limitations (v1)
+- No real auth (guest state); the conductor is hard-wired to CIR01
+- Language choice stored, UI English (real i18n later)
+- Light mode deferred to v1.1
+- Printed date updates on share-sheet / print-dialog open, not on save confirmation
+- Regenerate QR is local (old QR still resolves)
+- Stop marker, splits and ratings are local (ratings also POST to a logging stub)
+- The passenger's current stop never changes by itself: real updates need the conductor's stop marks via backend sync. Until then the dev-only "Advance one stop" link is the only way to reach **Confirm alighting**
+- History stars show the driver rating; the detail sheet shows both ratings and the comment
+- Conductor earnings, scans, rating, riders, on-board count and "total fares" are mock data; the leaderboard shows tagged sample data while no ratings exist (non-production)
+- Status bar: verify on a real device before launch
+- **Dev-only links must be stripped/guarded before production** (all `__DEV__`): Load demo data, Clear history (Profile); Clear trip, Advance one stop (Trip); leaderboard real/empty toggle; Load demo week (Earnings)
+- Camera scan path untested (the simulator has no camera)
 
 ### Deviations
 - `(passenger)/index.tsx` is Scan
+- `conductor-profile.tsx` (not `profile.tsx`): route collision avoidance
+- #1 leaderboard uses the `award` icon (no Feather crown); #3 uses muted gold (no bronze token)
 - Vertical timeline in Trip
-- Conductor has a 5th tab, Profile; its file is `conductor-profile.tsx` because two route groups cannot both serve `/profile`
-- Leaderboard "crown" is Feather's `award` icon (Feather has no crown); bronze rank colour is muted gold (no bronze token)
+- Rating sheet uses a Feather `check-circle` instead of the 🎉 emoji (Feather icons only); stars are gold/grey outlines (Feather has no filled star)
 - API uses tsx in dev
 - `apps/web` placeholder

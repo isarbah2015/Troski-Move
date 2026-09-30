@@ -1,4 +1,4 @@
-import { DriverRatingsResponse, HealthResponse, LeaderboardResponse, parseScannedCode, ResolvedVehicle } from '@trotrolink/shared';
+import { DriverRatingsResponse, HealthResponse, LeaderboardResponse, parseScannedCode, ResolvedVehicle, type RatingSubmission } from '@trotrolink/shared';
 
 export class VehicleNotFoundError extends Error {}
 
@@ -27,6 +27,17 @@ export function createApiClient(baseUrl: string) {
       const res = await fetch(`${baseUrl}/api/leaderboard/daily?${q.toString()}`);
       if (!res.ok) throw new Error(`Request failed (${res.status})`);
       return LeaderboardResponse.parse(await res.json());
+    },
+
+    /** Sends a trip rating. The API currently logs it (TODO: persist and refresh the leaderboard). */
+    async submitRating(body: RatingSubmission) {
+      const res = await fetch(`${baseUrl}/api/ratings`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body),
+      });
+      if (!res.ok) throw new Error(`Request failed (${res.status})`);
+      return (await res.json()) as { ok: true };
     },
 
     /** The last 10 ratings behind one vehicle's standing. */

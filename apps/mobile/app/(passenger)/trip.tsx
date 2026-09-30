@@ -4,13 +4,15 @@ import { Feather } from '@expo/vector-icons';
 import { useFocusEffect, useRouter } from 'expo-router';
 import * as Haptics from 'expo-haptics';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import type { ActiveTrip } from '@trotrolink/shared';
+import type { ActiveTrip, TripRecord } from '@trotrolink/shared';
+import { RatingSheet, type RatingTarget } from '@/components/RatingSheet';
 import { ReportSheet, type ReportReason } from '@/components/ReportSheet';
 import { useColors } from '@/hooks/useColors';
 import { formatCedis } from '@/lib/api';
-import { clearActiveTrip, getActiveTrip } from '@/lib/storage';
+import { RATING_PROMPT_WINDOW_MS, submitTripRating } from '@/lib/ratings';
+import { clearActiveTrip, getActiveTrip, getTripHistory, getTripRatings, markTripArrived, saveActiveTrip } from '@/lib/storage';
 import { showToast } from '@/lib/toast';
-import { tripProgress } from '@/lib/trip';
+import { advanceTrip, tripProgress } from '@/lib/trip';
 
 function LiveBadge() {
   const colors = useColors();
@@ -50,11 +52,13 @@ function Stat({ icon, label, value }: { icon: React.ComponentProps<typeof Feathe
   );
 }
 
-function ActiveTripView({ trip, onCleared }: { trip: ActiveTrip; onCleared: () => void }) {
+function ActiveTripView({ trip, onCleared, onAdvance, onConfirmAlighting }: { trip: ActiveTrip; onCleared: () => void; onAdvance: () => void; onConfirmAlighting: () => void }) {
   const colors = useColors();
   const insets = useSafeAreaInsets();
   const [reportOpen, setReportOpen] = useState(false);
   const progress = tripProgress(trip);
+  // The passenger can only confirm alighting once the vehicle has reached their stop.
+  const atDestination = trip.currentStop === trip.alightingStop;
 
   const dotColor = { passed: colors.primary, current: colors.accent, upcoming: colors.mutedForeground } as const;
 
@@ -125,6 +129,18 @@ function ActiveTripView({ trip, onCleared }: { trip: ActiveTrip; onCleared: () =
         </View>
       </View>
 
+      {atDestination ? (
+        <Pressable
+          onPress={onConfirmAlighting}
+          accessibilityRole="button"
+          accessibilityLabel={`Confirm alighting at ${trip.alightingStop}`}
+          style={[styles.confirmBtn, { backgroundColor: colors.primary, borderRadius: colors.radiusPill }]}
+        >
+          <Feather name="check-circle" size={20} color={colors.primaryForeground} />
+          <Text style={[styles.primaryText, { color: colors.primaryForeground }]}>Confirm alighting</Text>
+        </Pressable>
+      ) : null}
+
       <Pressable
         onPress={() => {
           Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
@@ -138,16 +154,23 @@ function ActiveTripView({ trip, onCleared }: { trip: ActiveTrip; onCleared: () =
       </Pressable>
 
       {__DEV__ ? (
-        <Pressable
-          onPress={async () => {
-            await clearActiveTrip();
-            onCleared();
-          }}
-          accessibilityRole="button"
-          style={styles.devLink}
-        >
-          <Text style={[styles.devText, { color: colors.mutedForeground }]}>Clear trip (dev only)</Text>
-        </Pressable>
+        <View style={styles.devRow}>
+          {!atDestination ? (
+            <Pressable onPress={onAdvance} accessibilityRole="button" style={styles.devLink}>
+              <Text style={[styles.devText, { color: colors.mutedForeground }]}>Advance one stop (dev only)</Text>
+            </Pressable>
+          ) : null}
+          <Pressable
+            onPress={async () => {
+              await clearActiveTrip();
+              onCleared();
+            }}
+            accessibilityRole="button"
+            style={styles.devLink}
+          >
+            <Text style={[styles.devText, { color: colors.mutedForeground }]}>Clear trip (dev only)</Text>
+          </Pressable>
+        </View>
       ) : null}
 
       <ReportSheet
@@ -163,7 +186,7 @@ function ActiveTripView({ trip, onCleared }: { trip: ActiveTrip; onCleared: () =
   );
 }
 
-function EmptyState() {
+function EmptyState({ recent, onRate }: { recent: TripRecord | null; onRate: (t: TripRecord) => void }) {
   const colors = useColors();
   const router = useRouter();
   const insets = useSafeAreaInsets();
@@ -186,31 +209,129 @@ function EmptyState() {
         <Feather name="maximize" size={18} color={colors.primaryForeground} />
         <Text style={[styles.primaryText, { color: colors.primaryForeground }]}>Go to scan</Text>
       </Pressable>
+
+      {recent ? (
+        <View style={[styles.prompt, { backgroundColor: colors.card, borderColor: colors.border, borderRadius: colors.radius }]}>
+          <Feather name="star" size={20} color={colors.accent} />
+          <View style={styles.promptText}>
+            <Text style={[styles.promptTitle, { color: colors.foreground }]}>How was your trip to {recent.alightingStop}?</Text>
+            <Text style={[styles.promptBody, { color: colors.mutedForeground }]}>Your rating helps the Driver of the Day.</Text>
+          </View>
+          <Pressable
+            onPress={() => {
+              Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+              onRate(recent);
+            }}
+            accessibilityRole="button"
+            accessibilityLabel={`Rate your trip to ${recent.alightingStop}`}
+            style={[styles.promptBtn, { borderColor: colors.accent, borderRadius: colors.radiusPill }]}
+          >
+            <Text style={[styles.promptBtnText, { color: colors.accent }]}>Rate trip</Text>
+          </Pressable>
+        </View>
+      ) : null}
     </View>
   );
 }
 
 export default function TripScreen() {
   const colors = useColors();
+  const router = useRouter();
   const [trip, setTrip] = useState<ActiveTrip | null>(null);
+  const [recent, setRecent] = useState<TripRecord | null>(null);
+  const [target, setTarget] = useState<RatingTarget | null>(null);
   const [loaded, setLoaded] = useState(false);
+
+  /** The newest trip the passenger confirmed alighting from in the last 24h and has not rated. */
+  const loadRecent = useCallback(async () => {
+    const [history, ratings] = await Promise.all([getTripHistory(), getTripRatings()]);
+    const cutoff = Date.now() - RATING_PROMPT_WINDOW_MS;
+    return history.find((t) => t.arrivedAt && new Date(t.arrivedAt).getTime() > cutoff && !ratings[t.tripId]) ?? null;
+  }, []);
 
   useFocusEffect(
     useCallback(() => {
       let active = true;
-      getActiveTrip().then((t) => {
+      void Promise.all([getActiveTrip(), loadRecent()]).then(([t, r]) => {
         if (!active) return;
         setTrip(t);
+        setRecent(r);
         setLoaded(true);
       });
       return () => {
         active = false;
       };
-    }, []),
+    }, [loadRecent]),
   );
 
+  const confirmAlighting = async () => {
+    if (!trip) return;
+    const arrivedAt = new Date().toISOString();
+    Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+    // The trip already sits in history from payment; stamp it as arrived and open the rating sheet.
+    await Promise.all([saveActiveTrip({ ...trip, arrivedAt }), markTripArrived(trip.tripId, arrivedAt)]);
+    setTrip({ ...trip, arrivedAt });
+    setTarget({
+      tripId: trip.tripId,
+      vehicleId: trip.vehicleId,
+      destination: trip.alightingStop,
+      driverName: trip.driverName,
+      conductorName: trip.conductorName ?? 'Conductor',
+      justArrived: true,
+    });
+  };
+
+  /** Closing the sheet after arrival ends the trip: it leaves `activeTrip` and lives on in history. */
+  const finishTrip = async (t: RatingTarget) => {
+    setTarget(null);
+    if (t.justArrived) {
+      await clearActiveTrip();
+      setTrip(null);
+    }
+    setRecent(await loadRecent());
+  };
+
+  const rateRecent = (t: TripRecord) =>
+    setTarget({
+      tripId: t.tripId,
+      vehicleId: t.vehicleId,
+      destination: t.alightingStop,
+      driverName: t.driverName ?? 'Driver',
+      conductorName: t.conductorName ?? 'Conductor',
+      justArrived: false,
+    });
+
   if (!loaded) return <View style={{ flex: 1, backgroundColor: colors.background }} />;
-  return trip ? <ActiveTripView trip={trip} onCleared={() => setTrip(null)} /> : <EmptyState />;
+
+  return (
+    <>
+      {trip ? (
+        <ActiveTripView
+          trip={trip}
+          onCleared={() => setTrip(null)}
+          onAdvance={async () => {
+            const next = advanceTrip(trip);
+            await saveActiveTrip(next);
+            setTrip(next);
+          }}
+          onConfirmAlighting={() => void confirmAlighting()}
+        />
+      ) : (
+        <EmptyState recent={recent} onRate={rateRecent} />
+      )}
+      <RatingSheet
+        target={target}
+        onSkip={finishTrip}
+        onSubmit={async (t, result) => {
+          await submitTripRating(t, result);
+          await finishTrip(t);
+          showToast('Thanks for rating!');
+          // After arriving, send the passenger back to Scan; rating from history stays put.
+          if (t.justArrived) router.navigate('/');
+        }}
+      />
+    </>
+  );
 }
 
 const styles = StyleSheet.create({
@@ -242,7 +363,15 @@ const styles = StyleSheet.create({
   receiptText: { fontFamily: 'Inter_600SemiBold', fontSize: 14 },
   secondaryBtn: { height: 56, borderWidth: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 10 },
   secondaryText: { fontFamily: 'Inter_600SemiBold', fontSize: 16 },
-  devLink: { alignSelf: 'center', paddingVertical: 16 },
+  devRow: { alignItems: 'center' },
+  devLink: { alignSelf: 'center', paddingVertical: 12 },
+  confirmBtn: { height: 56, marginBottom: 12, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 10 },
+  prompt: { flexDirection: 'row', alignItems: 'center', gap: 12, borderWidth: 1, padding: 14, marginTop: 28, alignSelf: 'stretch' },
+  promptText: { flex: 1 },
+  promptTitle: { fontFamily: 'Inter_600SemiBold', fontSize: 14 },
+  promptBody: { fontFamily: 'Inter_400Regular', fontSize: 12, marginTop: 2 },
+  promptBtn: { borderWidth: 1, paddingHorizontal: 14, height: 36, alignItems: 'center', justifyContent: 'center' },
+  promptBtnText: { fontFamily: 'Inter_700Bold', fontSize: 13 },
   devText: { fontFamily: 'Inter_500Medium', fontSize: 12 },
   empty: { flex: 1, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 32 },
   emptyBadge: { width: 80, height: 80, borderWidth: 1, alignItems: 'center', justifyContent: 'center', marginBottom: 24 },
