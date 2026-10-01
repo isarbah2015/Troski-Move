@@ -20,6 +20,7 @@ import { showToast } from '@/lib/toast';
 import { useFocusPolling } from '@/lib/polling';
 import { sendOrQueue } from '@/lib/sync';
 import { applyServerTrip, tripProgress } from '@/lib/trip';
+import { EMERALD, GOLD, WHITE } from '@/lib/colors';
 
 function LiveBadge() {
   const colors = useColors();
@@ -81,9 +82,9 @@ function ActiveTripView({ trip, onCleared, onConfirmAlighting }: { trip: ActiveT
       </View>
 
       <View style={[styles.paid, { backgroundColor: colors.secondary, borderColor: colors.primary, borderRadius: colors.radiusPill }]} accessibilityLabel={`Paid, trip ${trip.tripId}`}>
-        <PulseDot color={colors.primary} size={8} />
-        <Feather name="shield" size={14} color={colors.primary} />
-        <Text style={[styles.paidText, { color: colors.foreground }]}>PAID · {trip.tripId}</Text>
+        <PulseDot color={EMERALD} size={8} />
+        <Feather name="shield" size={14} color={EMERALD} />
+        <Text style={[styles.paidText, { color: WHITE }]}>PAID · {trip.tripId}</Text>
       </View>
 
       <Text style={[styles.to, { color: colors.foreground }]}>To {trip.alightingStop}</Text>
@@ -123,7 +124,7 @@ function ActiveTripView({ trip, onCleared, onConfirmAlighting }: { trip: ActiveT
               </Text>
               {isDest ? (
                 <View style={[styles.destPill, { backgroundColor: colors.secondary, borderRadius: colors.radiusPill }]}>
-                  <Text style={[styles.destText, { color: colors.accent }]}>Your stop</Text>
+                  <Text style={[styles.destText, { color: GOLD }]}>Your stop</Text>
                 </View>
               ) : null}
             </View>

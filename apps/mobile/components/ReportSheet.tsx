@@ -4,7 +4,7 @@ import { Feather } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
 import type { DisputeReason } from '@trotrolink/shared';
 import { useColors } from '@/hooks/useColors';
-import { colors as tokens } from '@/lib/colors';
+import { SCRIM } from '@/lib/colors';
 
 export const REPORT_REASONS: ReadonlyArray<{ key: DisputeReason; label: string; hint: string; icon: React.ComponentProps<typeof Feather>['name'] }> = [
   { key: 'overcharge', label: 'Overcharge', hint: 'I was asked to pay more than the official fare', icon: 'alert-circle' },
@@ -37,7 +37,7 @@ export function ReportSheet({ visible, onSubmit, onClose }: Props) {
   return (
     <Modal visible={visible} transparent animationType="slide" onRequestClose={onClose}>
       <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={styles.root}>
-        <Pressable style={[styles.scrim, { backgroundColor: `${tokens.background}99` }]} onPress={onClose} accessibilityLabel="Close" />
+        <Pressable style={[styles.scrim, { backgroundColor: SCRIM }]} onPress={onClose} accessibilityLabel="Close" />
         <View style={[styles.sheet, { backgroundColor: colors.card, borderColor: colors.border, borderTopLeftRadius: colors.radiusModal, borderTopRightRadius: colors.radiusModal }]}>
           <View style={[styles.grabber, { backgroundColor: colors.border }]} />
           <Text style={[styles.title, { color: colors.foreground }]}>Report an issue</Text>

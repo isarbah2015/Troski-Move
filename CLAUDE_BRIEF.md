@@ -121,6 +121,9 @@ Real trotros don't stop at fixed stations: passengers hail and alight anywhere. 
 - **Anti-fraud phases 1–4** (above)
 - **Offline demo mode** and a release **APK** (below)
 
+### Themes
+Dark (default look) and light, switchable in **Profile → Settings → Appearance** (System / Light / Dark; saved on the device). The palettes are `colors` and `lightColors` in `packages/shared/src/design.ts`; screens read them through `useColors()`. Light text and accents are darkened for contrast (emerald `#047857`, gold `#A16207`). Fixed-colour exceptions live in `apps/mobile/lib/colors.ts`: the camera screen and the navy hero cards stay dark in both themes, scrims are always dark, and QR codes stay black on white so they scan.
+
 ### Demo mode (no server, no database)
 With `EXPO_PUBLIC_API_URL` unset, the app serves the whole API from inside the phone (`apps/mobile/lib/demoServer.ts`): same rules as the real API (server-set price, payment-first trips, overstay + 60 s auto-charge, conductor PIN sessions, disputes, leaderboard). Data lives in AsyncStorage on the device; Sign out resets it. A "DEMO MODE" badge is shown on Scan and Today, and payments say "Simulator mode · no money moves" (they auto-approve after 3 s). One phone plays both roles: switch in **Profile → Role**. Two phones do NOT share data in demo mode (there is no server); use the real API for that. To use the real API instead, set `EXPO_PUBLIC_API_URL` at build/start time.
 
@@ -142,13 +145,13 @@ cd android && ./gradlew assembleRelease
 ### Critical pre-launch fixes (MUST FIX)
 - Set `CONDUCTOR_SETUP_CODE`, `UNION_API_KEY`, `MTN_MOMO_WEBHOOK_SECRET`; a union-run PIN reset
 - Real accounts (replace guest identity); verify the passenger's wallet number
-- Test live MoMo in **GHS** (the sandbox only accepts EUR)
+- Live MoMo/server hosting is **GPRTU's** to run; nothing here connects to live MTN or a live server
 - Strip all `__DEV__` links (verify they do not render in a release build)
 - Watch for a duplicate payment after a hot reload during real-device testing (the server refuses a second live charge for the same ride)
 
 ### Known limitations (v1)
 - Demo mode is single-device; earnings, scan counts and "total fares" on Today/Earnings are mock numbers
-- Passenger history is local; language stored but UI English; light mode deferred; printed date updates on share-sheet open; QR regenerate is local; status bar to verify on a real device
+- Passenger history is local; language stored but UI English; light mode built; printed date updates on share-sheet open; QR regenerate is local; status bar to verify on a real device
 - Camera scan untested in simulators (use the code chips)
 - "Get off now" / GPS: see the anti-fraud notes above
 
@@ -172,7 +175,7 @@ Trip tab shows **Confirm alighting** once the vehicle's current stop (set by the
 - Passenger Trip only updates while the Trip tab is focused; no push yet
 - Conductor earnings, scan count, rating and "total fares" on Today/Earnings are still mock numbers (the passenger count is live)
 - The leaderboard shows tagged sample data until a vehicle has ≥ 3 ratings in the last 24 h (non-production only)
-- Language choice stored, UI English; light mode deferred; status bar: verify on a real device
+- Language choice stored, UI English; light mode built; status bar: verify on a real device
 - Printed date updates on share-sheet open; Regenerate QR is local (old QR still resolves)
 - **Dev-only links must be stripped/guarded before production** (all `__DEV__`): Load demo data, Clear history (Profile); Clear trip, Advance one stop (Trip); leaderboard real/empty toggle; Load demo week (Earnings). "Advance one stop" now sends a real stop mark through the API.
 - Camera scan path untested (simulators have no camera)

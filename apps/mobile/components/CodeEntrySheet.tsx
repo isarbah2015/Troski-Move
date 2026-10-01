@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { ActivityIndicator, KeyboardAvoidingView, Modal, Platform, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 import { useColors } from '@/hooks/useColors';
-import { colors } from '@/lib/colors';
+import { SCRIM } from '@/lib/colors';
 
 type Props = {
   initialCode?: string;
@@ -60,7 +60,7 @@ export function CodeEntrySheet({ initialCode = '', visible, loading, error, onSu
 
 const styles = StyleSheet.create({
   root: { flex: 1, justifyContent: 'flex-end' },
-  scrim: { ...StyleSheet.absoluteFillObject, backgroundColor: `${colors.background}99` },
+  scrim: { ...StyleSheet.absoluteFillObject, backgroundColor: SCRIM },
   sheet: { padding: 24, paddingBottom: 36, borderWidth: 1, borderBottomWidth: 0 },
   grabber: { alignSelf: 'center', width: 40, height: 4, borderRadius: 2, marginBottom: 20 },
   title: { fontFamily: 'Inter_700Bold', fontSize: 22, marginBottom: 6 },

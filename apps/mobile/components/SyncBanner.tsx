@@ -4,6 +4,7 @@ import { Feather } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useColors } from '@/hooks/useColors';
 import { flushQueue, usePendingSync } from '@/lib/sync';
+import { GOLD, WHITE } from '@/lib/colors';
 
 /** "X actions pending sync": shown while anything is waiting in the offline queue. Tap to retry now. */
 export function SyncBanner() {
@@ -19,8 +20,8 @@ export function SyncBanner() {
       accessibilityLabel={`${pending} ${pending === 1 ? 'action' : 'actions'} pending sync. Tap to retry`}
       style={[styles.banner, { top: insets.top + 4, backgroundColor: colors.secondary, borderColor: colors.accent, borderRadius: colors.radiusPill }]}
     >
-      <Feather name="upload-cloud" size={14} color={colors.accent} />
-      <Text style={[styles.text, { color: colors.foreground }]}>
+      <Feather name="upload-cloud" size={14} color={GOLD} />
+      <Text style={[styles.text, { color: WHITE }]}>
         {pending} {pending === 1 ? 'action' : 'actions'} pending sync
       </Text>
     </Pressable>

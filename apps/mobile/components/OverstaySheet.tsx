@@ -4,7 +4,7 @@ import { Feather } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
 import { useColors } from '@/hooks/useColors';
 import { formatCedis } from '@/lib/api';
-import { colors as tokens } from '@/lib/colors';
+import { GOLD, SCRIM_STRONG } from '@/lib/colors';
 
 type Props = {
   declaredStop: string;
@@ -29,11 +29,11 @@ export function OverstaySheet({ declaredStop, overstay, onPay, onGetOff }: Props
 
   return (
     <Modal visible={!!overstay} transparent animationType="fade" onRequestClose={() => undefined}>
-      <View style={[styles.root, { backgroundColor: `${tokens.background}CC` }]}>
+      <View style={[styles.root, { backgroundColor: SCRIM_STRONG }]}>
         {overstay ? (
           <View style={[styles.card, { backgroundColor: colors.card, borderColor: colors.accent, borderRadius: colors.radiusModal }]} accessibilityLiveRegion="polite">
             <View style={[styles.badge, { backgroundColor: colors.secondary }]}>
-              <Feather name="alert-triangle" size={28} color={colors.accent} />
+              <Feather name="alert-triangle" size={28} color={GOLD} />
             </View>
             <Text style={[styles.title, { color: colors.foreground }]}>You&apos;ve passed {declaredStop}</Text>
             <Text style={[styles.body, { color: colors.mutedForeground }]}>

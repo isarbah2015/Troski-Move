@@ -9,8 +9,8 @@ import { RatingsSheet } from '@/components/RatingsSheet';
 import { SectionHeader } from '@/components/SectionHeader';
 import { useColors } from '@/hooks/useColors';
 import { api } from '@/lib/api';
-import { colors as tokens } from '@/lib/colors';
 import { getConductorVehicleCode } from '@/lib/storage';
+import { BRONZE, GOLD, SILVER } from '@/lib/colors';
 
 export default function LeaderboardScreen() {
   const colors = useColors();
@@ -43,7 +43,7 @@ export default function LeaderboardScreen() {
   );
 
   // Rank colours from the locked tokens: gold, silver (secondary text), bronze (muted gold).
-  const rankColor = (rank: number) => (rank === 1 ? tokens.highlightGold : rank === 2 ? tokens.textSecondary : rank === 3 ? `${tokens.highlightGold}99` : colors.mutedForeground);
+  const rankColor = (rank: number) => (rank === 1 ? GOLD : rank === 2 ? SILVER : rank === 3 ? BRONZE : colors.mutedForeground);
 
   return (
     <ScrollView
@@ -95,13 +95,13 @@ export default function LeaderboardScreen() {
                   accessibilityLabel={`Rank ${e.rank}, ${e.shortCode}, ${e.driverName}, rated ${e.avgRating.toFixed(1)} from ${e.totalRatings} ratings`}
                   style={[
                     styles.row,
-                    { backgroundColor: colors.card, borderColor: first ? tokens.highlightGold : colors.border, borderRadius: colors.radius },
-                    first && { shadowColor: tokens.highlightGold, shadowOpacity: 0.45, shadowRadius: 14, shadowOffset: { width: 0, height: 0 } },
+                    { backgroundColor: colors.card, borderColor: first ? GOLD : colors.border, borderRadius: colors.radius },
+                    first && { shadowColor: GOLD, shadowOpacity: 0.45, shadowRadius: 14, shadowOffset: { width: 0, height: 0 } },
                   ]}
                 >
                   <View style={styles.rankCol}>
                     <Text style={[styles.rank, { color: rankColor(e.rank) }]}>{e.rank}</Text>
-                    {first ? <Feather name="award" size={16} color={tokens.highlightGold} /> : null}
+                    {first ? <Feather name="award" size={16} color={GOLD} /> : null}
                   </View>
                   <View style={styles.mid}>
                     <Text style={[styles.code, { color: colors.foreground }]}>{e.shortCode}</Text>

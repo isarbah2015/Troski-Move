@@ -7,8 +7,8 @@ import type { TripRating, TripRecord } from '@trotrolink/shared';
 import { Stars } from '@/components/Stars';
 import { useColors } from '@/hooks/useColors';
 import { formatCedis } from '@/lib/api';
-import { colors as tokens } from '@/lib/colors';
 import { formatWhen } from '@/lib/profile';
+import { QR_BG, QR_FG, SCRIM } from '@/lib/colors';
 
 type Props = { trip: TripRecord | null; rating?: TripRating | null; onClose: () => void; onRideAgain: (vehicleCode: string) => void };
 
@@ -37,7 +37,7 @@ export function TripDetailSheet({ trip, rating, onClose, onRideAgain }: Props) {
   return (
     <Modal visible={!!trip} transparent animationType="slide" onRequestClose={onClose}>
       <View style={styles.root}>
-        <Pressable style={[StyleSheet.absoluteFill, { backgroundColor: `${tokens.background}99` }]} onPress={onClose} accessibilityLabel="Close" />
+        <Pressable style={[StyleSheet.absoluteFill, { backgroundColor: SCRIM }]} onPress={onClose} accessibilityLabel="Close" />
         {trip ? (
           <View style={[styles.sheet, { backgroundColor: colors.card, borderColor: colors.border, borderTopLeftRadius: colors.radiusModal, borderTopRightRadius: colors.radiusModal }]}>
             <View style={[styles.grabber, { backgroundColor: colors.border }]} />
@@ -62,7 +62,7 @@ export function TripDetailSheet({ trip, rating, onClose, onRideAgain }: Props) {
 
               <View style={styles.qrWrap}>
                 <View style={[styles.qrBox, { borderRadius: colors.radius }]}>
-                  <QRCode value={`trotrolink://trip/${trip.tripId}`} size={132} color={tokens.background} backgroundColor={tokens.textPrimary} />
+                  <QRCode value={`trotrolink://trip/${trip.tripId}`} size={132} color={QR_FG} backgroundColor={QR_BG} />
                 </View>
                 <Text style={[styles.ref, { color: colors.mutedForeground }]}>{trip.tripId}</Text>
               </View>
@@ -122,7 +122,7 @@ const styles = StyleSheet.create({
   ratingLabel: { fontFamily: 'Inter_500Medium', fontSize: 13, width: 78 },
   comment: { fontFamily: 'Inter_400Regular', fontSize: 14, lineHeight: 20, marginTop: 4 },
   qrWrap: { alignItems: 'center', marginVertical: 20 },
-  qrBox: { padding: 12, backgroundColor: tokens.textPrimary },
+  qrBox: { padding: 12, backgroundColor: QR_BG },
   ref: { fontFamily: 'Inter_600SemiBold', fontSize: 13, letterSpacing: 0.5, marginTop: 10 },
   box: { borderWidth: 1, paddingHorizontal: 16 },
   stopRow: { flexDirection: 'row', justifyContent: 'space-between', paddingVertical: 12 },

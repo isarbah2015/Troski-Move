@@ -28,6 +28,7 @@ import {
   type Role,
 } from '@/lib/storage';
 import { showToast } from '@/lib/toast';
+import { GOLD } from '@/lib/colors';
 
 const HISTORY_LIMIT = 10;
 
@@ -89,7 +90,7 @@ export default function ProfileScreen() {
       {/* User card */}
       <View style={[styles.userCard, card]}>
         <View style={[styles.avatar, { backgroundColor: colors.secondary }]}>
-          <Feather name="user" size={26} color={colors.accent} />
+          <Feather name="user" size={26} color={GOLD} />
         </View>
         <View style={styles.userText}>
           <Text style={[styles.name, { color: colors.foreground }]}>{person.name}</Text>
@@ -183,7 +184,7 @@ export default function ProfileScreen() {
       <SectionHeader>Payment method</SectionHeader>
       <View style={[styles.payCard, card]}>
         <View style={[styles.payIcon, { backgroundColor: colors.secondary }]}>
-          <Feather name="smartphone" size={20} color={colors.accent} />
+          <Feather name="smartphone" size={20} color={GOLD} />
         </View>
         <View>
           <Text style={[styles.payName, { color: colors.foreground }]}>MTN MoMo</Text>

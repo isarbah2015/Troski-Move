@@ -6,7 +6,7 @@ import QRCode from 'react-native-qrcode-svg';
 import type { ServerTrip } from '@trotrolink/shared';
 import { useColors } from '@/hooks/useColors';
 import { formatCedis } from '@/lib/api';
-import { colors as tokens } from '@/lib/colors';
+import { EMERALD, QR_BG, QR_FG, SCRIM, WHITE } from '@/lib/colors';
 
 type Props = { trip: ServerTrip | null; onClose: () => void; onConfirmAlight: (trip: ServerTrip) => void };
 
@@ -16,13 +16,13 @@ export function PassengerSheet({ trip, onClose, onConfirmAlight }: Props) {
   return (
     <Modal visible={!!trip} transparent animationType="slide" onRequestClose={onClose}>
       <View style={styles.root}>
-        <Pressable style={[StyleSheet.absoluteFill, { backgroundColor: `${tokens.background}99` }]} onPress={onClose} accessibilityLabel="Close" />
+        <Pressable style={[StyleSheet.absoluteFill, { backgroundColor: SCRIM }]} onPress={onClose} accessibilityLabel="Close" />
         {trip ? (
           <View style={[styles.sheet, { backgroundColor: colors.card, borderColor: colors.border, borderTopLeftRadius: colors.radiusModal, borderTopRightRadius: colors.radiusModal }]}>
             <View style={[styles.grabber, { backgroundColor: colors.border }]} />
             <View style={[styles.paid, { backgroundColor: colors.secondary, borderColor: colors.primary, borderRadius: colors.radiusPill }]}>
-              <Feather name="shield" size={14} color={colors.primary} />
-              <Text style={[styles.paidText, { color: colors.foreground }]}>PAID · {trip.tripId}</Text>
+              <Feather name="shield" size={14} color={EMERALD} />
+              <Text style={[styles.paidText, { color: WHITE }]}>PAID · {trip.tripId}</Text>
             </View>
             <Text style={[styles.title, { color: colors.foreground }]}>
               {trip.boardingStop} → {trip.alightingStop}
@@ -32,7 +32,7 @@ export function PassengerSheet({ trip, onClose, onConfirmAlight }: Props) {
             </Text>
             <View style={styles.qrWrap}>
               <View style={[styles.qrBox, { borderRadius: colors.radius }]}>
-                <QRCode value={`trotrolink://trip/${trip.tripId}`} size={150} color={tokens.background} backgroundColor={tokens.textPrimary} />
+                <QRCode value={`trotrolink://trip/${trip.tripId}`} size={150} color={QR_FG} backgroundColor={QR_BG} />
               </View>
               <Text style={[styles.hint, { color: colors.mutedForeground }]}>Matches the QR on the passenger&apos;s Trip screen</Text>
             </View>
@@ -64,7 +64,7 @@ const styles = StyleSheet.create({
   title: { fontFamily: 'Inter_700Bold', fontSize: 24, marginTop: 14 },
   sub: { fontFamily: 'Inter_500Medium', fontSize: 14, marginTop: 4 },
   qrWrap: { alignItems: 'center', marginVertical: 20 },
-  qrBox: { padding: 12, backgroundColor: tokens.textPrimary },
+  qrBox: { padding: 12, backgroundColor: QR_BG },
   hint: { fontFamily: 'Inter_400Regular', fontSize: 12, marginTop: 10 },
   cta: { height: 54, alignItems: 'center', justifyContent: 'center' },
   ctaText: { fontFamily: 'Inter_700Bold', fontSize: 16 },

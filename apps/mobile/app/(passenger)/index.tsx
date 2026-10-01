@@ -1,6 +1,7 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { Linking, Platform, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { Feather } from '@expo/vector-icons';
+import { StatusBar } from 'expo-status-bar';
 import { CameraView, useCameraPermissions } from 'expo-camera';
 import * as Haptics from 'expo-haptics';
 import { useFocusEffect, useLocalSearchParams, useRouter } from 'expo-router';
@@ -11,13 +12,13 @@ import { DemoBadge } from '@/components/DemoBadge';
 import { PaymentSheet, type PaymentPhase } from '@/components/PaymentSheet';
 import { StopSheet } from '@/components/StopSheet';
 import { useColors } from '@/hooks/useColors';
-import { colors as tokens } from '@/lib/colors';
 import { VehicleNotFoundError } from '@/lib/api';
 import { api } from '@/lib/api';
 import { payForTrip } from '@/lib/payment';
 import { appendTripRecord, saveActiveTrip } from '@/lib/storage';
 import { showToast } from '@/lib/toast';
 import { buildTrip, buildTripRecord, newTripId } from '@/lib/trip';
+import { CAMERA_DIM, SILVER, WHITE } from '@/lib/colors';
 
 type PaymentState = { phase: PaymentPhase; resolved: ResolvedVehicle; stop: Stop; simulator: boolean; message?: string; referenceId?: string; tripId?: string };
 
@@ -27,7 +28,7 @@ const DEMO_CODES = ['CIR01', 'CIR02', 'MAD05', 'TEM03'];
 const SHOW_DEMO = Platform.OS === 'web' || __DEV__;
 
 export default function ScanScreen() {
-  const colors = useColors();
+  const colors = useColors('dark'); // the camera screen is dark in both themes
   const insets = useSafeAreaInsets();
   const router = useRouter();
   const { code: prefillCode, n: prefillNonce } = useLocalSearchParams<{ code?: string; n?: string }>();
@@ -140,6 +141,7 @@ export default function ScanScreen() {
 
   return (
     <View style={[styles.root, { backgroundColor: colors.background }]}>
+      {focused ? <StatusBar style="light" /> : null}
       {permission?.granted && focused ? (
         <CameraView
           style={StyleSheet.absoluteFill}
@@ -151,9 +153,9 @@ export default function ScanScreen() {
       <View style={[StyleSheet.absoluteFill, styles.dim]} pointerEvents="none" />
 
       <View style={[styles.top, { paddingTop: insets.top + 16 }]}>
-        <DemoBadge />
-        <Text style={[styles.title, { color: tokens.textPrimary }]}>Scan to ride</Text>
-        <Text style={[styles.subtitle, { color: tokens.textSecondary }]}>Point at the QR sticker inside the trotro</Text>
+        <DemoBadge force="dark" />
+        <Text style={[styles.title, { color: WHITE }]}>Scan to ride</Text>
+        <Text style={[styles.subtitle, { color: SILVER }]}>Point at the QR sticker inside the trotro</Text>
       </View>
 
       <View style={styles.center} pointerEvents="none">
@@ -231,7 +233,7 @@ export default function ScanScreen() {
 const CORNER = 36;
 const styles = StyleSheet.create({
   root: { flex: 1 },
-  dim: { backgroundColor: `${tokens.background}73` },
+  dim: { backgroundColor: CAMERA_DIM },
   top: { paddingHorizontal: 24 },
   title: { fontFamily: 'Inter_700Bold', fontSize: 28 },
   subtitle: { fontFamily: 'Inter_400Regular', fontSize: 15, marginTop: 4 },

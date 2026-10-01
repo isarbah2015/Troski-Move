@@ -9,12 +9,12 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { SectionHeader } from '@/components/SectionHeader';
 import { useColors } from '@/hooks/useColors';
 import { formatCedis } from '@/lib/api';
-import { colors as tokens } from '@/lib/colors';
 import { MOCK_TODAY, formatOnline } from '@/lib/conductor';
 import { DEFAULT_SPLITS, localDateKey, netEarnings, parseAmount, sanitizeAmount, weekDays } from '@/lib/earnings';
 import { getConductorVehicleCode, getDailySplits, saveDailySplit, type DailySplitRecord } from '@/lib/storage';
 import { sendOrQueue } from '@/lib/sync';
 import { showToast } from '@/lib/toast';
+import { EMERALD, ERROR, GOLD, HERO_GRADIENT, SILVER, WHITE } from '@/lib/colors';
 
 type Field = 'ownerDrop' | 'conductorWage' | 'fuelCost';
 
@@ -141,16 +141,16 @@ export default function EarningsScreen() {
       </View>
 
       <LinearGradient
-        colors={[tokens.primaryNavy, tokens.surface]}
+        colors={HERO_GRADIENT}
         start={{ x: 0, y: 0 }}
         end={{ x: 1, y: 1 }}
-        style={[styles.netCard, { borderColor: positive ? tokens.highlightGold : tokens.error, borderRadius: colors.radius }]}
+        style={[styles.netCard, { borderColor: positive ? GOLD : ERROR, borderRadius: colors.radius }]}
       >
-        <Text style={[styles.kicker, { color: tokens.textSecondary }]}>YOUR NET EARNINGS</Text>
-        <Text style={[styles.net, { color: positive ? tokens.textPrimary : tokens.error }]} accessibilityLiveRegion="polite">
+        <Text style={[styles.kicker, { color: SILVER }]}>YOUR NET EARNINGS</Text>
+        <Text style={[styles.net, { color: positive ? WHITE : ERROR }]} accessibilityLiveRegion="polite">
           {net < 0 ? '-' : ''}{formatCedis(Math.abs(net))}
         </Text>
-        {!positive ? <Text style={[styles.warn, { color: tokens.error }]}>Costs are higher than today&apos;s fares</Text> : null}
+        {!positive ? <Text style={[styles.warn, { color: ERROR }]}>Costs are higher than today&apos;s fares</Text> : null}
       </LinearGradient>
 
       <SectionHeader>This week</SectionHeader>
@@ -164,7 +164,7 @@ export default function EarningsScreen() {
               style={[
                 styles.weekRow,
                 i > 0 && { borderTopColor: colors.border, borderTopWidth: StyleSheet.hairlineWidth },
-                d.isToday && { backgroundColor: `${tokens.accentEmerald}1F`, borderRadius: 10, marginHorizontal: -8, paddingHorizontal: 8 },
+                d.isToday && { backgroundColor: `${EMERALD}1F`, borderRadius: 10, marginHorizontal: -8, paddingHorizontal: 8 },
               ]}
             >
               <Text style={[styles.weekDay, { color: d.isToday ? colors.primary : colors.mutedForeground }]}>{d.label}</Text>

@@ -3,7 +3,7 @@ import { KeyboardAvoidingView, Modal, Platform, Pressable, ScrollView, StyleShee
 import { Feather } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
 import { useColors } from '@/hooks/useColors';
-import { colors as tokens } from '@/lib/colors';
+import { EMERALD, SCRIM, SILVER } from '@/lib/colors';
 
 export type RatingTarget = {
   tripId: string;
@@ -42,7 +42,7 @@ function StarRow({ label, name, value, onChange }: { label: string; name: string
             accessibilityState={{ selected: value === n }}
             accessibilityLabel={`${n} ${n === 1 ? 'star' : 'stars'} for ${label.toLowerCase()}`}
           >
-            <Feather name="star" size={36} color={n <= value ? colors.accent : `${tokens.textSecondary}66`} />
+            <Feather name="star" size={36} color={n <= value ? colors.accent : `${SILVER}66`} />
           </Pressable>
         ))}
       </View>
@@ -70,14 +70,14 @@ export function RatingSheet({ target, onSubmit, onSkip }: Props) {
   return (
     <Modal visible={!!target} transparent animationType="slide" onRequestClose={() => target && void onSkip(target)}>
       <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={styles.root}>
-        <Pressable style={[StyleSheet.absoluteFill, { backgroundColor: `${tokens.background}99` }]} onPress={() => target && void onSkip(target)} accessibilityLabel="Close" />
+        <Pressable style={[StyleSheet.absoluteFill, { backgroundColor: SCRIM }]} onPress={() => target && void onSkip(target)} accessibilityLabel="Close" />
         {target ? (
           <View style={[styles.sheet, { backgroundColor: colors.card, borderColor: colors.border, borderTopLeftRadius: colors.radiusModal, borderTopRightRadius: colors.radiusModal }]}>
             <View style={[styles.grabber, { backgroundColor: colors.border }]} />
             <ScrollView showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
               <View style={styles.head}>
                 <View style={[styles.badge, { backgroundColor: colors.secondary }]}>
-                  <Feather name={target.justArrived ? 'check-circle' : 'star'} size={26} color={colors.primary} />
+                  <Feather name={target.justArrived ? 'check-circle' : 'star'} size={26} color={EMERALD} />
                 </View>
                 <Text style={[styles.title, { color: colors.foreground }]}>{target.justArrived ? "You've arrived!" : 'Rate your trip'}</Text>
                 <Text style={[styles.dest, { color: colors.primary }]}>{target.destination}</Text>

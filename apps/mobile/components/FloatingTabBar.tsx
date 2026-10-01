@@ -4,7 +4,7 @@ import * as Haptics from 'expo-haptics';
 import type { Tabs } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useColors } from '@/hooks/useColors';
-import { colors as tokens } from '@/lib/colors';
+import { EMERALD } from '@/lib/colors';
 
 // The tab bar's props, derived from Expo Router (its navigation package isn't a direct dependency).
 type BottomTabBarProps = Parameters<NonNullable<React.ComponentProps<typeof Tabs>['tabBar']>>[0];
@@ -108,7 +108,7 @@ export function FloatingTabBar({ state, descriptors, navigation }: BottomTabBarP
             backgroundColor: colors.card,
             borderColor: colors.border,
             borderRadius: colors.radiusModal,
-            shadowColor: tokens.accentEmerald,
+            shadowColor: EMERALD,
             transform: [{ translateY: bob.interpolate({ inputRange: [0, 1], outputRange: [1, -2] }) }],
           },
         ]}
@@ -122,8 +122,8 @@ export function FloatingTabBar({ state, descriptors, navigation }: BottomTabBarP
               {
                 width: Math.max(0, itemWidth - inset * 2),
                 marginLeft: inset,
-                backgroundColor: `${tokens.accentEmerald}1F`,
-                borderColor: `${tokens.accentEmerald}55`,
+                backgroundColor: `${EMERALD}1F`,
+                borderColor: `${EMERALD}55`,
                 borderRadius: colors.radius,
                 transform: [{ translateX: slide.interpolate({ inputRange: [0, Math.max(1, count - 1)], outputRange: [0, itemWidth * Math.max(1, count - 1)] }) }],
               },

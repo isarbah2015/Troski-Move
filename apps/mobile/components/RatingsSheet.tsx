@@ -5,7 +5,7 @@ import type { DriverRatingsResponse, LeaderboardEntry } from '@trotrolink/shared
 import { Stars } from '@/components/Stars';
 import { useColors } from '@/hooks/useColors';
 import { api } from '@/lib/api';
-import { colors as tokens } from '@/lib/colors';
+import { GOLD, SCRIM } from '@/lib/colors';
 
 type Props = { entry: LeaderboardEntry | null; forceEmpty: boolean; onClose: () => void };
 
@@ -40,13 +40,13 @@ export function RatingsSheet({ entry, forceEmpty, onClose }: Props) {
   return (
     <Modal visible={!!entry} transparent animationType="slide" onRequestClose={onClose}>
       <View style={styles.root}>
-        <Pressable style={[StyleSheet.absoluteFill, { backgroundColor: `${tokens.background}99` }]} onPress={onClose} accessibilityLabel="Close" />
+        <Pressable style={[StyleSheet.absoluteFill, { backgroundColor: SCRIM }]} onPress={onClose} accessibilityLabel="Close" />
         {entry ? (
           <View style={[styles.sheet, { backgroundColor: colors.card, borderColor: colors.border, borderTopLeftRadius: colors.radiusModal, borderTopRightRadius: colors.radiusModal }]}>
             <View style={[styles.grabber, { backgroundColor: colors.border }]} />
             <View style={styles.head}>
               <View style={[styles.codePill, { backgroundColor: colors.secondary, borderRadius: colors.radiusPill }]}>
-                <Text style={[styles.codeText, { color: colors.accent }]}>{entry.shortCode}</Text>
+                <Text style={[styles.codeText, { color: GOLD }]}>{entry.shortCode}</Text>
               </View>
               <Text style={[styles.driver, { color: colors.mutedForeground }]}>{entry.driverName}</Text>
             </View>

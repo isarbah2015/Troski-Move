@@ -4,7 +4,8 @@ import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { KeyboardProvider } from 'react-native-keyboard-controller';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { ErrorBoundary } from '@/components/ErrorBoundary';
-import { colors } from '@/lib/colors';
+import { useColors } from '@/hooks/useColors';
+import { restoreTheme } from '@/lib/theme';
 import { SyncBanner } from '@/components/SyncBanner';
 import { ToastHost } from '@/components/ToastHost';
 import { useSyncLoop } from '@/lib/sync';
@@ -16,6 +17,7 @@ import {
   useFonts,
 } from '@expo-google-fonts/inter';
 import { Stack } from 'expo-router';
+import { StatusBar } from 'expo-status-bar';
 import * as SplashScreen from 'expo-splash-screen';
 
 // Prevent the splash screen from auto-hiding before asset loading is complete.
@@ -23,14 +25,20 @@ SplashScreen.preventAutoHideAsync();
 
 const queryClient = new QueryClient();
 
+function ThemedStatusBar() {
+  const { scheme } = useColors();
+  return <StatusBar style={scheme === 'light' ? 'dark' : 'light'} />;
+}
+
 function RootLayoutNav() {
   useSyncLoop();
+  const colors = useColors();
   return (
     <Stack
       screenOptions={{
         headerBackTitle: 'Back',
-        headerStyle: { backgroundColor: colors.surface },
-        headerTintColor: colors.textPrimary,
+        headerStyle: { backgroundColor: colors.card },
+        headerTintColor: colors.foreground,
         headerTitleStyle: { fontFamily: 'Inter_600SemiBold' },
         contentStyle: { backgroundColor: colors.background },
       }}
@@ -51,6 +59,10 @@ export default function RootLayout() {
   });
 
   useEffect(() => {
+    void restoreTheme();
+  }, []);
+
+  useEffect(() => {
     if (fontsLoaded || fontError) {
       SplashScreen.hideAsync();
     }
@@ -65,6 +77,7 @@ export default function RootLayout() {
           <GestureHandlerRootView>
             <KeyboardProvider>
               <RootLayoutNav />
+              <ThemedStatusBar />
               <SyncBanner />
               <ToastHost />
             </KeyboardProvider>

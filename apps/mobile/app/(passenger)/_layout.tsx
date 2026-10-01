@@ -1,21 +1,20 @@
 import React from 'react';
-import { StyleSheet } from 'react-native';
 import { Feather } from '@expo/vector-icons';
 import { Tabs } from 'expo-router';
 import { FloatingTabBar } from '@/components/FloatingTabBar';
-import { colors } from '@/lib/colors';
+import { useColors } from '@/hooks/useColors';
 
 // Passenger role: exactly 3 tabs (Scan, Trip, Profile). Scan (index.tsx) is the first tab and owns `/`.
 export default function PassengerLayout() {
+  const colors = useColors();
   return (
     <Tabs
       initialRouteName="index"
       tabBar={(props) => <FloatingTabBar {...props} />}
       screenOptions={{
         headerShown: false,
-        tabBarActiveTintColor: colors.accentEmerald,
-        tabBarInactiveTintColor: colors.textSecondary,
-        tabBarStyle: { backgroundColor: colors.surface, borderTopColor: colors.border, borderTopWidth: StyleSheet.hairlineWidth },
+        tabBarActiveTintColor: colors.primary,
+        tabBarInactiveTintColor: colors.mutedForeground,
         tabBarLabelStyle: { fontFamily: 'Inter_600SemiBold', fontSize: 11 },
       }}
     >

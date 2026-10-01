@@ -12,11 +12,11 @@ import { PulseDot } from '@/components/PulseDot';
 import { SectionHeader } from '@/components/SectionHeader';
 import { useColors } from '@/hooks/useColors';
 import { api, formatCedis } from '@/lib/api';
-import { colors as tokens } from '@/lib/colors';
 import { bonusFor, formatOnline, MOCK_BONUS, MOCK_TODAY, useConductorVehicle } from '@/lib/conductor';
 import { useFocusPolling } from '@/lib/polling';
 import { showToast } from '@/lib/toast';
 import { sendOrQueue } from '@/lib/sync';
+import { EMERALD, HERO_GRADIENT, SILVER, WHITE } from '@/lib/colors';
 
 const GUTTER = 24;
 const GAP = 12;
@@ -96,11 +96,11 @@ export default function TodayScreen() {
       ) : (
         <>
           {/* Vehicle */}
-          <LinearGradient colors={[tokens.primaryNavy, tokens.surface]} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={[styles.vehicle, { borderColor: colors.border, borderRadius: colors.radius }]}>
+          <LinearGradient colors={HERO_GRADIENT} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={[styles.vehicle, { borderColor: colors.border, borderRadius: colors.radius }]}>
             <View style={styles.vehicleTop}>
               <View style={styles.codeRow}>
-                <Feather name="truck" size={20} color={tokens.textPrimary} />
-                <Text style={[styles.code, { color: tokens.textPrimary }]}>{data.vehicle.shortCode}</Text>
+                <Feather name="truck" size={20} color={WHITE} />
+                <Text style={[styles.code, { color: WHITE }]}>{data.vehicle.shortCode}</Text>
               </View>
               <Pressable
                 onPress={() => {
@@ -110,14 +110,14 @@ export default function TodayScreen() {
                 accessibilityRole="switch"
                 accessibilityState={{ checked: online }}
                 accessibilityLabel={online ? 'Online. Tap to go offline' : 'Offline. Tap to go online'}
-                style={[styles.pill, { borderColor: online ? colors.primary : colors.mutedForeground, borderRadius: colors.radiusPill }]}
+                style={[styles.pill, { borderColor: online ? EMERALD : SILVER, borderRadius: colors.radiusPill }]}
               >
-                <PulseDot color={online ? colors.primary : colors.mutedForeground} active={online} size={8} />
-                <Text style={[styles.pillText, { color: online ? colors.primary : colors.mutedForeground }]}>{online ? 'Online' : 'Offline'}</Text>
+                <PulseDot color={online ? EMERALD : SILVER} active={online} size={8} />
+                <Text style={[styles.pillText, { color: online ? EMERALD : SILVER }]}>{online ? 'Online' : 'Offline'}</Text>
               </Pressable>
             </View>
-            <Text style={[styles.route, { color: tokens.textPrimary }]}>{data.route.origin} → {data.route.destination}</Text>
-            <Text style={[styles.driver, { color: tokens.textSecondary }]}>{data.vehicle.driverName} (driver)</Text>
+            <Text style={[styles.route, { color: WHITE }]}>{data.route.origin} → {data.route.destination}</Text>
+            <Text style={[styles.driver, { color: SILVER }]}>{data.vehicle.driverName} (driver)</Text>
           </LinearGradient>
 
           {/* Earnings */}

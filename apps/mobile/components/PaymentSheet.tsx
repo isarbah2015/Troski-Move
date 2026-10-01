@@ -2,8 +2,8 @@ import React from 'react';
 import { ActivityIndicator, Modal, Pressable, StyleSheet, Text, View } from 'react-native';
 import { Feather } from '@expo/vector-icons';
 import { useColors } from '@/hooks/useColors';
-import { colors as tokens } from '@/lib/colors';
 import { formatCedis } from '@/lib/api';
+import { EMERALD, ERROR, SCRIM_STRONG } from '@/lib/colors';
 
 export type PaymentPhase = 'sending' | 'pending' | 'success' | 'failed' | 'timeout';
 
@@ -34,14 +34,14 @@ export function PaymentSheet({ phase, amount, destination, message, simulator, o
 
   return (
     <Modal visible={!!phase} transparent animationType="fade" onRequestClose={() => (bad ? onClose() : undefined)}>
-      <View style={[styles.root, { backgroundColor: `${tokens.background}CC` }]}>
+      <View style={[styles.root, { backgroundColor: SCRIM_STRONG }]}>
         {copy ? (
           <View style={[styles.card, { backgroundColor: colors.card, borderColor: bad ? colors.destructive : colors.border, borderRadius: colors.radiusModal }]} accessibilityLiveRegion="polite">
             <View style={[styles.badge, { backgroundColor: colors.secondary }]}>
               {busy ? (
-                <ActivityIndicator color={colors.primary} />
+                <ActivityIndicator color={EMERALD} />
               ) : (
-                <Feather name={phase === 'success' ? 'check-circle' : phase === 'timeout' ? 'clock' : 'x-circle'} size={30} color={bad ? colors.destructive : colors.primary} />
+                <Feather name={phase === 'success' ? 'check-circle' : phase === 'timeout' ? 'clock' : 'x-circle'} size={30} color={bad ? ERROR : EMERALD} />
               )}
             </View>
             <Text style={[styles.title, { color: colors.foreground }]}>{copy.title}</Text>

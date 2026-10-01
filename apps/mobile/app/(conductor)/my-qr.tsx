@@ -10,10 +10,10 @@ import { captureRef } from 'react-native-view-shot';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { encodeQrPayload } from '@trotrolink/shared';
 import { useColors } from '@/hooks/useColors';
-import { colors as tokens } from '@/lib/colors';
 import { useConductorVehicle } from '@/lib/conductor';
 import { getQrState, saveQrState, type QrState } from '@/lib/storage';
 import { showToast } from '@/lib/toast';
+import { QR_BG, QR_FG, SILVER } from '@/lib/colors';
 
 const QR_SIZE = 240;
 
@@ -119,8 +119,8 @@ export default function MyQrScreen() {
             <QRCode
               value={encodeQrPayload({ vehicleId: data.vehicle.id, shortCode: data.vehicle.shortCode, routeId: data.route.routeId, version: qr.version })}
               size={QR_SIZE}
-              color={tokens.background}
-              backgroundColor={tokens.textPrimary}
+              color={QR_FG}
+              backgroundColor={QR_BG}
             />
             <Text style={styles.stickerLabel}>SHORT CODE</Text>
             <Text style={styles.stickerCode} accessibilityLabel={`Short code ${data.vehicle.shortCode.split('').join(' ')}`}>{data.vehicle.shortCode}</Text>
@@ -182,9 +182,9 @@ const styles = StyleSheet.create({
   errorText: { fontFamily: 'Inter_500Medium', fontSize: 14, textAlign: 'center' },
   retry: { height: 44, paddingHorizontal: 24, borderWidth: 1, alignItems: 'center', justifyContent: 'center' },
   retryText: { fontFamily: 'Inter_600SemiBold', fontSize: 15 },
-  sticker: { alignSelf: 'center', alignItems: 'center', backgroundColor: tokens.textPrimary, padding: 24 },
-  stickerLabel: { fontFamily: 'Inter_600SemiBold', fontSize: 12, letterSpacing: 2, color: tokens.textSecondary, marginTop: 20 },
-  stickerCode: { fontFamily: 'Inter_700Bold', fontSize: 44, letterSpacing: 12, color: tokens.background, marginTop: 4, paddingLeft: 12 },
+  sticker: { alignSelf: 'center', alignItems: 'center', backgroundColor: QR_BG, padding: 24 },
+  stickerLabel: { fontFamily: 'Inter_600SemiBold', fontSize: 12, letterSpacing: 2, color: SILVER, marginTop: 20 },
+  stickerCode: { fontFamily: 'Inter_700Bold', fontSize: 44, letterSpacing: 12, color: QR_FG, marginTop: 4, paddingLeft: 12 },
   routeBox: { marginTop: 20, alignItems: 'center' },
   routeLine: { fontFamily: 'Inter_600SemiBold', fontSize: 16 },
   via: { fontFamily: 'Inter_500Medium', fontSize: 14, marginTop: 4, textAlign: 'center' },

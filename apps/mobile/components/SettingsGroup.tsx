@@ -3,10 +3,12 @@ import { Linking, Pressable, StyleSheet, Switch, Text, View } from 'react-native
 import { Feather } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
 import { useRouter } from 'expo-router';
-import type { AppLanguage } from '@trotrolink/shared';
+import type { AppLanguage, ThemePreference } from '@trotrolink/shared';
+import { APPEARANCE_LABEL, AppearanceSheet } from '@/components/AppearanceSheet';
 import { LanguageSheet } from '@/components/LanguageSheet';
 import { useColors } from '@/hooks/useColors';
 import { getLanguage, getNotifications, setLanguage, setNotifications } from '@/lib/storage';
+import { getThemePreference, setThemePreference } from '@/lib/theme';
 
 type IconName = React.ComponentProps<typeof Feather>['name'];
 
@@ -29,17 +31,21 @@ export function SettingsGroup() {
   const [language, setLanguageState] = useState<AppLanguage>('English');
   const [notifications, setNotificationsState] = useState(true);
   const [languageOpen, setLanguageOpen] = useState(false);
+  const [theme, setTheme] = useState<ThemePreference>('system');
+  const [themeOpen, setThemeOpen] = useState(false);
 
   useEffect(() => {
-    void Promise.all([getLanguage(), getNotifications()]).then(([l, n]) => {
+    void Promise.all([getLanguage(), getNotifications(), getThemePreference()]).then(([l, n, t]) => {
       setLanguageState(l);
       setNotificationsState(n);
+      setTheme(t);
     });
   }, []);
 
   return (
     <View style={[styles.group, { backgroundColor: colors.card, borderColor: colors.border, borderRadius: colors.radius }]}>
       <Row icon="globe" label="Language" value={language} onPress={() => setLanguageOpen(true)} />
+      <Row icon={theme === 'light' ? 'sun' : 'moon'} label="Appearance" value={APPEARANCE_LABEL[theme]} onPress={() => setThemeOpen(true)} divider />
       <View style={[styles.row, styles.divider, { borderTopColor: colors.border }]}>
         <Feather name="bell" size={20} color={colors.mutedForeground} />
         <Text style={[styles.label, { color: colors.foreground }]}>Notifications</Text>
@@ -52,7 +58,7 @@ export function SettingsGroup() {
               await setNotifications(on);
             }}
             trackColor={{ false: colors.border, true: colors.primary }}
-            thumbColor={colors.foreground}
+            thumbColor="#FFFFFF"
             accessibilityLabel="Notifications"
           />
         </View>
@@ -60,6 +66,16 @@ export function SettingsGroup() {
       <Row icon="lock" label="Privacy" onPress={() => router.push('/privacy')} divider />
       <Row icon="help-circle" label="Help" onPress={() => Linking.openURL('mailto:help@trotrolink.app')} divider />
 
+      <AppearanceSheet
+        visible={themeOpen}
+        selected={theme}
+        onSelect={async (t) => {
+          setTheme(t);
+          await setThemePreference(t);
+          setThemeOpen(false);
+        }}
+        onClose={() => setThemeOpen(false)}
+      />
       <LanguageSheet
         visible={languageOpen}
         selected={language}

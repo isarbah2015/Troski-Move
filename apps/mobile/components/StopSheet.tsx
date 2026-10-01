@@ -3,9 +3,9 @@ import { Modal, Pressable, ScrollView, StyleSheet, Text, View } from 'react-nati
 import { Feather } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
 import { useColors } from '@/hooks/useColors';
-import { colors } from '@/lib/colors';
 import type { ResolvedVehicle, Stop } from '@trotrolink/shared';
 import { formatCedis } from '@/lib/api';
+import { GOLD, SCRIM } from '@/lib/colors';
 
 type Props = {
   resolved: ResolvedVehicle | null;
@@ -37,7 +37,7 @@ export function StopSheet({ resolved, onClose, onPay }: Props) {
             <>
               <View style={styles.headRow}>
                 <View style={[styles.codePill, { backgroundColor: colors.secondary, borderRadius: colors.radiusPill }]}>
-                  <Text style={[styles.codeText, { color: colors.accent }]}>{resolved.vehicle.shortCode}</Text>
+                  <Text style={[styles.codeText, { color: GOLD }]}>{resolved.vehicle.shortCode}</Text>
                 </View>
                 <Text style={[styles.conductor, { color: colors.mutedForeground }]}>Conductor {resolved.vehicle.conductorName}</Text>
               </View>
@@ -97,7 +97,7 @@ export function StopSheet({ resolved, onClose, onPay }: Props) {
 
 const styles = StyleSheet.create({
   root: { flex: 1, justifyContent: 'flex-end' },
-  scrim: { ...StyleSheet.absoluteFillObject, backgroundColor: `${colors.background}99` },
+  scrim: { ...StyleSheet.absoluteFillObject, backgroundColor: SCRIM },
   sheet: { padding: 24, paddingBottom: 36, borderWidth: 1, borderBottomWidth: 0, maxHeight: '88%' },
   grabber: { alignSelf: 'center', width: 40, height: 4, borderRadius: 2, marginBottom: 18 },
   headRow: { flexDirection: 'row', alignItems: 'center', gap: 10, marginBottom: 10 },
