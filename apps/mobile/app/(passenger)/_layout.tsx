@@ -10,7 +10,7 @@ export default function PassengerLayout() {
   return (
     <Tabs
       initialRouteName="index"
-      tabBar={(props) => <FloatingTabBar {...props} />}
+      tabBar={(props) => <FloatingTabBar {...props} darkRoutes={['index']} />}
       screenOptions={{
         headerShown: false,
         tabBarActiveTintColor: colors.primary,

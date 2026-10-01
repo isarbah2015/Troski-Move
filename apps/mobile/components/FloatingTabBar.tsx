@@ -63,8 +63,11 @@ function TabItem({ label, focused, compact, icon, onPress, onLongPress, testID }
  * Floating "card" tab bar: it hovers above the content with a soft emerald glow and a slow bob, and a
  * pill slides between tabs on a spring. The bob stops when the user prefers reduced motion.
  */
-export function FloatingTabBar({ state, descriptors, navigation }: BottomTabBarProps) {
-  const colors = useColors();
+export function FloatingTabBar({ state, descriptors, navigation, darkRoutes = [] }: BottomTabBarProps & { darkRoutes?: string[] }) {
+  // Always-dark screens (the camera) get a dark bar and strip; everything else follows the theme.
+  const onDarkScreen = darkRoutes.includes(state.routes[state.index]!.name);
+  const colors = useColors(onDarkScreen ? 'dark' : undefined);
+  const stripBg = colors.background;
   const insets = useSafeAreaInsets();
   const [width, setWidth] = useState(0);
   const slide = useRef(new Animated.Value(state.index)).current;
@@ -99,7 +102,7 @@ export function FloatingTabBar({ state, descriptors, navigation }: BottomTabBarP
 
   return (
     // The wrapper takes part in layout (so screens end above it) and stays transparent so the card floats.
-    <View style={[styles.wrap, { paddingBottom: Math.max(insets.bottom - 18, 4) }]} pointerEvents="box-none">
+    <View style={[styles.wrap, { paddingBottom: Math.max(insets.bottom - 18, 4), backgroundColor: stripBg }]} pointerEvents="box-none">
       <Animated.View
         onLayout={(e: LayoutChangeEvent) => setWidth(e.nativeEvent.layout.width)}
         style={[
@@ -160,7 +163,7 @@ export function FloatingTabBar({ state, descriptors, navigation }: BottomTabBarP
 }
 
 const styles = StyleSheet.create({
-  wrap: { paddingHorizontal: 16, paddingTop: 6, backgroundColor: 'transparent' },
+  wrap: { paddingHorizontal: 16, paddingTop: 6 },
   card: {
     flexDirection: 'row',
     padding: PAD,
