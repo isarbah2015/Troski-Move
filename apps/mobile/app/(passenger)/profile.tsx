@@ -18,6 +18,7 @@ import { confirmDeleteAccount, confirmSignOut } from '@/lib/auth';
 import { loadDemoProfile } from '@/lib/demo';
 import { submitTripRating } from '@/lib/ratings';
 import { NetworkPicker } from '@/components/NetworkPicker';
+import { KenteStrip } from '@/components/KenteStrip';
 import { MOMO_NETWORK_LABEL } from '@trotrolink/shared';
 import { useMomoNetwork } from '@/lib/network';
 import { formatWhen, GUEST_USER, lifetimeStats, maskMomo, maskPhone } from '@/lib/profile';
@@ -110,6 +111,7 @@ export default function ProfileScreen() {
             <Text style={[styles.verified, { color: person.verified ? '#2BD99F' : SILVER }]}>{person.verified ? 'Verified' : 'Not verified'}</Text>
           </View>
         </View>
+        <View style={{ position: 'absolute', left: 0, right: 0, bottom: 0 }}><KenteStrip /></View>
       </LinearGradient>
 
       {/* Stats */}

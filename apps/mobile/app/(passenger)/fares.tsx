@@ -6,6 +6,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useFocusEffect } from 'expo-router';
 import { formatCedis, pairKey, payAmount, tripFare, type FaresResponse } from '@trotrolink/shared';
 import { useColors } from '@/hooks/useColors';
+import { RouteSpine } from '@/components/RouteSpine';
 import { api } from '@/lib/api';
 import { useT } from '@/lib/i18n';
 
@@ -122,30 +123,14 @@ export default function FaresScreen() {
           {route ? (
             <>
               <Text style={[styles.label, { color: colors.mutedForeground }]}>{t('fares.stops').toUpperCase()}</Text>
-              <View style={[styles.list, card]}>
-                {route.stops.map((s, i) => {
-                  const isFrom = s.name === from;
-                  const isTo = s.name === to;
-                  const between = !!from && !!to && route.stops.findIndex((x) => x.name === from) < i && i < route.stops.findIndex((x) => x.name === to);
-                  return (
-                    <Pressable
-                      key={s.name}
-                      onPress={() => pick(s.name)}
-                      accessibilityRole="button"
-                      accessibilityLabel={`${s.name}, ${formatCedis(s.fare)} from ${route.origin}`}
-                      style={[styles.row, i > 0 && { borderTopWidth: StyleSheet.hairlineWidth * 2, borderTopColor: colors.border }, (isFrom || isTo) && { backgroundColor: tint }]}
-                    >
-                      <View style={styles.rail}>
-                        <View style={[styles.line, { backgroundColor: colors.border, top: i === 0 ? '50%' : 0, bottom: i === route.stops.length - 1 ? '50%' : 0 }]} />
-                        <View style={[styles.node, { borderColor: isFrom || isTo || between ? colors.primary : colors.border, backgroundColor: isFrom || isTo ? colors.primary : colors.card }]} />
-                      </View>
-                      <Text numberOfLines={1} style={[styles.stop, { color: colors.foreground }]}>{s.name}</Text>
-                      {isFrom ? <Text style={[styles.tag, { color: colors.primary }]}>{t('fares.from').toUpperCase()}</Text> : null}
-                      {isTo ? <Text style={[styles.tag, { color: colors.primary }]}>{t('fares.to').toUpperCase()}</Text> : null}
-                      <Text style={[styles.fare, { color: i === 0 ? colors.mutedForeground : colors.foreground }]}>{i === 0 ? t('fares.start') : formatCedis(s.fare)}</Text>
-                    </Pressable>
-                  );
-                })}
+              <View style={[styles.list, card, { paddingVertical: 8, paddingRight: 4 }]}>
+                <RouteSpine
+                  stops={route.stops.map((s, i) => ({ name: s.name, here: s.name === from, right: i === 0 ? t('fares.start') : formatCedis(s.fare) }))}
+                  selected={to}
+                  onSelect={pick}
+                  resettable
+                  hereLabel={t('fares.from').toUpperCase()}
+                />
               </View>
 
               <View style={[styles.hop, card]}>

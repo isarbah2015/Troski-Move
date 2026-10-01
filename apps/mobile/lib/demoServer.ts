@@ -5,7 +5,7 @@
  * roles (switched in Profile) see each other's activity. It is used when EXPO_PUBLIC_API_URL is not set.
  */
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { alightCheck, SEED_ROUTES, parseScannedCode, type RouteStop } from '@trotrolink/shared';
+import { alightCheck, AT_STOP_RADIUS_M, BOARDING_RADIUS_M, nearestStop, SEED_ROUTES, parseScannedCode, type RouteStop } from '@trotrolink/shared';
 
 const KEY = 'demoDb';
 const APPROVE_MS = 3000;
@@ -13,6 +13,8 @@ const AUTO_EXTEND_MS = 60_000;
 const SESSION_MS = 12 * 3_600_000;
 
 type Trip = {
+  /** Set once a phone reports its position for this trip: from then on the trip follows GPS, not the demo timetable. */
+  gpsAt?: number;
   tripId: string; deviceId: string; vehicleCode: string; boarding: string; alighting: string; current: string; paid: number;
   startedAt: number; arrivedAt?: number; active: boolean; lastMarkAt?: number; customStopNote?: string; alightGps?: { status: 'near' | 'far'; distanceM: number };
   overstayStop?: string; overstayAt?: number; autoExtendedAt?: number;
@@ -61,7 +63,7 @@ export async function seedTrip(p: { tripId: string; deviceId: string; vehicleCod
   const paid = due(round2(stops[to]!.fare - stops[0]!.fare));
   const startedAt = Date.now() - p.minutesAgo * 60_000;
   d.payments.push({ ref: `demo-seed-${p.tripId}`, tripId: p.tripId, deviceId: p.deviceId, vehicleCode: v.shortCode, boarding: stops[0]!.name, alighting: stops[to]!.name, amount: paid, createdAt: startedAt, status: 'SUCCESSFUL' });
-  d.trips.push({ tripId: p.tripId, deviceId: p.deviceId, vehicleCode: v.shortCode, boarding: stops[0]!.name, alighting: stops[to]!.name, current: p.current, paid, startedAt, active: true, lastMarkAt: Date.now() - 60_000 });
+  d.trips.push({ tripId: p.tripId, deviceId: p.deviceId, vehicleCode: v.shortCode, boarding: stops[0]!.name, alighting: stops[to]!.name, current: p.current, paid, startedAt, active: true, lastMarkAt: Date.now() });
   d.events.push({ vehicle: v.shortCode, type: 'boarded', stop: stops[0]!.name, at: startedAt });
   d.events.push({ vehicle: v.shortCode, type: 'stop_reached', stop: p.current, at: Date.now() - 60_000 });
   await save();
@@ -131,8 +133,24 @@ function settle(d: Db, p: Payment) {
 }
 
 /** Charges passengers who ignored the overstay prompt for 60 seconds, and settles approved payments. */
+/** Without GPS the demo still moves: one timetable minute passes every 6 seconds, so a ride can be watched end to end. */
+const DEMO_SECONDS_PER_MIN = 6;
+
 function tick(d: Db) {
   for (const t of d.trips) {
+    if (t.active && !t.gpsAt && !t.overstayStop) {
+      const stops = vehicle(t.vehicleCode)!.route.stops;
+      const alight = idx(stops, t.alighting);
+      let cur = idx(stops, t.current);
+      let clock = (t.lastMarkAt ?? t.startedAt) + 0;
+      while (cur < alight) {
+        const legMs = (stops[cur + 1]!.etaMinutes || 1) * DEMO_SECONDS_PER_MIN * 1000;
+        if (Date.now() - clock < legMs) break;
+        clock += legMs; cur += 1;
+        t.current = stops[cur]!.name; t.lastMarkAt = clock;
+        d.events.push({ vehicle: t.vehicleCode, type: cur === alight ? 'arrived' : 'stop_reached', stop: stops[cur]!.name, at: clock });
+      }
+    }
     if (t.active && t.overstayStop && t.overstayAt && !t.autoExtendedAt && Date.now() - t.overstayAt > AUTO_EXTEND_MS) {
       t.autoExtendedAt = Date.now();
       extension(d, t);
@@ -207,7 +225,10 @@ async function route(method: string, path: string, query: URLSearchParams, body:
   if (path === '/vehicles/resolve') {
     const v = vehicle(parseScannedCode(query.get('code') ?? ''));
     if (!v) fail(404, 'Vehicle not found');
+    const qlat = Number(query.get('lat')), qlng = Number(query.get('lng'));
+    const near = query.get('lat') && Number.isFinite(qlat) && Number.isFinite(qlng) ? nearestStop(v!.route.stops.slice(0, -1), { lat: qlat, lng: qlng }, BOARDING_RADIUS_M) : null;
     return {
+      detectedBoarding: near ? { stop: near.stop.name, distanceM: near.distanceM } : null,
       vehicle: { id: v!.id, shortCode: v!.shortCode, driverName: v!.driverName, conductorName: v!.conductorName, verified: true, suspended: false },
       fareNotice: null,
       // Where the trotro is now (the conductor's latest stop mark since the last route or direction change).
@@ -292,6 +313,25 @@ async function route(method: string, path: string, query: URLSearchParams, body:
     return { ok: true };
   }
 
+  if (post && path === '/trips/position') {
+    const t = d.trips.find((x) => x.active && x.tripId === body.tripId && x.deviceId === body.deviceId);
+    if (!t) fail(404, 'No active trip');
+    t!.gpsAt = Date.now();
+    const stops = vehicle(t!.vehicleCode)!.route.stops;
+    const hit = typeof body.lat === 'number' ? nearestStop(stops, { lat: body.lat, lng: body.lng }, AT_STOP_RADIUS_M) : null;
+    const board = idx(stops, t!.boarding), alight = idx(stops, t!.alighting), cur = idx(stops, t!.current);
+    let arrived = false;
+    if (hit && hit.index >= board && hit.index > cur && !t!.overstayStop) {
+      const target = Math.min(hit.index, alight);
+      if (target > cur) {
+        t!.current = stops[target]!.name; t!.lastMarkAt = Date.now();
+        d.events.push({ vehicle: t!.vehicleCode, type: 'stop_reached', stop: stops[target]!.name, at: Date.now() });
+        if (target === alight) { arrived = true; d.events.push({ vehicle: t!.vehicleCode, type: 'arrived', stop: stops[alight]!.name, at: Date.now() }); }
+      }
+    }
+    await save();
+    return { ok: true, currentStop: t!.current, arrived };
+  }
   if (post && path === '/trips/stop') {
     const own = authed(d, headers); ownVehicle(own, String(body.vehicleCode));
     const v = vehicle(own)!; const stops = v.route.stops;

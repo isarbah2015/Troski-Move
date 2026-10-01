@@ -14,6 +14,7 @@ import { PaymentSheet, type PaymentPhase } from '@/components/PaymentSheet';
 import { StopSheet } from '@/components/StopSheet';
 import { useColors } from '@/hooks/useColors';
 import { DEMO_MODE, VehicleNotFoundError } from '@/lib/api';
+import { getPosition } from '@/lib/location';
 import { api } from '@/lib/api';
 import { payForTrip } from '@/lib/payment';
 import { appendTripRecord, saveActiveTrip } from '@/lib/storage';
@@ -73,7 +74,9 @@ export default function ScanScreen() {
     setError(null);
     setNotFound(false);
     try {
-      const result = await api.resolveVehicle(code);
+      // Where the passenger is standing tells the app which stop they are getting on at. Optional: no location, no problem.
+      const here = await getPosition({ askPermission: true, timeoutMs: 2000 });
+      const result = await api.resolveVehicle(code, here ?? undefined);
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
       setCodeOpen(false);
       setResolved(result);

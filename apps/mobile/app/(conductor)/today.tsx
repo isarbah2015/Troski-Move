@@ -10,6 +10,7 @@ import { CEDI, CONDUCTOR_BONUS, type ServerTrip } from '@trotrolink/shared';
 import { DemoBadge } from '@/components/DemoBadge';
 import { PassengerSheet } from '@/components/PassengerSheet';
 import { VerifySheet } from '@/components/VerifySheet';
+import { KenteStrip } from '@/components/KenteStrip';
 import { PulseDot } from '@/components/PulseDot';
 import { SectionHeader } from '@/components/SectionHeader';
 import { useColors } from '@/hooks/useColors';
@@ -41,12 +42,13 @@ export default function TodayScreen() {
   const pastStop = (passengers ?? []).filter((p) => p.overstay);
 
   const stops = data?.route.stops ?? [];
-  const current = currentStop ?? passengers?.[0]?.currentStop ?? stops[0]?.name ?? null;
+  // Where the trotro is: GPS (this phone), else the furthest stop any passenger's phone has reached, else the start. Nobody taps for it.
+  const furthest = (passengers ?? []).reduce((best, p) => Math.max(best, stops.findIndex((x) => x.name === p.currentStop)), -1);
+  const current = currentStop ?? (furthest >= 0 ? stops[furthest]!.name : stops[0]?.name ?? null);
   const [heads, setHeads] = useState<number | null>(null);
   const [auto, setAuto] = useState(true);
   const [voice, setVoice] = useState(false);
   const [verifyOpen, setVerifyOpen] = useState(false);
-  const [fixStop, setFixStop] = useState(false);
   const board = useMemo(() => buildBoard(stops.map((s) => s.name), current, passengers ?? []), [stops, current, passengers]);
   const counted = heads ?? board.total;
   const missing = Math.max(0, counted - board.total);
@@ -70,7 +72,6 @@ export default function TodayScreen() {
     if (name === current) return;
     Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
     setCurrentStop(name);
-    setFixStop(false);
     if (automatic) showToast(`${name} marked automatically`);
     if (vehicleCode) {
       void sendOrQueue({ type: 'stop', body: { vehicleCode, stopName: name } });
@@ -195,6 +196,7 @@ export default function TodayScreen() {
                 <Text style={[styles.headingText, { color: WHITE }]}>Change route</Text>
               </Pressable>
             </View>
+            <View style={{ position: 'absolute', left: 0, right: 0, bottom: 0 }}><KenteStrip /></View>
           </LinearGradient>
 
           {/* The Big Board: who is getting off, who has paid, and whether the head count matches. */}
@@ -228,7 +230,7 @@ export default function TodayScreen() {
             <Pressable onPress={() => { Haptics.selectionAsync(); setAuto((a) => !a); }} accessibilityRole="switch" accessibilityState={{ checked: auto }} style={[styles.chip, { borderColor: auto ? colors.primary : colors.border, borderRadius: colors.radiusPill }]}>
               <Feather name="navigation" size={14} color={auto ? colors.primary : colors.mutedForeground} />
               <Text style={[styles.chipText, { color: auto ? colors.primary : colors.mutedForeground }]}>
-                {auto ? (gps === 'on' ? 'GPS marks stops' : gps === 'searching' ? 'Looking for GPS…' : 'GPS marks stops') : 'GPS off'}
+                {auto ? (gps === 'searching' ? 'Waiting for GPS' : 'Stops are detected for you') : 'GPS off'}
               </Text>
             </Pressable>
             <Pressable onPress={() => { Haptics.selectionAsync(); setVoice((v) => { if (!v) speak(announcement(board)); return !v; }); }} accessibilityRole="switch" accessibilityState={{ checked: voice }} style={[styles.chip, { borderColor: voice ? colors.primary : colors.border, borderRadius: colors.radiusPill }]}>
@@ -270,13 +272,12 @@ export default function TodayScreen() {
               ) : (
                 board.nextPax.map((p) => <PaxCard key={p.tripId} pax={p} onPress={() => { Haptics.selectionAsync(); setSelected(p); }} />)
               )}
-              <Pressable onPress={() => markStop(board.next!)} accessibilityRole="button" style={[styles.atBtn, { backgroundColor: colors.primary, borderRadius: colors.radiusPill }]}>
-                <Feather name="map-pin" size={20} color={colors.primaryForeground} />
-                <Text style={[styles.atText, { color: colors.primaryForeground }]}>We are at {board.next}</Text>
-              </Pressable>
             </>
           ) : (
-            <Text style={[styles.empty, { color: colors.mutedForeground }]}>End of the line. Turn round to start the return leg.</Text>
+            <Pressable onPress={turnRound} accessibilityRole="button" style={[styles.atBtn, { backgroundColor: colors.primary, borderRadius: colors.radiusPill }]}>
+              <Feather name="repeat" size={20} color={colors.primaryForeground} />
+              <Text style={[styles.atText, { color: colors.primaryForeground }]}>End of the line: turn round</Text>
+            </Pressable>
           )}
 
           {board.later.length > 0 ? (
@@ -295,19 +296,6 @@ export default function TodayScreen() {
                 </View>
               ))}
             </>
-          ) : null}
-
-          <Pressable onPress={() => { Haptics.selectionAsync(); setFixStop((f) => !f); }} accessibilityRole="button" style={styles.fixLink}>
-            <Text style={[styles.fixText, { color: colors.mutedForeground }]}>Not at {current}? {fixStop ? 'Hide' : 'Set the stop'}</Text>
-          </Pressable>
-          {fixStop ? (
-            <View style={styles.fixChips}>
-              {stops.map((s) => (
-                <Pressable key={s.name} onPress={() => markStop(s.name)} accessibilityRole="button" accessibilityState={{ selected: s.name === current }} style={[styles.chip, { borderColor: s.name === current ? colors.primary : colors.border, backgroundColor: s.name === current ? colors.primary : 'transparent', borderRadius: colors.radiusPill }]}>
-                  <Text style={[styles.chipText, { color: s.name === current ? colors.primaryForeground : colors.foreground }]}>{s.name}</Text>
-                </Pressable>
-              ))}
-            </View>
           ) : null}
 
           {/* The two things a conductor does about fraud, one tap each. */}
@@ -459,7 +447,7 @@ const styles = StyleSheet.create({
   errorText: { fontFamily: 'PlusJakartaSans_500Medium', fontSize: 14, textAlign: 'center' },
   retry: { height: 44, paddingHorizontal: 24, borderWidth: StyleSheet.hairlineWidth * 2, alignItems: 'center', justifyContent: 'center' },
   retryText: { fontFamily: 'PlusJakartaSans_600SemiBold', fontSize: 15 },
-  vehicle: { padding: 20, borderWidth: StyleSheet.hairlineWidth * 2, marginBottom: GAP },
+  vehicle: { overflow: 'hidden', padding: 20, borderWidth: StyleSheet.hairlineWidth * 2, marginBottom: GAP },
   vehicleTop: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
   codeRow: { flexDirection: 'row', alignItems: 'center', gap: 10 },
   code: { fontFamily: 'PlusJakartaSans_700Bold', fontSize: 22, letterSpacing: 1 },

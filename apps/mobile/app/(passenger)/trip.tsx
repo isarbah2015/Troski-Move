@@ -29,6 +29,7 @@ import { applyServerTrip, tripProgress } from '@/lib/trip';
 import { EMERALD, GOLD, SILVER, WHITE } from '@/lib/colors';
 import { t as tt, useT } from '@/lib/i18n';
 import { PrimaryButton } from '@/components/PrimaryButton';
+import { KenteStrip } from '@/components/KenteStrip';
 import { LiveEta } from '@/components/LiveEta';
 import { SupportStatus } from '@/components/SupportStatus';
 
@@ -101,6 +102,7 @@ function ActiveTripView({ trip, onCleared, onConfirmAlighting }: { trip: ActiveT
         <Text style={[styles.route, { color: SILVER }]}>
           {trip.vehicleShortCode} · {trip.routeName} · Driver {trip.driverName}
         </Text>
+        <View style={{ position: 'absolute', left: 0, right: 0, bottom: 0 }}><KenteStrip /></View>
       </LinearGradient>
 
       <LiveEta

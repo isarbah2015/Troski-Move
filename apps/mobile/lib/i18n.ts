@@ -16,7 +16,7 @@ const en: Dict = {
   'fares.route': 'Route', 'fares.stops': 'Fare from the first stop', 'fares.from': 'From', 'fares.to': 'To', 'fares.start': 'Start',
   'fares.pickFrom': 'Tap the stop you get on at', 'fares.pickTo': 'Now tap the stop you get off at', 'fares.official': 'Official fare', 'fares.fixed': 'fixed short-hop price',
   'fares.foot': 'You pay the official fare, rounded up to the next step set by GPRTU. If a driver asks for more, report it from the Trip screen.',
-  'stop.payWith': 'Pay with', 'profile.networkNote': 'Fares are the same on every network. Pick the wallet you will approve the payment on.',
+  'stop.payWith': 'Pay with', 'stop.detected': 'You are here', 'stop.youChose': 'Getting on at', 'stop.change': 'Change', 'stop.done': 'Done', 'stop.atStop': 'At the stop, from your location', 'stop.metresAway': 'About {m} m from the stop, from your location', 'stop.noLocation': 'Location is off or you are not near a listed stop. Pick where you got on.', 'profile.networkNote': 'Fares are the same on every network. Pick the wallet you will approve the payment on.',
   'scan.title': 'Scan to ride', 'scan.subtitle': 'Point at the QR sticker inside the trotro',
   'scan.enterCode': 'Enter short code', 'scan.allowCamera': 'Allow camera access to scan the QR code.', 'scan.allow': 'Allow',
   'code.title': 'Enter short code', 'code.hint': 'Find it printed under the QR sticker, e.g. CIR01.', 'code.find': 'Find my trotro',
