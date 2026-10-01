@@ -6,6 +6,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { CONDUCTOR_BONUS, type ServerTrip } from '@trotrolink/shared';
+import { DemoBadge } from '@/components/DemoBadge';
 import { PassengerSheet } from '@/components/PassengerSheet';
 import { PulseDot } from '@/components/PulseDot';
 import { SectionHeader } from '@/components/SectionHeader';
@@ -79,7 +80,8 @@ export default function TodayScreen() {
 
   return (
     <ScrollView style={{ backgroundColor: colors.background }} contentContainerStyle={[styles.scroll, { paddingTop: insets.top + 16 }]} showsVerticalScrollIndicator={false}>
-      <Text style={[styles.kicker, { color: colors.mutedForeground }]}>TROTROLINK · CONDUCTOR</Text>
+      <DemoBadge />
+      <Text style={[styles.kicker, { color: colors.mutedForeground, marginTop: 8 }]}>TROTROLINK · CONDUCTOR</Text>
 
       {loading ? (
         <View style={styles.center}><ActivityIndicator color={colors.primary} /></View>

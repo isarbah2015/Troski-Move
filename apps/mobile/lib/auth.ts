@@ -2,6 +2,7 @@ import { Alert } from 'react-native';
 import * as Haptics from 'expo-haptics';
 import { clearSession } from '@/lib/conductorSession';
 import { api } from '@/lib/api';
+import { resetDemo } from '@/lib/demoServer';
 import { clearAllLocalData } from '@/lib/storage';
 
 /**
@@ -22,6 +23,7 @@ export function confirmSignOut(onSignedOut: () => void | Promise<void>, beforeCl
           // Offline: the local session is wiped anyway.
         }
         await clearAllLocalData();
+        await resetDemo();
         await clearSession();
         await onSignedOut();
       },

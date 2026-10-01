@@ -48,12 +48,14 @@ export type ApiClientOptions = {
   getToken?: () => Promise<string | null>;
   /** Called when the API answers 401 on a request that carried a token (the session expired or was ended). */
   onUnauthorized?: () => void;
+  /** Replaces `fetch`: the app's offline demo mode serves the API from inside the app. */
+  fetch?: typeof fetch;
 };
 
 export function createApiClient(baseUrl: string, options: ApiClientOptions = {}) {
   async function request(path: string, init: RequestInit = {}): Promise<unknown> {
     const token = await options.getToken?.();
-    const res = await fetch(`${baseUrl}/api${path}`, token ? { ...init, headers: { ...(init.headers as Record<string, string> | undefined), Authorization: `Bearer ${token}` } } : init);
+    const res = await (options.fetch ?? fetch)(`${baseUrl}/api${path}`, token ? { ...init, headers: { ...(init.headers as Record<string, string> | undefined), Authorization: `Bearer ${token}` } } : init);
     if (res.status === 401 && token) options.onUnauthorized?.();
     if (!res.ok) {
       let message = `Request failed (${res.status})`;

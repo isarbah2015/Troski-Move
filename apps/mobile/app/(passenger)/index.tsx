@@ -7,6 +7,7 @@ import { useFocusEffect, useLocalSearchParams, useRouter } from 'expo-router';
 import type { ResolvedVehicle, Stop } from '@trotrolink/shared';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { CodeEntrySheet } from '@/components/CodeEntrySheet';
+import { DemoBadge } from '@/components/DemoBadge';
 import { PaymentSheet, type PaymentPhase } from '@/components/PaymentSheet';
 import { StopSheet } from '@/components/StopSheet';
 import { useColors } from '@/hooks/useColors';
@@ -150,6 +151,7 @@ export default function ScanScreen() {
       <View style={[StyleSheet.absoluteFill, styles.dim]} pointerEvents="none" />
 
       <View style={[styles.top, { paddingTop: insets.top + 16 }]}>
+        <DemoBadge />
         <Text style={[styles.title, { color: tokens.textPrimary }]}>Scan to ride</Text>
         <Text style={[styles.subtitle, { color: tokens.textSecondary }]}>Point at the QR sticker inside the trotro</Text>
       </View>
