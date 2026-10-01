@@ -6,6 +6,11 @@ import { APP_LANGUAGES, type AppLanguage } from '@trotrolink/shared';
 import { useColors } from '@/hooks/useColors';
 import { SCRIM } from '@/lib/colors';
 
+// Each language is listed in its own script so visitors can find it, with the English name beneath for the others.
+const NATIVE_NAME: Record<AppLanguage, string> = {
+  English: 'English', Twi: 'Twi (Akan)', Ewe: 'Eʋegbe (Ewe)', German: 'Deutsch', Russian: 'Русский', Dutch: 'Nederlands', Chinese: '中文 (简体)',
+};
+
 type Props = { visible: boolean; selected: AppLanguage; onSelect: (l: AppLanguage) => void; onClose: () => void };
 
 export function LanguageSheet({ visible, selected, onSelect, onClose }: Props) {
@@ -30,12 +35,12 @@ export function LanguageSheet({ visible, selected, onSelect, onClose }: Props) {
                 accessibilityState={{ selected: active }}
                 style={[styles.row, { borderColor: active ? colors.primary : colors.border, borderRadius: colors.radius }]}
               >
-                <Text style={[styles.label, { color: colors.foreground }]}>{l}</Text>
+                <Text style={[styles.label, { color: colors.foreground }]}>{NATIVE_NAME[l]}</Text>
                 {active ? <Feather name="check" size={20} color={colors.primary} /> : null}
               </Pressable>
             );
           })}
-          <Text style={[styles.note, { color: colors.mutedForeground }]}>Twi and Ewe cover the passenger screens (the conductor screens stay in English). The wording is a first version and may change.</Text>
+          <Text style={[styles.note, { color: colors.mutedForeground }]}>All languages cover the passenger screens (the conductor screens stay in English). Non-English wording is a first version and may change.</Text>
         </View>
       </View>
     </Modal>

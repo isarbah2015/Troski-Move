@@ -5,6 +5,7 @@ import * as Haptics from 'expo-haptics';
 import { useRouter } from 'expo-router';
 import type { AppLanguage, ThemePreference } from '@trotrolink/shared';
 import { APPEARANCE_LABEL, AppearanceSheet } from '@/components/AppearanceSheet';
+import { CediIcon } from '@/components/CediIcon';
 import { CurrencySheet } from '@/components/CurrencySheet';
 import { setDisplayCurrency, useDisplayCurrency } from '@/lib/currencyPref';
 import { LanguageSheet } from '@/components/LanguageSheet';
@@ -14,13 +15,13 @@ import { getLanguage, getNotifications, setLanguage, setNotifications } from '@/
 import { getThemePreference, setThemePreference } from '@/lib/theme';
 import { setAppLanguage, useT } from '@/lib/i18n';
 
-type IconName = React.ComponentProps<typeof Feather>['name'];
+type IconName = React.ComponentProps<typeof Feather>['name'] | 'cedi';
 
 function Row({ icon, label, value, onPress, divider }: { icon: IconName; label: string; value?: string; onPress: () => void; divider?: boolean }) {
   const colors = useColors();
   return (
     <Pressable onPress={onPress} accessibilityRole="button" style={[styles.row, divider && styles.divider, divider && { borderTopColor: colors.border }]}>
-      <Feather name={icon} size={20} color={colors.mutedForeground} />
+      {icon === 'cedi' ? <CediIcon size={20} color={colors.mutedForeground} /> : <Feather name={icon} size={20} color={colors.mutedForeground} />}
       <Text style={[styles.label, { color: colors.foreground }]}>{label}</Text>
       {value ? <Text style={[styles.value, { color: colors.mutedForeground }]}>{value}</Text> : null}
       <Feather name="chevron-right" size={20} color={colors.mutedForeground} />
@@ -74,7 +75,7 @@ export function SettingsGroup({ onDeleteAccount }: { onDeleteAccount?: () => voi
           />
         </View>
       </View>
-      <Row icon="dollar-sign" label="Currency" value={currency === 'GHS' ? '₵ Cedi' : currency} onPress={() => setCurrencyOpen(true)} divider />
+      <Row icon="cedi"label="Currency" value={currency === 'GHS' ? '₵ Cedi' : currency} onPress={() => setCurrencyOpen(true)} divider />
       <Row icon="lock" label={t('set.privacy')} onPress={() => router.push('/privacy')} divider />
       <Row icon="compass" label="Visiting Ghana?" onPress={() => router.push('/visitor')} divider />
       <Row icon="help-circle" label={t('set.help')} onPress={() => Linking.openURL('mailto:help@trotrolink.app')} divider />

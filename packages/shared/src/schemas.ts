@@ -89,7 +89,7 @@ export const TripRecord = z.object({
 });
 export type TripRecord = z.infer<typeof TripRecord>;
 
-export const APP_LANGUAGES = ['English', 'Twi', 'Ewe'] as const;
+export const APP_LANGUAGES = ['English', 'Twi', 'Ewe', 'German', 'Russian', 'Dutch', 'Chinese'] as const;
 export type AppLanguage = (typeof APP_LANGUAGES)[number];
 
 export const LeaderboardEntry = z.object({

@@ -191,7 +191,7 @@ Trip tab shows **Confirm alighting** once the vehicle's current stop (set by the
 - **Custom drop-off**: passenger can pick "Somewhere else" in the stop sheet and type a note (`customStopNote`). Fare is that of the nearest anchor; the note is stored on the payment, trip and transaction, and feeds the union's stop suggestions.
 - **GPS check at alighting**: `alightCheck` (`packages/shared/src/geo.ts`), 200 m radius. Optional and never blocking; result stored as `alightDistanceM` / `alightGps` and shown in union transactions.
 - **ETA by position**: `interpolatedEta` uses GPS along the leg, else time since the last stop mark, capped at 90 %. Stop lat/lng are approximate.
-- **Languages**: English, Twi, Ewe (`apps/mobile/lib/i18n.ts`, `useT()`). Twi/Ewe are a first pass for native-speaker review; conductor screens stay English.
+- **Languages**: English, Twi, Ewe, German, Russian, Dutch, Chinese (`apps/mobile/lib/i18n.ts`, `useT()`). All non-English wording is a first pass for native-speaker review; conductor screens stay English.
 - **Currency**: `₵` everywhere. Visitors can view approximate USD/EUR/GBP/NGN (`packages/shared/src/currency.ts`); rates are fixed rough figures, replace with a live source. "Visiting Ghana?" guide is general advice to verify.
 - **Notifications**: local notifications (`lib/notify.ts`) work while the app is alive. Server push (`services/push.ts`, Expo push API) needs FCM credentials and `EXPO_PUBLIC_EAS_PROJECT_ID` from GPRTU.
 - **USSD**: `POST /api/ussd` (form-encoded, Africa's Talking style). Flow: vehicle code, stop number, confirm, MoMo prompt. Text says "GHS" (GSM 7-bit has no ₵).
