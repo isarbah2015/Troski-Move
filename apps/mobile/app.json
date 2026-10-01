@@ -23,7 +23,13 @@
       "adaptiveIcon": {
         "foregroundImage": "./assets/images/icon.png",
         "backgroundColor": "#060A13"
-      }
+      },
+      "permissions": [
+        "ACCESS_FINE_LOCATION",
+        "ACCESS_COARSE_LOCATION",
+        "CAMERA",
+        "VIBRATE"
+      ]
     },
     "web": {
       "favicon": "./assets/images/icon.png"
@@ -33,7 +39,24 @@
       "expo-font",
       "expo-web-browser",
       "./plugins/withGradleMemory",
-      ["expo-notifications", { "color": "#10B981" }]
+      [
+        "expo-notifications",
+        {
+          "color": "#10B981"
+        }
+      ],
+      [
+        "expo-location",
+        {
+          "locationWhenInUsePermission": "TrotroLink uses your location to find the stop you are at and to follow your trip. It is only used while you ride."
+        }
+      ],
+      [
+        "expo-camera",
+        {
+          "cameraPermission": "TrotroLink uses the camera to scan the QR sticker in the trotro."
+        }
+      ]
     ],
     "experiments": {
       "typedRoutes": true,

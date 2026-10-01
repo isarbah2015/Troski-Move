@@ -233,3 +233,9 @@ Today/Earnings numbers, scan counts and average rating in the conductor app are 
 - Optional voice readout (`lib/speak.ts`, expo-speech on device, speechSynthesis on web).
 - Passengers are anonymous guests, so rows show "Passenger · <last 4 of trip id>".
 - Toasts slide up above the tab bar. Screenshot scripts grow the phone to fit each screen (`fit.js` in the scratchpad).
+
+## Building the Android APK (run on a computer, not in the cloud session)
+- **Phone plugged in by USB** (fastest): enable Developer options + USB debugging, check `adb devices` lists it, then `cd apps/mobile && pnpm android:phone` (needs Android Studio / the Android SDK and JDK 17 or 21). It builds and installs on the phone.
+- **Shareable APK file**: `cd apps/mobile && npx eas-cli login && pnpm apk:demo`. EAS builds it in the cloud and gives a download link/QR. `demo` runs offline with sample data; for the live server edit `eas.json` (`live` profile, set `EXPO_PUBLIC_API_URL`) and run `pnpm apk:live`.
+- The cloud coding session has no Android SDK (dl.google.com is blocked) and cannot reach api.expo.dev, so it cannot produce the APK itself.
+- Location and camera permissions are declared in `app.json` (needed for boarding detection, trip progress and QR scanning).

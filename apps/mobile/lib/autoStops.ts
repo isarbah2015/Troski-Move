@@ -27,6 +27,7 @@ export function useAutoStops(p: { stops: GpsStop[]; current: string | null; enab
     let stop = false;
     const tick = async () => {
       const pos = await getPosition({ askPermission: true, timeoutMs: 4000 });
+      console.log('AUTOSTOP tick', JSON.stringify(pos), latest.current.current, latest.current.stops.length);
       if (stop) return;
       if (!pos) {
         setState('searching');
