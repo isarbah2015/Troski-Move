@@ -316,7 +316,9 @@ export type ConductorLoginResponse = z.infer<typeof ConductorLoginResponse>;
 export const ExtendBody = z.object({ tripId: z.string().min(1) });
 export type ExtendBody = z.infer<typeof ExtendBody>;
 
-export const DISPUTE_REASONS = ['overcharge', 'route_deviation', 'safety_concern', 'forced_early_alighting'] as const;
+export const DISPUTE_REASONS = ['accident', 'careless_driving', 'overcharge', 'route_deviation', 'safety_concern', 'forced_early_alighting'] as const;
+/** Reasons the union treats as live alerts: they appear on the dashboard at once, with the passenger's location. */
+export const URGENT_REASONS = ['accident', 'careless_driving'] as const;
 export type DisputeReason = (typeof DISPUTE_REASONS)[number];
 
 /** `POST /api/disputes`: a passenger reports a trip. The server attaches the evidence. */
@@ -327,6 +329,9 @@ export const DisputeBody = z.object({
   description: z.string().max(500).optional(),
   /** For an overcharge: what the passenger was asked to pay, in GHS. */
   amountAsked: z.number().positive().max(1000).optional(),
+  /** Where the passenger is, so the union can send help to an accident or follow a careless driver. */
+  lat: z.number().min(-90).max(90).optional(),
+  lng: z.number().min(-180).max(180).optional(),
 });
 export type DisputeBody = z.infer<typeof DisputeBody>;
 
@@ -355,3 +360,9 @@ export const UnregisteredReportBody = z.object({
 export type UnregisteredReportBody = z.infer<typeof UnregisteredReportBody>;
 export const UnregisteredReportResponse = z.object({ ok: z.literal(true), reportId: z.number().int() });
 export type UnregisteredReportResponse = z.infer<typeof UnregisteredReportResponse>;
+
+/** `GET /api/disputes/status`: the union's live answer to a passenger's urgent report. */
+export const SupportStatusResponse = z.object({
+  reports: z.array(z.object({ id: z.number().int(), reason: z.enum(DISPUTE_REASONS), status: z.string(), reply: z.string().nullable(), repliedAt: z.string().nullable(), createdAt: z.string() })),
+});
+export type SupportStatusResponse = z.infer<typeof SupportStatusResponse>;

@@ -29,6 +29,8 @@ import { applyServerTrip, tripProgress } from '@/lib/trip';
 import { EMERALD, GOLD, SILVER, WHITE } from '@/lib/colors';
 import { t as tt, useT } from '@/lib/i18n';
 import { PrimaryButton } from '@/components/PrimaryButton';
+import { LiveEta } from '@/components/LiveEta';
+import { SupportStatus } from '@/components/SupportStatus';
 
 function LiveBadge() {
   const colors = useColors();
@@ -58,21 +60,11 @@ function LiveBadge() {
   );
 }
 
-function Stat({ icon, label, value }: { icon: React.ComponentProps<typeof Feather>['name']; label: string; value: string }) {
-  const colors = useColors();
-  return (
-    <View style={[styles.stat, { backgroundColor: colors.card, borderColor: colors.border, borderRadius: colors.radius, ...colors.elevation }]}>
-      <Feather name={icon} size={16} color={colors.mutedForeground} />
-      <Text style={[styles.statValue, { color: colors.foreground }]} numberOfLines={1} adjustsFontSizeToFit>{value}</Text>
-      <Text style={[styles.statLabel, { color: colors.mutedForeground }]}>{label}</Text>
-    </View>
-  );
-}
-
 function ActiveTripView({ trip, onCleared, onConfirmAlighting }: { trip: ActiveTrip; onCleared: () => void; onConfirmAlighting: () => void }) {
   const colors = useColors();
   const insets = useSafeAreaInsets();
   const [reportOpen, setReportOpen] = useState(false);
+  const [reportReason, setReportReason] = useState<import('@trotrolink/shared').DisputeReason | null>(null);
   const t = useT();
   const progress = tripProgress(trip);
   const eta = useLiveEta(trip);
@@ -111,20 +103,17 @@ function ActiveTripView({ trip, onCleared, onConfirmAlighting }: { trip: ActiveT
         </Text>
       </LinearGradient>
 
-      <View style={styles.stats}>
-        <Stat icon="map-pin" label={t('trip.currentStop')} value={trip.currentStop} />
-        <Stat icon="flag" label={t('trip.stopsAway')} value={String(trip.stopsRemaining)} />
-        <Stat icon="clock" label={t('trip.eta')} value={`~${eta} min`} />
-      </View>
+      <LiveEta
+        eta={eta}
+        progress={progress}
+        destination={trip.alightingStop}
+        currentStop={trip.currentStop}
+        stopsRemaining={trip.stopsRemaining}
+        stops={trip.stops.map((st) => st.name)}
+        alightingStop={trip.alightingStop}
+      />
 
-      <View
-        style={[styles.track, { backgroundColor: colors.border, borderRadius: colors.radiusPill }]}
-        accessibilityRole="progressbar"
-        accessibilityValue={{ min: 0, max: 100, now: Math.round(progress * 100) }}
-      >
-        <LinearGradient colors={colors.gradient} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }} style={[styles.fill, { width: `${Math.round(progress * 100)}%`, borderRadius: colors.radiusPill }]} />
-      </View>
-      <Text style={[styles.pct, { color: colors.mutedForeground }]}>{t('trip.rideDone', { pct: Math.round(progress * 100) })}</Text>
+      <SupportStatus trip={trip} onOpen={(reason) => { setReportReason(reason); setReportOpen(true); }} />
 
       <View style={[styles.card, { backgroundColor: colors.card, borderColor: colors.border, borderRadius: colors.radius, ...colors.elevation }]}>
         {trip.stops.map((s, i) => {
@@ -196,13 +185,18 @@ function ActiveTripView({ trip, onCleared, onConfirmAlighting }: { trip: ActiveT
 
       <ReportSheet
         visible={reportOpen}
-        onClose={() => setReportOpen(false)}
+        initialReason={reportReason}
+        onClose={() => { setReportOpen(false); setReportReason(null); }}
         onSubmit={async (reason, description, amountAsked) => {
           // Queued if offline; the server attaches the trip, vehicle and stop history as evidence.
-          await sendOrQueue({ type: 'dispute', body: { tripId: trip.tripId, deviceId: await getDeviceId(), reason, description, ...(amountAsked !== undefined ? { amountAsked } : {}) } });
+          // Accidents and careless driving are live alerts: send the phone's position so GPRTU can find the trotro.
+          const urgent = reason === 'accident' || reason === 'careless_driving';
+          const pos = urgent ? await getPosition({ timeoutMs: 4000 }) : null;
+          await sendOrQueue({ type: 'dispute', body: { tripId: trip.tripId, deviceId: await getDeviceId(), reason, description, ...(amountAsked !== undefined ? { amountAsked } : {}), ...(pos ? { lat: pos.lat, lng: pos.lng } : {}) } });
           await saveTripReport(trip.tripId, reason);
           setReportOpen(false);
-          showToast('Report sent. Union will review within 24h.');
+          setReportReason(null);
+          showToast(urgent ? 'Alert sent. GPRTU can see your report now.' : 'Report sent. Union will review within 24h.');
         }}
       />
     </ScrollView>

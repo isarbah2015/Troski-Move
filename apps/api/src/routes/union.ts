@@ -19,6 +19,7 @@ router.get("/union/overview", async (_req, res): Promise<void> => {
   const [overcharge] = await db.select({ n: count() }).from(disputesTable).where(and(eq(disputesTable.disputeType, "overcharge"), eq(disputesTable.status, "open")));
   const [rating] = await db.select({ avg: sql<string | null>`round(avg(${ratingsTable.driverRating})::numeric, 2)`, n: count() }).from(ratingsTable).where(gt(ratingsTable.ratedAt, DAY));
   const flagged = await computeCompliance();
+  const [urgent] = await db.execute(sql`select count(*)::int as n from disputes where urgent = true and status in ('open','investigating')`).then((r) => r.rows as Array<{ n: number }>);
   const [unreg] = await db.execute(sql`select count(*)::int as n from unregistered_reports where status = 'open'`).then((r) => r.rows as Array<{ n: number }>);
   res.json({
     tripsToday: today?.trips ?? 0,
@@ -31,6 +32,7 @@ router.get("/union/overview", async (_req, res): Promise<void> => {
     flaggedVehicles: flagged.filter((v) => v.severity !== "ok").length,
     suspendedVehicles: flagged.filter((v) => v.status === "suspended").length,
     unregisteredOpen: unreg?.n ?? 0,
+    urgentAlerts: urgent?.n ?? 0,
   });
 });
 

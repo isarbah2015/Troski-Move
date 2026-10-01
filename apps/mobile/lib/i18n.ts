@@ -41,6 +41,9 @@ const en: Dict = {
   'report.title': 'Report an issue', 'report.what': 'What went wrong on this trip?', 'report.send': 'Send report',
   'verified.badge': 'GPRTU Verified', 'suspended.title': 'Vehicle suspended by GPRTU', 'suspended.body': 'This trotro cannot take payments right now. Please take another one.', 'fare.notice': 'New GPRTU fares from {date}',
   'unreg.link': 'No GPRTU sticker? Report this vehicle', 'unreg.title': 'Report an unregistered vehicle', 'unreg.body': 'Only GPRTU-registered trotros can take payments in TrotroLink. Tell the union about this one and we will check it.', 'unreg.code': 'Vehicle code, if any', 'unreg.note': 'Where did you see it? (route, stop, colour)', 'unreg.send': 'Send to GPRTU', 'unreg.thanks': 'Thanks. GPRTU will check this vehicle.', 'code.report': 'Report this vehicle to GPRTU', 'report.asked': 'What were you asked to pay? (₵, optional)',
+  'sos.hurt': 'If anyone is hurt, call now', 'sos.callGprtu': 'Call GPRTU support', 'sos.live': 'GPRTU sees this the moment you send it, with your location, and replies here in real time.', 'sos.send': 'Send alert to GPRTU now',
+  'support.title': 'GPRTU support', 'support.received': 'Alert received. GPRTU is looking at it now.', 'support.replied': 'GPRTU replied', 'support.accident': 'Accident reported', 'support.careless': 'Careless driving reported', 'support.resolved': 'Resolved',
+  'safety.title': 'Safety', 'safety.accident': 'Report an accident', 'safety.careless': 'Driver driving carelessly', 'eta.arrive': 'Arriving at {stop}', 'eta.stops': '{n} stops away', 'eta.live': 'LIVE', 'eta.updated': 'Updated {when}', 'eta.now': 'just now', 'eta.at': 'About {time}', 'eta.min': 'min', 'eta.arrived': 'Arrived',
 };
 
 const tw: Dict = {
@@ -139,6 +142,9 @@ const de: Dict = {
   'report.title': 'Problem melden', 'report.what': 'Was ist auf dieser Fahrt schiefgelaufen?', 'report.send': 'Meldung senden',
   'verified.badge': 'GPRTU-verifiziert', 'suspended.title': 'Fahrzeug von GPRTU gesperrt', 'suspended.body': 'Dieses Trotro kann derzeit keine Zahlungen annehmen. Bitte nimm ein anderes.', 'fare.notice': 'Neue GPRTU-Fahrpreise ab {date}',
   'unreg.link': 'Kein GPRTU-Aufkleber? Fahrzeug melden', 'unreg.title': 'Nicht registriertes Fahrzeug melden', 'unreg.body': 'Nur bei GPRTU registrierte Trotros können in TrotroLink Zahlungen annehmen. Melde dieses der Gewerkschaft, wir prüfen es.', 'unreg.code': 'Fahrzeugcode, falls vorhanden', 'unreg.note': 'Wo hast du es gesehen? (Strecke, Haltestelle, Farbe)', 'unreg.send': 'An GPRTU senden', 'unreg.thanks': 'Danke. GPRTU prüft dieses Fahrzeug.', 'code.report': 'Dieses Fahrzeug bei GPRTU melden', 'report.asked': 'Wie viel solltest du zahlen? (₵, optional)',
+  'sos.hurt': 'Wenn jemand verletzt ist, ruf jetzt an', 'sos.callGprtu': 'GPRTU-Support anrufen', 'sos.live': 'GPRTU sieht deine Meldung sofort, mit deinem Standort, und antwortet hier in Echtzeit.', 'sos.send': 'Alarm jetzt an GPRTU senden',
+  'support.title': 'GPRTU-Support', 'support.received': 'Alarm eingegangen. GPRTU kümmert sich darum.', 'support.replied': 'GPRTU hat geantwortet', 'support.accident': 'Unfall gemeldet', 'support.careless': 'Leichtsinniges Fahren gemeldet', 'support.resolved': 'Erledigt',
+  'safety.title': 'Sicherheit', 'safety.accident': 'Unfall melden', 'safety.careless': 'Fahrer fährt leichtsinnig', 'eta.arrive': 'Ankunft in {stop}', 'eta.stops': '{n} Haltestellen entfernt', 'eta.live': 'LIVE', 'eta.updated': 'Aktualisiert {when}', 'eta.now': 'gerade eben', 'eta.at': 'Etwa {time}', 'eta.min': 'Min.', 'eta.arrived': 'Angekommen',
 };
 
 const ru: Dict = {
@@ -173,6 +179,9 @@ const ru: Dict = {
   'report.title': 'Сообщить о проблеме', 'report.what': 'Что пошло не так во время этой поездки?', 'report.send': 'Отправить сообщение',
   'verified.badge': 'Проверено GPRTU', 'suspended.title': 'Машина приостановлена GPRTU', 'suspended.body': 'Этот тротро сейчас не принимает платежи. Пожалуйста, выберите другой.', 'fare.notice': 'Новые тарифы GPRTU с {date}',
   'unreg.link': 'Нет наклейки GPRTU? Сообщить о машине', 'unreg.title': 'Сообщить о незарегистрированной машине', 'unreg.body': 'Платежи в TrotroLink принимают только тротро, зарегистрированные в GPRTU. Сообщите об этом союзу, и мы проверим.', 'unreg.code': 'Код машины, если есть', 'unreg.note': 'Где вы её видели? (маршрут, остановка, цвет)', 'unreg.send': 'Отправить в GPRTU', 'unreg.thanks': 'Спасибо. GPRTU проверит эту машину.', 'code.report': 'Сообщить об этой машине в GPRTU', 'report.asked': 'Сколько с вас просили? (₵, необязательно)',
+  'sos.hurt': 'Если кто-то ранен, звоните сейчас', 'sos.callGprtu': 'Позвонить в поддержку GPRTU', 'sos.live': 'GPRTU видит сообщение сразу, с вашим местоположением, и отвечает здесь в реальном времени.', 'sos.send': 'Отправить тревогу в GPRTU',
+  'support.title': 'Поддержка GPRTU', 'support.received': 'Тревога получена. GPRTU уже занимается этим.', 'support.replied': 'GPRTU ответил', 'support.accident': 'Сообщено об аварии', 'support.careless': 'Сообщено об опасной езде', 'support.resolved': 'Решено',
+  'safety.title': 'Безопасность', 'safety.accident': 'Сообщить об аварии', 'safety.careless': 'Водитель едет небрежно', 'eta.arrive': 'Прибытие: {stop}', 'eta.stops': 'Остановок: {n}', 'eta.live': 'LIVE', 'eta.updated': 'Обновлено {when}', 'eta.now': 'только что', 'eta.at': 'Около {time}', 'eta.min': 'мин', 'eta.arrived': 'Прибыли',
 };
 
 const nl: Dict = {
@@ -207,6 +216,9 @@ const nl: Dict = {
   'report.title': 'Probleem melden', 'report.what': 'Wat ging er mis tijdens deze rit?', 'report.send': 'Melding versturen',
   'verified.badge': 'GPRTU-geverifieerd', 'suspended.title': 'Voertuig geschorst door GPRTU', 'suspended.body': 'Deze trotro kan nu geen betalingen aannemen. Neem een andere.', 'fare.notice': 'Nieuwe GPRTU-tarieven vanaf {date}',
   'unreg.link': 'Geen GPRTU-sticker? Meld dit voertuig', 'unreg.title': 'Meld een niet-geregistreerd voertuig', 'unreg.body': 'Alleen bij GPRTU geregistreerde trotro’s kunnen betalingen aannemen in TrotroLink. Meld deze bij de bond, dan controleren we hem.', 'unreg.code': 'Voertuigcode, indien aanwezig', 'unreg.note': 'Waar zag je hem? (route, halte, kleur)', 'unreg.send': 'Naar GPRTU sturen', 'unreg.thanks': 'Bedankt. GPRTU controleert dit voertuig.', 'code.report': 'Meld dit voertuig bij GPRTU', 'report.asked': 'Hoeveel moest je betalen? (₵, optioneel)',
+  'sos.hurt': 'Is er iemand gewond? Bel nu', 'sos.callGprtu': 'Bel GPRTU-support', 'sos.live': 'GPRTU ziet dit direct, met je locatie, en antwoordt hier in realtime.', 'sos.send': 'Stuur nu alarm naar GPRTU',
+  'support.title': 'GPRTU-support', 'support.received': 'Alarm ontvangen. GPRTU kijkt er nu naar.', 'support.replied': 'GPRTU heeft gereageerd', 'support.accident': 'Ongeval gemeld', 'support.careless': 'Onvoorzichtig rijden gemeld', 'support.resolved': 'Opgelost',
+  'safety.title': 'Veiligheid', 'safety.accident': 'Meld een ongeval', 'safety.careless': 'Chauffeur rijdt onvoorzichtig', 'eta.arrive': 'Aankomst bij {stop}', 'eta.stops': '{n} haltes te gaan', 'eta.live': 'LIVE', 'eta.updated': 'Bijgewerkt {when}', 'eta.now': 'zojuist', 'eta.at': 'Ongeveer {time}', 'eta.min': 'min', 'eta.arrived': 'Aangekomen',
 };
 
 const zh: Dict = {
@@ -241,6 +253,9 @@ const zh: Dict = {
   'report.title': '报告问题', 'report.what': '这次行程出了什么问题？', 'report.send': '发送报告',
   'verified.badge': 'GPRTU 认证', 'suspended.title': '车辆已被 GPRTU 暂停', 'suspended.body': '这辆 trotro 目前无法收款，请乘坐其他车辆。', 'fare.notice': 'GPRTU 新票价自 {date} 起生效',
   'unreg.link': '没有 GPRTU 贴纸？举报此车辆', 'unreg.title': '举报未注册车辆', 'unreg.body': '只有在 GPRTU 注册的 trotro 才能在 TrotroLink 收款。请向工会举报，我们会核查。', 'unreg.code': '车辆代码（如有）', 'unreg.note': '在哪里看到的？（路线、站点、颜色）', 'unreg.send': '发送给 GPRTU', 'unreg.thanks': '谢谢，GPRTU 会核查该车辆。', 'code.report': '向 GPRTU 举报此车辆', 'report.asked': '对方要你付多少？（₵，可选）',
+  'sos.hurt': '如有人受伤，请立即拨打', 'sos.callGprtu': '致电 GPRTU 支持', 'sos.live': 'GPRTU 会立刻看到你的报告和位置，并在此实时回复。', 'sos.send': '立即向 GPRTU 发送警报',
+  'support.title': 'GPRTU 支持', 'support.received': '已收到警报，GPRTU 正在处理。', 'support.replied': 'GPRTU 已回复', 'support.accident': '已报告事故', 'support.careless': '已报告危险驾驶', 'support.resolved': '已解决',
+  'safety.title': '安全', 'safety.accident': '报告事故', 'safety.careless': '司机驾驶不当', 'eta.arrive': '到达 {stop}', 'eta.stops': '还有 {n} 站', 'eta.live': '实时', 'eta.updated': '{when}更新', 'eta.now': '刚刚', 'eta.at': '约 {time}', 'eta.min': '分钟', 'eta.arrived': '已到达',
 };
 
 const DICTS: Record<AppLanguage, Dict> = { English: en, Twi: tw, Ewe: ee, German: de, Russian: ru, Dutch: nl, Chinese: zh };

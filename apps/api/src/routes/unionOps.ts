@@ -1,9 +1,9 @@
 import { Router, type IRouter } from "express";
 import { z } from "zod";
-import { desc, eq, isNotNull, sql } from "drizzle-orm";
+import { and, desc, eq, inArray, isNotNull, sql } from "drizzle-orm";
 import { requireUnion } from "../auth";
 import { db } from "../db";
-import { fareTablesTable, routesTable, unregisteredReportsTable, usersTable, vehiclesTable, warningsTable } from "../db/schema";
+import { disputesTable, fareTablesTable, routesTable, unregisteredReportsTable, usersTable, vehiclesTable, warningsTable } from "../db/schema";
 import { logger } from "../logger";
 import { computeCompliance, RULES } from "../services/compliance";
 import { buildPercentTable, currentFares, invalidateFareCache } from "../services/fares";
@@ -79,6 +79,51 @@ router.post("/union/vehicles/:code/reinstate", async (req, res): Promise<void> =
   }
   await db.update(vehiclesTable).set({ status: "active", suspendedUntil: null, suspensionReason: null }).where(eq(vehiclesTable.id, v.id));
   res.json({ ok: true });
+});
+
+// ---- Live safety alerts: accidents and careless driving ------------------------------------------------
+
+const ALERT_LABEL: Record<string, string> = { accident: "an accident", careless_driving: "careless driving" };
+
+/** Open urgent reports, newest first. The dashboard polls this every few seconds. */
+router.get("/union/alerts", async (_req, res): Promise<void> => {
+  const rows = await db
+    .select({ d: disputesTable, code: vehiclesTable.shortCode, driver: vehiclesTable.driverName, phone: vehiclesTable.driverPhone, route: routesTable.routeName })
+    .from(disputesTable)
+    .innerJoin(vehiclesTable, eq(disputesTable.vehicleId, vehiclesTable.id))
+    .innerJoin(routesTable, eq(vehiclesTable.routeId, routesTable.id))
+    .where(and(eq(disputesTable.urgent, true), inArray(disputesTable.status, ["open", "investigating"])))
+    .orderBy(desc(disputesTable.createdAt))
+    .limit(30);
+  res.json({
+    alerts: rows.map(({ d, code, driver, phone, route }) => ({
+      id: d.id, type: d.disputeType, status: d.status, vehicle: code, driver, driverPhone: phone, route,
+      note: d.description, lat: d.lat ? Number(d.lat) : null, lng: d.lng ? Number(d.lng) : null,
+      at: d.createdAt, ageSeconds: Math.round((Date.now() - d.createdAt.getTime()) / 1000), reply: d.staffReply, repliedAt: d.repliedAt,
+    })),
+  });
+});
+
+/** The union's answer, shown to the passenger within seconds. Optionally warns the driver by SMS. */
+router.post("/union/disputes/:id/reply", async (req, res): Promise<void> => {
+  const parsed = z.object({ message: z.string().trim().min(3).max(300), smsDriver: z.boolean().optional() }).safeParse(req.body);
+  const id = Number(req.params["id"]);
+  if (!parsed.success || !Number.isInteger(id)) {
+    res.status(400).json({ error: "Write a short message" });
+    return;
+  }
+  const [d] = await db.select().from(disputesTable).where(eq(disputesTable.id, id));
+  if (!d) {
+    res.status(404).json({ error: "Report not found" });
+    return;
+  }
+  await db.update(disputesTable).set({ staffReply: parsed.data.message, repliedAt: new Date(), status: d.status === "open" ? "investigating" : d.status }).where(eq(disputesTable.id, id));
+  let smsStatus: string | null = null;
+  if (parsed.data.smsDriver && d.vehicleId) {
+    const [v] = await db.select().from(vehiclesTable).where(eq(vehiclesTable.id, d.vehicleId));
+    if (v) smsStatus = await sendSms(v.driverPhone, `GPRTU: a passenger has reported ${ALERT_LABEL[d.disputeType] ?? "an incident"} on ${v.shortCode}. Drive carefully and call your terminal chairman now.`);
+  }
+  res.json({ ok: true, smsStatus });
 });
 
 // ---- Registration: reports of unregistered vehicles ---------------------------------------------------
@@ -225,8 +270,16 @@ router.get("/union/terminals", async (_req, res): Promise<void> => {
 
 // ---- Income statements (driver credit) ---------------------------------------------------------------
 
-/** Placeholder thresholds: the lender sets the real ones. A month "counts" when the vehicle earned on enough days. */
-const CREDIT = { months: 6, activeDaysPerMonth: 15 } as const;
+/**
+ * A statement can be cut by week or by month, over any number of periods: a young programme has weeks of history, not
+ * months. A period "counts" when the vehicle earned on enough days; the lender sets how many counting periods it needs.
+ */
+const PERIOD = {
+  week: { trunc: "week", back: "26 weeks", activeDays: 4, defaultRequired: 12 },
+  month: { trunc: "month", back: "12 months", activeDays: 15, defaultRequired: 6 },
+} as const;
+type Unit = keyof typeof PERIOD;
+const unitOf = (q: unknown): Unit => (q === "week" ? "week" : "month");
 
 router.post("/union/vehicles/:code/consent", async (req, res): Promise<void> => {
   const parsed = z.object({ consent: z.boolean() }).safeParse(req.body);
@@ -239,11 +292,14 @@ router.post("/union/vehicles/:code/consent", async (req, res): Promise<void> => 
   res.json({ ok: true });
 });
 
-router.get("/union/statements", async (_req, res): Promise<void> => {
+router.get("/union/statements", async (req, res): Promise<void> => {
+  const unit = unitOf(req.query["unit"]);
+  const trunc = PERIOD[unit].trunc;
+  const required = Math.min(52, Math.max(1, Number(req.query["required"]) || PERIOD[unit].defaultRequired));
   const vs = await db.select().from(vehiclesTable).orderBy(vehiclesTable.shortCode);
-  const hist = (await db.execute(sql`select vehicle_id, count(distinct date_trunc('month', timestamp))::int as months, count(*)::int as trips, coalesce(sum(amount_paid),0)::float as fares, min(timestamp) as first from transactions group by vehicle_id`)).rows as Array<Record<string, unknown>>;
+  const hist = (await db.execute(sql`select vehicle_id, count(distinct date_trunc(${sql.raw(`'${trunc}'`)}, timestamp))::int as periods, count(*)::int as trips, coalesce(sum(amount_paid),0)::float as fares, min(timestamp) as first from transactions group by vehicle_id`)).rows as Array<Record<string, unknown>>;
   const h = new Map(hist.map((r) => [Number(r["vehicle_id"]), r]));
-  res.json({ requirement: CREDIT, vehicles: vs.map((v) => ({ vehicle: v.shortCode, driver: v.driverName, consent: v.creditConsent, monthsOfHistory: Number(h.get(v.id)?.["months"] ?? 0), trips: Number(h.get(v.id)?.["trips"] ?? 0), fares: Number(h.get(v.id)?.["fares"] ?? 0), since: h.get(v.id)?.["first"] ?? null })) });
+  res.json({ unit, required, activeDaysPerPeriod: PERIOD[unit].activeDays, vehicles: vs.map((v) => ({ vehicle: v.shortCode, driver: v.driverName, consent: v.creditConsent, periodsOfHistory: Number(h.get(v.id)?.["periods"] ?? 0), trips: Number(h.get(v.id)?.["trips"] ?? 0), fares: Number(h.get(v.id)?.["fares"] ?? 0), since: h.get(v.id)?.["first"] ?? null })) });
 });
 
 router.get("/union/statements/:code", async (req, res): Promise<void> => {
@@ -256,29 +312,35 @@ router.get("/union/statements/:code", async (req, res): Promise<void> => {
     res.status(403).json({ error: "The owner has not agreed to share an income statement for this vehicle.", consentRequired: true });
     return;
   }
-  const months = (
+  const unit = unitOf(req.query["unit"]);
+  const cfg = PERIOD[unit];
+  const required = Math.min(52, Math.max(1, Number(req.query["required"]) || cfg.defaultRequired));
+  const trunc = sql.raw(`'${cfg.trunc}'`);
+  const back = sql.raw(`'${cfg.back}'`);
+  const periods = (
     await db.execute(sql`
       with m as (
-        select date_trunc('month', timestamp) as mo, count(*)::int as trips, coalesce(sum(amount_paid), 0)::float as fares,
+        select date_trunc(${trunc}, timestamp) as mo, count(*)::int as trips, coalesce(sum(amount_paid), 0)::float as fares,
                count(distinct (timestamp at time zone 'UTC')::date)::int as active_days
-        from transactions where vehicle_id = ${v.id} and timestamp > now() - interval '12 months' group by 1
+        from transactions where vehicle_id = ${v.id} and timestamp > now() - ${back}::interval group by 1
       ), r as (
-        select date_trunc('month', t.timestamp) as mo, round(avg(rt.driver_rating)::numeric, 2)::float as avg_rating
+        select date_trunc(${trunc}, t.timestamp) as mo, round(avg(rt.driver_rating)::numeric, 2)::float as avg_rating
         from ratings rt join transactions t on t.id = rt.transaction_id where t.vehicle_id = ${v.id} group by 1
       )
-      select to_char(m.mo, 'YYYY-MM') as month, m.trips, m.fares, m.active_days, r.avg_rating from m left join r on r.mo = m.mo order by m.mo`)
-  ).rows as Array<{ month: string; trips: number; fares: number; active_days: number; avg_rating: number | null }>;
-  const consistent = months.filter((m) => m.active_days >= CREDIT.activeDaysPerMonth).length;
-  const totals = months.reduce((a, m) => ({ trips: a.trips + m.trips, fares: a.fares + m.fares }), { trips: 0, fares: 0 });
+      select to_char(m.mo, 'YYYY-MM-DD') as start, m.trips, m.fares, m.active_days, r.avg_rating from m left join r on r.mo = m.mo order by m.mo`)
+  ).rows as Array<{ start: string; trips: number; fares: number; active_days: number; avg_rating: number | null }>;
+  const consistent = periods.filter((m) => m.active_days >= cfg.activeDays).length;
+  const totals = periods.reduce((a, m) => ({ trips: a.trips + m.trips, fares: a.fares + m.fares }), { trips: 0, fares: 0 });
   const [warn] = (await db.execute(sql`select count(*)::int as n from warnings where vehicle_id = ${v.id} and created_at > now() - interval '12 months'`)).rows as Array<{ n: number }>;
   res.json({
     generatedAt: new Date(),
     vehicle: v.shortCode,
     driver: v.driverName,
-    months: months.map((m) => ({ month: m.month, trips: m.trips, fares: Math.round(m.fares * 100) / 100, avgPerTrip: m.trips ? Math.round((m.fares / m.trips) * 100) / 100 : 0, activeDays: m.active_days, avgRating: m.avg_rating })),
+    unit,
+    periods: periods.map((m) => ({ start: m.start, trips: m.trips, fares: Math.round(m.fares * 100) / 100, avgPerTrip: m.trips ? Math.round((m.fares / m.trips) * 100) / 100 : 0, activeDays: m.active_days, avgRating: m.avg_rating })),
     totals: { trips: totals.trips, fares: Math.round(totals.fares * 100) / 100 },
     warnings12m: warn?.n ?? 0,
-    eligibility: { requiredMonths: CREDIT.months, activeDaysPerMonth: CREDIT.activeDaysPerMonth, monthsOnRecord: months.length, consistentMonths: consistent, eligible: consistent >= CREDIT.months },
+    eligibility: { unit, required, activeDaysPerPeriod: cfg.activeDays, periodsOnRecord: periods.length, consistentPeriods: consistent, eligible: consistent >= required },
     notice: "Fares collected through TrotroLink only. Cash fares are not included. Shared with the owner's consent. The lender sets the credit decision.",
   });
 });

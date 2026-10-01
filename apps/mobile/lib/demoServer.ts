@@ -342,10 +342,23 @@ async function route(method: string, path: string, query: URLSearchParams, body:
     return { mock: false, shortCode: code, driverName: v!.driverName, entries: real.map((r) => ({ rating: r.driver, comment: r.comment ?? null, ratedAt: new Date(r.at).toISOString() })) };
   }
 
+  if (path === '/disputes/status') {
+    const tid = query.get('tripId'); const dev = query.get('deviceId');
+    const t = d.trips.find((x) => x.tripId === tid); if (!t || t!.deviceId !== dev) fail(404, 'Trip not found');
+    const mine = d.disputes.filter((x) => x.urgent && (x.trip as { tripId?: string } | undefined)?.tripId === tid).reverse();
+    // The demo plays the union: a reply arrives a few seconds after the alert, as it would from the dashboard.
+    for (const r of mine) {
+      if (!r.reply && Date.now() - Number(r.at) > 7000) {
+        r.reply = r.type === 'accident' ? 'GPRTU support: we have your location and are calling the driver now. Help is on the way. Stay where it is safe.' : 'GPRTU support: thank you. We have your location and are speaking to the driver about this now.';
+        r.repliedAt = new Date().toISOString(); r.status = 'investigating'; await save();
+      }
+    }
+    return { reports: mine.map((r) => ({ id: r.id, reason: r.type, status: r.status ?? 'open', reply: r.reply ?? null, repliedAt: r.repliedAt ?? null, createdAt: r.filedAt })) };
+  }
   if (post && path === '/disputes') {
     const t = d.trips.find((x) => x.tripId === body.tripId); if (!t) fail(404, 'Trip not found');
     if (t!.deviceId !== body.deviceId) fail(403, 'This is not your trip');
-    d.disputes.push({ id: d.disputes.length + 1, type: body.reason, description: body.description ?? null, amountAsked: body.amountAsked ?? null, trip: { ...t }, events: d.events.filter((e) => e.vehicle === t!.vehicleCode).slice(-40), filedAt: new Date().toISOString() });
+    d.disputes.push({ id: d.disputes.length + 1, type: body.reason, description: body.description ?? null, amountAsked: body.amountAsked ?? null, urgent: body.reason === 'accident' || body.reason === 'careless_driving', at: Date.now(), reply: null, status: 'open', lat: body.lat ?? null, lng: body.lng ?? null, trip: { ...t }, events: d.events.filter((e) => e.vehicle === t!.vehicleCode).slice(-40), filedAt: new Date().toISOString() });
     await save(); return { ok: true, disputeId: d.disputes.length };
   }
   if (post && path === '/reports/unregistered') {

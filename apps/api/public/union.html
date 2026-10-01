@@ -178,6 +178,14 @@
   .stmt h3 { margin:0 0 2px; } .stmt .meta { color:var(--muted); margin:0 0 14px; }
   .swatch { display:inline-flex; align-items:center; gap:8px; font-weight:600; }
   .flagcol { display:flex; flex-direction:column; align-items:flex-start; gap:6px; } .btncol { display:flex; flex-direction:column; gap:6px; min-width:118px; } .btncol .act { width:100%; }
+  nav button .count.live { background:var(--err); color:#fff; animation:blink 1.4s infinite; } @keyframes blink { 50% { opacity:.55; } }
+  .alert { padding:22px; margin-bottom:16px; border-left:5px solid var(--err); display:grid; grid-template-columns:1fr; gap:14px; } .alert.careless { border-left-color:var(--gold); }
+  .alert .head { display:flex; align-items:center; gap:12px; flex-wrap:wrap; } .alert h3 { margin:0; font-size:18px; font-weight:800; letter-spacing:-.3px; }
+  .alert .age { margin-left:auto; font-weight:700; color:var(--err); font-variant-numeric:tabular-nums; } .alert.careless .age { color:var(--gold); }
+  .alert .meta { display:flex; gap:18px; flex-wrap:wrap; color:var(--muted); font-weight:500; } .alert .meta a { color:var(--accent); font-weight:700; text-decoration:none; }
+  .alert .reply { display:grid; gap:10px; } .chips { display:flex; gap:8px; flex-wrap:wrap; } .chips button { border:1px solid var(--border-strong); background:var(--surface-2); border-radius:999px; padding:7px 14px; font-weight:600; font-size:12.5px; cursor:pointer; }
+  .alert .row { margin-top:0; } .replied { background:var(--accent-soft); color:var(--accent); padding:10px 14px; border-radius:12px; font-weight:600; }
+  .pulsedot { width:10px; height:10px; border-radius:50%; background:var(--err); box-shadow:0 0 0 0 var(--err); animation:pulse 1.6s infinite; display:inline-block; }
   .navgroup { font-size:11px; font-weight:700; letter-spacing:.14em; color:var(--faint); padding:14px 12px 4px; }
   @media print { aside, header.top, .no-print { display:none !important; } .shell { display:block; } dialog { box-shadow:none; border:0; width:100%; } body { background:#fff; color:#000; } }
   @media (max-width:860px) { .formgrid { grid-template-columns:1fr; } .navgroup { display:none; } }
@@ -207,6 +215,7 @@
     <symbol id="i-sun" viewBox="0 0 24 24"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.900 4.900l1.400 1.400M17.700 17.700l1.400 1.400M2 12h2M20 12h2M4.900 19.100l1.400-1.400M17.700 6.300l1.400-1.400"/></symbol>
     <symbol id="i-lock" viewBox="0 0 24 24"><rect x="4.500" y="10.500" width="15" height="10" rx="3"/><path d="M8 10.500V8a4 4 0 0 1 8 0v2.500"/></symbol>
     <symbol id="i-cedi" viewBox="0 0 24 24"><path d="M17.500 7.500A6 6 0 1 0 17.500 16.500M12 3v18"/></symbol>
+    <symbol id="i-siren" viewBox="0 0 24 24"><path d="M7 18v-6a5 5 0 0 1 10 0v6M5 18h14v3H5zM12 2v2M4.500 5.500 6 7M19.500 5.500 18 7"/></symbol>
     <symbol id="i-shield" viewBox="0 0 24 24"><path d="M12 3 4.500 6v5.500c0 4.600 3.100 8.100 7.500 9.500 4.400-1.400 7.500-4.900 7.500-9.500V6z"/><path d="m8.800 12 2.200 2.200 4.200-4.400"/></symbol>
     <symbol id="i-trend" viewBox="0 0 24 24"><path d="m3 17 6-6 4 4 8-8M15 7h6v6"/></symbol>
     <symbol id="i-building" viewBox="0 0 24 24"><path d="M4 21V7l8-4 8 4v14M4 21h16M9 21v-5h6v5M9 10h.01M15 10h.01M12 10h.01"/></symbol>
@@ -251,6 +260,7 @@
 <script>
 const TABS = [
   ['overview','Overview','i-grid','Today across every vehicle','Monitor'],
+  ['alerts','Live alerts','i-siren','Accidents and careless-driving reports, with passenger location','Monitor'],
   ['compliance','Compliance','i-shield','Fare enforcement, warnings and suspensions','Monitor'],
   ['transactions','Transactions','i-list','Every fare paid, with the official fare beside it','Monitor'],
   ['disputes','Disputes','i-flag','Passenger reports, with the evidence attached','Monitor'],
@@ -270,7 +280,8 @@ const when = (iso) => iso ? new Date(iso).toLocaleString('en-GB', { day:'numeric
 const icon = (id) => `<svg class="ico"><use href="#${id}"/></svg>`;
 let key = sessionStorage.getItem('unionKey') || '';
 let tab = 'overview';
-let openDisputes = 0, flaggedCount = 0, unregOpen = 0;
+let stUnit = 'week', stRequired = 4;
+let openDisputes = 0, flaggedCount = 0, unregOpen = 0, urgentCount = 0;
 
 /* Theme: follow the OS until the viewer chooses; remember the choice. */
 function applyTheme(t) { if (t) document.documentElement.dataset.theme = t; else delete document.documentElement.dataset.theme; syncThemeIcon(); }
@@ -293,7 +304,7 @@ function renderTabs() {
   $('#tabs').innerHTML = TABS.map(([id, label, ic, , g]) => {
     const head = g !== group ? `<div class="navgroup">${g.toUpperCase()}</div>` : '';
     group = g;
-    const badge = id === 'disputes' && openDisputes ? `<span class="count">${openDisputes}</span>` : id === 'compliance' && flaggedCount ? `<span class="count">${flaggedCount}</span>` : id === 'register' && unregOpen ? `<span class="count">${unregOpen}</span>` : '';
+    const badge = id === 'disputes' && openDisputes ? `<span class="count">${openDisputes}</span>` : id === 'alerts' && urgentCount ? `<span class="count live">${urgentCount}</span>` : id === 'compliance' && flaggedCount ? `<span class="count">${flaggedCount}</span>` : id === 'register' && unregOpen ? `<span class="count">${unregOpen}</span>` : '';
     return `${head}<button role="tab" aria-selected="${id === tab}" data-tab="${id}">${icon(ic)}${label}${badge}</button>`;
   }).join('');
   document.querySelectorAll('[data-tab]').forEach((b) => b.onclick = () => { tab = b.dataset.tab; renderTabs(); load(); });
@@ -332,7 +343,7 @@ const dayLabel = (d) => new Date(d + 'T00:00:00Z').toLocaleDateString('en-GB', {
 const views = {
   async overview() {
     const [o, tx, rt, ds] = await Promise.all([api('/union/overview'), api('/union/transactions'), api('/union/ratings'), api('/union/disputes')]);
-    openDisputes = o.openDisputes; flaggedCount = o.flaggedVehicles; unregOpen = o.unregisteredOpen; renderTabs();
+    openDisputes = o.openDisputes; flaggedCount = o.flaggedVehicles; unregOpen = o.unregisteredOpen; urgentCount = o.urgentAlerts; renderTabs();
     const byVeh = {};
     tx.transactions.forEach((x) => { (byVeh[x.vehicle] ??= { fares: 0, n: 0 }); byVeh[x.vehicle].fares += Number(x.paid); byVeh[x.vehicle].n += 1; });
     const fares = Object.entries(byVeh).sort((a, b) => b[1].fares - a[1].fares).map(([v, d]) => ({ label: v, sub: `${d.n} trips`, value: d.fares, tip: `${v}: ${cedi(d.fares)} from ${d.n} trips` }));
@@ -357,6 +368,22 @@ const views = {
       </div>`;
   },
 
+
+  async alerts() {
+    const { alerts: a } = await api('/union/alerts');
+    urgentCount = a.length; renderTabs();
+    if (!a.length) return '<div class="card empty"><b>No live alerts</b>Accident and careless-driving reports from passengers appear here the moment they are sent. This page refreshes by itself.</div>';
+    const quick = ['Help is on the way. Stay where it is safe.', 'We are calling the driver now.', 'Thank you. We have your location and are acting on this.'];
+    return `<p class="muted" style="margin:0 0 16px"><span class="pulsedot"></span> &nbsp;Live: this page checks for new reports every 5 seconds. Your reply reaches the passenger's phone within seconds.</p>` + a.map((x) => `<section class="card alert ${x.type === 'careless_driving' ? 'careless' : ''}" data-alert="${x.id}">
+      <div class="head"><span class="pill ${x.type === 'accident' ? 'bad' : 'warn'}">${x.type === 'accident' ? 'Accident' : 'Careless driving'}</span><h3><span class="veh">${esc(x.vehicle)}</span> ${esc(x.route)}</h3><span class="age" data-since="${new Date(x.at).getTime()}">${x.ageSeconds}s ago</span></div>
+      <div class="meta"><span>Driver: <b>${esc(x.driver)}</b></span>${x.driverPhone ? `<a href="tel:${esc(x.driverPhone)}">Call driver ${esc(x.driverPhone)}</a>` : ''}${x.lat !== null ? `<a href="https://www.openstreetmap.org/?mlat=${x.lat}&mlon=${x.lng}#map=17/${x.lat}/${x.lng}" target="_blank" rel="noopener">Passenger location on map</a>` : '<span>No location shared</span>'}</div>
+      ${x.note ? `<div>“${esc(x.note)}”</div>` : ''}
+      ${x.reply ? `<div class="replied">You replied ${when(x.repliedAt)}: ${esc(x.reply)}</div>` : ''}
+      <div class="reply"><div class="chips">${quick.map((q) => `<button type="button" data-quick="${esc(q)}">${esc(q.split('.')[0])}</button>`).join('')}</div>
+        <div class="row"><input class="field" data-msg placeholder="Message to the passenger" value="${esc(quick[0])}"><button class="btn primary" data-send="${x.id}">Send</button></div>
+        <label class="swatch" style="font-weight:500"><input type="checkbox" data-sms checked> Also SMS the driver</label>
+        <div><button class="act" data-resolve="${x.id}">Mark resolved</button></div></div></section>`).join('');
+  },
   async compliance() {
     const { rules, vehicles: v } = await api('/union/compliance');
     const chips = `<div class="rulechips"><span class="rulechip">Fare over official by <b>&gt;${rules.overFarePct}%</b></span><span class="rulechip">Driver rating below <b>${rules.lowRating.toFixed(1)}</b> (min ${rules.minRatingsForFlag} ratings)</span><span class="rulechip"><b>${rules.repeatWarnings}</b> warnings in 90 days: suspension recommended</span></div>`;
@@ -387,8 +414,10 @@ const views = {
     return `<p class="muted" style="margin:0 0 16px">Every paid trip books a terminal fee of <b>${cedi(feePerTrip)}</b> to the terminal where its route starts. It is not charged to the passenger. Today so far: <b>${tot.trips}</b> trips, <b>${cedi(tot.fees)}</b> in fees.</p><div class="tcards">${t.map((x) => { const max = Math.max(...x.days.map((d) => d.trips), 1); return `<section class="card tcard"><h2>${esc(x.terminal)}</h2><div class="tstats"><div><b>${x.tripsToday}</b><span>Trips today</span></div><div><b>${cedi(x.feesToday)}</b><span>Fees today</span></div><div><b>${cedi(x.faresToday)}</b><span>Fares today</span></div></div><div class="miniwrap" role="img" aria-label="Trips per day, last 7 days">${week(x.days).map((d) => `<div class="minicol" data-tip="${esc(dayLabel(d.day) + ': ' + d.trips + ' trips, ' + cedi(d.fees) + ' fees')}"><div class="mini" style="height:${d.trips ? Math.max(10, (d.trips / max) * 78) : 3}px;${d.trips ? '' : 'opacity:.25'}"></div><span>${esc(dayLabel(d.day))}</span></div>`).join('')}</div><p class="hint" style="margin:10px 0 0">Last 7 days: ${x.trips7} trips · ${cedi(x.fees7)} in fees</p></section>`; }).join('')}</div>`;
   },
   async statements() {
-    const { requirement: r, vehicles: v } = await api('/union/statements');
-    return `<p class="muted" style="margin:0 0 16px">Verified income statements for driver credit. A statement is only produced with the owner's consent, and only from fares collected through TrotroLink. A lender usually asks for <b>${r.months} months</b> of steady earnings (placeholder: at least ${r.activeDaysPerMonth} active days a month).</p>${table(['Vehicle','Driver','Months on record','Trips','Fares collected','Owner consent','Statement'], v.map((x) => `<tr><td><span class="veh">${esc(x.vehicle)}</span></td><td>${esc(x.driver)}</td><td><div class="progress" style="width:120px"><i style="width:${Math.min(100, (x.monthsOfHistory / r.months) * 100)}%"></i></div><div class="muted">${x.monthsOfHistory} of ${r.months}</div></td><td class="mono">${x.trips}</td><td class="mono">${cedi(x.fares)}</td><td><label class="swatch"><input type="checkbox" data-consent="${esc(x.vehicle)}" ${x.consent ? 'checked' : ''}> ${x.consent ? 'Agreed' : 'Not agreed'}</label></td><td>${x.consent ? `<button class="act" data-stmt="${esc(x.vehicle)}">Generate</button>` : '<span class="muted">Needs consent</span>'}</td></tr>`))}`;
+    const { unit, required, activeDaysPerPeriod, vehicles: v } = await api(`/union/statements?unit=${stUnit}&required=${stRequired}`);
+    const U = unit === 'week' ? 'weeks' : 'months';
+    return `<div class="card pad" style="margin-bottom:16px;display:flex;gap:18px;align-items:center;flex-wrap:wrap"><div><label class="f" style="margin:0 0 6px">Statement period</label><div class="seg" id="stunit"><button type="button" aria-pressed="${unit === 'week'}" data-unit="week">Weeks</button><button type="button" aria-pressed="${unit === 'month'}" data-unit="month">Months</button></div></div><div><label class="f" for="streq" style="margin:0 0 6px">Periods a lender needs</label><input class="field" id="streq" type="number" min="1" max="52" value="${required}" style="width:120px"></div><p class="hint" style="margin:0;flex:1;min-width:260px">Cut a statement by the week while the programme is young, or by the month later. A ${unit} counts when the vehicle earned on at least <b>${activeDaysPerPeriod} days</b>. The lender can ask for any number, even one.</p></div>
+    ${table(['Vehicle','Driver',`${U[0].toUpperCase() + U.slice(1)} on record`,'Trips','Fares collected','Owner consent','Statement'], v.map((x) => `<tr><td><span class="veh">${esc(x.vehicle)}</span></td><td>${esc(x.driver)}</td><td><div class="progress" style="width:120px"><i style="width:${Math.min(100, (x.periodsOfHistory / required) * 100)}%"></i></div><div class="muted">${x.periodsOfHistory} of ${required} ${U}</div></td><td class="mono">${x.trips}</td><td class="mono">${cedi(x.fares)}</td><td><label class="swatch"><input type="checkbox" data-consent="${esc(x.vehicle)}" ${x.consent ? 'checked' : ''}> ${x.consent ? 'Agreed' : 'Not agreed'}</label></td><td>${x.consent ? `<button class="act" data-stmt="${esc(x.vehicle)}">Generate</button>` : '<span class="muted">Needs consent</span>'}</td></tr>`))}`;
   },
   async register() {
     const [rep, comp] = await Promise.all([api('/union/unregistered-reports'), api('/union/compliance')]);
@@ -402,7 +431,7 @@ const views = {
   },
   async disputes() {
     const { disputes: d } = await api('/union/disputes');
-    return table(['Filed','Type','Status','Details','Action'], d.map((x) => `<tr><td class="nowrap muted">${when(x.createdAt)}</td><td><span class="pill ${x.disputeType === 'overcharge' ? 'bad' : 'warn'}">${esc(x.disputeType.replace(/_/g,' '))}</span></td><td><span class="pill ${x.status === 'resolved' ? 'ok' : x.status === 'open' ? 'bad' : ''}">${esc(x.status)}</span></td><td>${esc(x.description || '')}<details><summary>View evidence</summary><pre>${esc(JSON.stringify(x.evidence, null, 2))}</pre></details></td><td><select data-dispute="${x.id}" aria-label="Status"><option ${x.status==='open'?'selected':''}>open</option><option ${x.status==='investigating'?'selected':''}>investigating</option><option ${x.status==='resolved'?'selected':''}>resolved</option><option ${x.status==='rejected'?'selected':''}>rejected</option></select></td></tr>`), 'No reports', 'Passenger reports will appear here with their evidence.');
+    return table(['Filed','Type','Status','Details','Action'], d.map((x) => `<tr><td class="nowrap muted">${when(x.createdAt)}</td><td><span class="pill ${['overcharge','accident'].includes(x.disputeType) ? 'bad' : 'warn'}">${esc(x.disputeType.replace(/_/g,' '))}</span></td><td><span class="pill ${x.status === 'resolved' ? 'ok' : x.status === 'open' ? 'bad' : ''}">${esc(x.status)}</span></td><td>${esc(x.description || '')}<details><summary>View evidence</summary><pre>${esc(JSON.stringify(x.evidence, null, 2))}</pre></details></td><td><select data-dispute="${x.id}" aria-label="Status"><option ${x.status==='open'?'selected':''}>open</option><option ${x.status==='investigating'?'selected':''}>investigating</option><option ${x.status==='resolved'?'selected':''}>resolved</option><option ${x.status==='rejected'?'selected':''}>rejected</option></select></td></tr>`), 'No reports', 'Passenger reports will appear here with their evidence.');
   },
   async ratings() {
     const { vehicles: v, comments: c } = await api('/union/ratings');
@@ -470,25 +499,30 @@ function wireFares() {
     catch (e) { toast(e.message); }
   };
 }
+function wireStatements() {
+  document.querySelectorAll('#stunit button').forEach((b) => b.onclick = () => { stUnit = b.dataset.unit; stRequired = stUnit === 'week' ? 12 : 6; load(); });
+  $('#streq').onchange = () => { stRequired = Math.min(52, Math.max(1, Number($('#streq').value) || 1)); load(); };
+}
 async function showStatement(code) {
-  let d; try { d = await api(`/union/statements/${code}`); } catch (e) { toast(e.message); return; }
-  const e = d.eligibility;
+  let d; try { d = await api(`/union/statements/${code}?unit=${stUnit}&required=${stRequired}`); } catch (e) { toast(e.message); return; }
+  const e = d.eligibility; const U = d.unit === 'week' ? 'weeks' : 'months';
+  const label = (m) => d.unit === 'week' ? `Week of ${new Date(m.start + 'T00:00:00Z').toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })}` : new Date(m.start + 'T00:00:00Z').toLocaleDateString('en-GB', { month: 'long', year: 'numeric' });
   const dlg = document.createElement('dialog'); dlg.style.width = 'min(760px, calc(100vw - 32px))';
-  dlg.innerHTML = `<div class="dlg stmt"><h3>Income statement · ${esc(d.vehicle)}</h3><p class="meta">${esc(d.driver)} · generated ${when(d.generatedAt)}</p>
+  dlg.innerHTML = `<div class="dlg stmt"><h3>Income statement · ${esc(d.vehicle)}</h3><p class="meta">${esc(d.driver)} · by ${d.unit} · generated ${when(d.generatedAt)}</p>
     <div class="grid" style="grid-template-columns:repeat(3,1fr);margin-bottom:16px"><div class="card kpi"><div class="top"><span>Fares collected</span></div><div class="num" style="font-size:26px">${cedi(d.totals.fares)}</div></div><div class="card kpi"><div class="top"><span>Trips</span></div><div class="num" style="font-size:26px">${d.totals.trips}</div></div><div class="card kpi"><div class="top"><span>Warnings (12 m)</span></div><div class="num" style="font-size:26px">${d.warnings12m}</div></div></div>
-    ${table(['Month','Trips','Fares','Avg per trip','Active days','Avg rating'], d.months.map((m) => `<tr><td><b>${esc(m.month)}</b></td><td class="mono">${m.trips}</td><td class="mono">${cedi(m.fares)}</td><td class="mono">${cedi(m.avgPerTrip)}</td><td class="mono">${m.activeDays}</td><td>${m.avgRating ? `<span class="stars">${m.avgRating}</span>` : '—'}</td></tr>`))}
-    <div style="margin-top:16px"><div class="progress"><i style="width:${Math.min(100, (e.consistentMonths / e.requiredMonths) * 100)}%"></i></div><p style="margin:8px 0 0"><b>${e.consistentMonths} of ${e.requiredMonths}</b> consistent months · <span class="pill ${e.eligible ? 'ok' : 'warn'}">${e.eligible ? 'Meets the history requirement' : 'Not enough history yet'}</span></p></div>
+    ${table([d.unit === 'week' ? 'Week' : 'Month','Trips','Fares','Avg per trip','Active days','Avg rating'], d.periods.map((m) => `<tr><td><b>${esc(label(m))}</b></td><td class="mono">${m.trips}</td><td class="mono">${cedi(m.fares)}</td><td class="mono">${cedi(m.avgPerTrip)}</td><td class="mono">${m.activeDays}</td><td>${m.avgRating ? `<span class="stars">${m.avgRating}</span>` : '—'}</td></tr>`))}
+    <div style="margin-top:16px"><div class="progress"><i style="width:${Math.min(100, (e.consistentPeriods / e.required) * 100)}%"></i></div><p style="margin:8px 0 0"><b>${e.consistentPeriods} of ${e.required}</b> consistent ${U} (earned on ${e.activeDaysPerPeriod}+ days) · <span class="pill ${e.eligible ? 'ok' : 'warn'}">${e.eligible ? 'Meets the history requirement' : 'Not enough history yet'}</span></p></div>
     <p class="hint" style="margin-top:12px">${esc(d.notice)}</p>
     <div class="actions no-print"><button class="btn" id="stcsv">Download CSV</button><button class="btn" id="stprint">Print</button><button class="btn primary" id="stclose">Close</button></div></div>`;
   document.body.appendChild(dlg); dlg.showModal();
   dlg.querySelector('#stclose').onclick = () => { dlg.close(); dlg.remove(); };
   dlg.querySelector('#stprint').onclick = () => window.print();
-  dlg.querySelector('#stcsv').onclick = () => { const rows = [['month','trips','fares_ghs','avg_per_trip_ghs','active_days','avg_rating'], ...d.months.map((m) => [m.month, m.trips, m.fares, m.avgPerTrip, m.activeDays, m.avgRating ?? ''])]; const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([rows.map((r) => r.join(',')).join('\n')], { type: 'text/csv' })); a.download = `statement-${d.vehicle}.csv`; a.click(); };
+  dlg.querySelector('#stcsv').onclick = () => { const rows = [[d.unit + '_start','trips','fares_ghs','avg_per_trip_ghs','active_days','avg_rating'], ...d.periods.map((m) => [m.start, m.trips, m.fares, m.avgPerTrip, m.activeDays, m.avgRating ?? ''])]; const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([rows.map((r) => r.join(',')).join('\n')], { type: 'text/csv' })); a.download = `statement-${d.vehicle}-by-${d.unit}.csv`; a.click(); };
 }
 
-async function load() {
+async function load(quiet) {
   const el = $('#view');
-  el.innerHTML = '<div class="card empty">Loading…</div>';
+  if (!quiet) el.innerHTML = '<div class="card empty">Loading…</div>';
   try {
     el.innerHTML = await views[tab]();
     requestAnimationFrame(() => document.querySelectorAll('.fill[data-w]').forEach((f) => { f.style.width = f.dataset.w + '%'; }));
@@ -510,12 +544,25 @@ async function load() {
     document.querySelectorAll('[data-ureport]').forEach((s) => s.onchange = async () => { await api(`/union/unregistered-reports/${s.dataset.ureport}/status`, { method: 'POST', body: JSON.stringify({ status: s.value }) }); });
     document.querySelectorAll('[data-consent]').forEach((c) => c.onchange = async () => { await api(`/union/vehicles/${c.dataset.consent}/consent`, { method: 'POST', body: JSON.stringify({ consent: c.checked }) }); load(); });
     document.querySelectorAll('[data-stmt]').forEach((b) => b.onclick = () => showStatement(b.dataset.stmt));
+    document.querySelectorAll('[data-quick]').forEach((b) => b.onclick = () => { b.closest('.reply').querySelector('[data-msg]').value = b.dataset.quick; });
+    document.querySelectorAll('[data-send]').forEach((b) => b.onclick = async () => { const box = b.closest('.reply'); await api(`/union/disputes/${b.dataset.send}/reply`, { method: 'POST', body: JSON.stringify({ message: box.querySelector('[data-msg]').value, smsDriver: box.querySelector('[data-sms]').checked }) }); toast('Reply sent to the passenger'); load(true); });
+    document.querySelectorAll('[data-resolve]').forEach((b) => b.onclick = async () => { await api(`/union/disputes/${b.dataset.resolve}/status`, { method: 'POST', body: JSON.stringify({ status: 'resolved' }) }); toast('Marked resolved'); load(true); });
+    if (tab === 'statements') wireStatements();
     if (tab === 'fares') wireFares();
     if (tab === 'ussd') { $('#dial').onclick = () => ussdStep(null); $('#send').onclick = () => $('#entry').value && ussdStep($('#entry').value.trim()); $('#entry').onkeydown = (e) => e.key === 'Enter' && $('#send').click(); }
   } catch (e) { if (e.message !== 'unauthorized') el.innerHTML = `<div class="card empty"><b>Could not load</b>${esc(e.message)}</div>`; }
 }
 
-$('#refresh').onclick = load;
+$('#refresh').onclick = () => load();
+/* Live alerts: poll every 5 s, and keep the sidebar count fresh from any page. Typing in a reply box is never interrupted. */
+setInterval(async () => {
+  if ($('#app').hidden || document.hidden) return;
+  try {
+    if (tab === 'alerts') { const typing = document.activeElement && document.activeElement.matches && document.activeElement.matches('[data-msg]'); if (!typing) await load(true); }
+    else { const { alerts } = await api('/union/alerts'); if (alerts.length !== urgentCount) { urgentCount = alerts.length; renderTabs(); } }
+  } catch {}
+}, 5000);
+setInterval(() => document.querySelectorAll('[data-since]').forEach((e) => { const sec = Math.max(0, Math.round((Date.now() - Number(e.dataset.since)) / 1000)); e.textContent = sec < 90 ? `${sec}s ago` : `${Math.round(sec / 60)} min ago`; }), 1000);
 $('#go').onclick = async () => { key = $('#key').value.trim(); sessionStorage.setItem('unionKey', key); try { await api('/union/overview'); showApp(); } catch {} };
 $('#key').onkeydown = (e) => e.key === 'Enter' && $('#go').click();
 (async () => { try { await api('/union/overview'); showApp(); } catch { if (!key) showLogin(); } })();

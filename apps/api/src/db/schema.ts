@@ -177,7 +177,7 @@ export const conductorBonusTable = pgTable(
 
 export type ConductorBonus = typeof conductorBonusTable.$inferSelect;
 
-export const disputeTypes = ["overcharge", "route_deviation", "safety_concern", "forced_early_alighting", "unpaid_passenger", "wrong_stop", "payment_failed", "other"] as const;
+export const disputeTypes = ["accident", "careless_driving", "overcharge", "route_deviation", "safety_concern", "forced_early_alighting", "unpaid_passenger", "wrong_stop", "payment_failed", "other"] as const;
 export const disputeStatuses = ["open", "investigating", "resolved", "rejected"] as const;
 
 export const disputesTable = pgTable("disputes", {
@@ -191,6 +191,13 @@ export const disputesTable = pgTable("disputes", {
   description: text("description"),
   /** For an overcharge report: what the passenger says they were asked to pay (GHS). Feeds the fare-compliance flags. */
   amountAsked: numeric("amount_asked", { precision: 8, scale: 2 }),
+  /** Live alerts (accident, careless driving): shown on the dashboard at once, with where the passenger is. */
+  urgent: boolean("urgent").notNull().default(false),
+  lat: numeric("lat", { precision: 9, scale: 6 }),
+  lng: numeric("lng", { precision: 9, scale: 6 }),
+  /** The union's answer, shown to the passenger in the app. */
+  staffReply: text("staff_reply"),
+  repliedAt: timestamp("replied_at", { withTimezone: true }),
   /** Snapshot taken when the report was filed: the trip, vehicle, conductor and every trip event. */
   evidence: jsonb("evidence"),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),

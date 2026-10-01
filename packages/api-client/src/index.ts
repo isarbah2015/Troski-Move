@@ -24,6 +24,7 @@ import {
   type SplitBody,
   type StartTripBody,
   type StopMarkBody,
+  SupportStatusResponse,
   UnregisteredReportBody,
   UnregisteredReportResponse,
 } from '@trotrolink/shared';
@@ -167,6 +168,11 @@ export function createApiClient(baseUrl: string, options: ApiClientOptions = {})
     /** Passenger reports a trip; the server attaches the evidence. */
     async reportTrip(body: DisputeBody) {
       return DisputeResponse.parse(await post('/disputes', body));
+    },
+
+    /** The union's live answer (status and message) to this passenger's urgent reports on a trip. */
+    async supportStatus(tripId: string, deviceId: string) {
+      return SupportStatusResponse.parse(await request(`/disputes/status?tripId=${encodeURIComponent(tripId)}&deviceId=${encodeURIComponent(deviceId)}`));
     },
 
     /** Passenger reports a vehicle that is not on the GPRTU register (no sticker, or a code that does not exist). */
