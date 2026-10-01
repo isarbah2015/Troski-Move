@@ -8,6 +8,7 @@ import { formatCedis } from '@/lib/api';
 import { GOLD, SCRIM } from '@/lib/colors';
 import { Approx } from '@/components/Approx';
 import { useT } from '@/lib/i18n';
+import { PrimaryButton } from '@/components/PrimaryButton';
 
 type Props = {
   resolved: ResolvedVehicle | null;
@@ -114,17 +115,12 @@ export function StopSheet({ resolved, onClose, onPay }: Props) {
                 </View>
               ) : null}
 
-              <Pressable
+              <PrimaryButton
                 disabled={!ready}
                 onPress={() => stop && onPay(stop, customNote || undefined)}
-                accessibilityRole="button"
-                accessibilityState={{ disabled: !ready }}
-                style={[styles.cta, { backgroundColor: colors.primary, opacity: ready ? 1 : 0.4, borderRadius: colors.radiusPill }]}
-              >
-                <Text style={[styles.ctaText, { color: colors.primaryForeground }]}>
-                  {stop ? t('stop.pay', { amount: formatCedis(stop.amountToPay) }) : t('stop.choose')}
-                </Text>
-              </Pressable>
+                label={stop ? t('stop.pay', { amount: formatCedis(stop.amountToPay) }) : t('stop.choose')}
+                style={styles.cta}
+              />
             </>
           ) : null}
         </View>
@@ -136,25 +132,25 @@ export function StopSheet({ resolved, onClose, onPay }: Props) {
 const styles = StyleSheet.create({
   root: { flex: 1, justifyContent: 'flex-end' },
   scrim: { ...StyleSheet.absoluteFillObject, backgroundColor: SCRIM },
-  sheet: { padding: 24, paddingBottom: 36, borderWidth: 1, borderBottomWidth: 0, maxHeight: '88%' },
+  sheet: { padding: 24, paddingBottom: 36, borderWidth: StyleSheet.hairlineWidth * 2, borderBottomWidth: 0, maxHeight: '88%' },
   grabber: { alignSelf: 'center', width: 40, height: 4, borderRadius: 2, marginBottom: 18 },
   headRow: { flexDirection: 'row', alignItems: 'center', gap: 10, marginBottom: 10 },
   codePill: { paddingHorizontal: 12, paddingVertical: 5 },
-  codeText: { fontFamily: 'Inter_700Bold', fontSize: 13, letterSpacing: 1 },
-  conductor: { fontFamily: 'Inter_500Medium', fontSize: 13 },
-  route: { fontFamily: 'Inter_700Bold', fontSize: 22, marginBottom: 18 },
-  label: { fontFamily: 'Inter_600SemiBold', fontSize: 11, letterSpacing: 1, marginBottom: 10 },
+  codeText: { fontFamily: 'PlusJakartaSans_700Bold', fontSize: 13, letterSpacing: 1 },
+  conductor: { fontFamily: 'PlusJakartaSans_500Medium', fontSize: 13 },
+  route: { fontFamily: 'PlusJakartaSans_700Bold', fontSize: 22, marginBottom: 18 },
+  label: { fontFamily: 'PlusJakartaSans_600SemiBold', fontSize: 11, letterSpacing: 1, marginBottom: 10 },
   list: { flexGrow: 0 },
-  row: { flexDirection: 'row', alignItems: 'center', gap: 12, borderWidth: 1, paddingHorizontal: 16, paddingVertical: 14, marginBottom: 8 },
-  stopName: { flex: 1, fontFamily: 'Inter_600SemiBold', fontSize: 16 },
-  stopFare: { fontFamily: 'Inter_500Medium', fontSize: 14 },
+  row: { flexDirection: 'row', alignItems: 'center', gap: 12, borderWidth: StyleSheet.hairlineWidth * 2, paddingHorizontal: 16, paddingVertical: 14, marginBottom: 8 },
+  stopName: { flex: 1, fontFamily: 'PlusJakartaSans_600SemiBold', fontSize: 16 },
+  stopFare: { fontFamily: 'PlusJakartaSans_500Medium', fontSize: 14 },
   customLink: { flexDirection: 'row', alignItems: 'center', gap: 6, paddingVertical: 10 },
-  customText: { fontFamily: 'Inter_600SemiBold', fontSize: 14 },
-  noteInput: { borderWidth: 1, height: 52, paddingHorizontal: 14, fontFamily: 'Inter_500Medium', fontSize: 15 },
-  noteHint: { fontFamily: 'Inter_400Regular', fontSize: 12, marginTop: 6 },
+  customText: { fontFamily: 'PlusJakartaSans_600SemiBold', fontSize: 14 },
+  noteInput: { borderWidth: StyleSheet.hairlineWidth * 2, height: 52, paddingHorizontal: 14, fontFamily: 'PlusJakartaSans_500Medium', fontSize: 15 },
+  noteHint: { fontFamily: 'PlusJakartaSans_400Regular', fontSize: 12, marginTop: 6 },
   fareBox: { marginTop: 10, alignItems: 'center' },
-  fareLine: { fontFamily: 'Inter_400Regular', fontSize: 13 },
-  fareAmount: { fontFamily: 'Inter_700Bold', fontSize: 34, marginTop: 2 },
-  cta: { marginTop: 16, height: 56, alignItems: 'center', justifyContent: 'center' },
-  ctaText: { fontFamily: 'Inter_700Bold', fontSize: 17 },
+  fareLine: { fontFamily: 'PlusJakartaSans_400Regular', fontSize: 13 },
+  fareAmount: { fontFamily: 'PlusJakartaSans_700Bold', fontSize: 34, marginTop: 2 },
+  cta: { marginTop: 16 },
+  ctaText: { fontFamily: 'PlusJakartaSans_700Bold', fontSize: 17 },
 });

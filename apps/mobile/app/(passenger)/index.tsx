@@ -1,7 +1,7 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
-import { Linking, Platform, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Animated, Easing, Linking, Platform, Pressable, ScrollView, StyleSheet, Text, View, useWindowDimensions } from 'react-native';
 import { Feather } from '@expo/vector-icons';
-import { StatusBar } from 'expo-status-bar';
+import { LinearGradient } from 'expo-linear-gradient';
 import { CameraView, useCameraPermissions } from 'expo-camera';
 import * as Haptics from 'expo-haptics';
 import { useFocusEffect, useLocalSearchParams, useRouter } from 'expo-router';
@@ -18,19 +18,30 @@ import { payForTrip } from '@/lib/payment';
 import { appendTripRecord, saveActiveTrip } from '@/lib/storage';
 import { showToast } from '@/lib/toast';
 import { buildTrip, buildTripRecord, newTripId } from '@/lib/trip';
-import { CAMERA_DIM, SILVER, WHITE } from '@/lib/colors';
+import { PrimaryButton } from '@/components/PrimaryButton';
 import { useT } from '@/lib/i18n';
 
 type PaymentState = { phase: PaymentPhase; resolved: ResolvedVehicle; stop: Stop; simulator: boolean; message?: string; referenceId?: string; tripId?: string; customNote?: string };
 
-const FRAME = 260;
 // Demo codes for web / simulators that have no camera.
 const DEMO_CODES = ['CIR01', 'CIR02', 'MAD05', 'TEM03'];
 const SHOW_DEMO = Platform.OS === 'web' || __DEV__ || DEMO_MODE;
 
 export default function ScanScreen() {
   const t = useT();
-  const colors = useColors('dark'); // the camera screen is dark in both themes
+  const colors = useColors(); // the screen follows the theme; only the live camera picture is dark
+  const { width: screenW, height: screenH } = useWindowDimensions();
+  const frameW = Math.min(screenW - 48, 420);
+  const frameH = Math.min(Math.max(screenH * 0.42, 280), 400);
+  const sweep = useRef(new Animated.Value(0)).current;
+  useEffect(() => {
+    const loop = Animated.loop(Animated.sequence([
+      Animated.timing(sweep, { toValue: 1, duration: 2200, easing: Easing.inOut(Easing.quad), useNativeDriver: true }),
+      Animated.timing(sweep, { toValue: 0, duration: 2200, easing: Easing.inOut(Easing.quad), useNativeDriver: true }),
+    ]));
+    loop.start();
+    return () => loop.stop();
+  }, [sweep]);
   const insets = useSafeAreaInsets();
   const router = useRouter();
   const { code: prefillCode, n: prefillNonce } = useLocalSearchParams<{ code?: string; n?: string }>();
@@ -142,77 +153,95 @@ export default function ScanScreen() {
 
   const scanning = focused && !resolved && !codeOpen && permission?.granted;
 
+  const cameraOn = !!permission?.granted && focused;
+  const cameraOff = !!permission && !permission.granted;
+
   return (
     <View style={[styles.root, { backgroundColor: colors.background }]}>
-      {focused ? <StatusBar style="light" /> : null}
-      {permission?.granted && focused ? (
-        <CameraView
-          style={StyleSheet.absoluteFill}
-          facing="back"
-          barcodeScannerSettings={{ barcodeTypes: ['qr'] }}
-          onBarcodeScanned={scanning ? ({ data }) => { void resolve(data); } : undefined}
-        />
-      ) : null}
-      <View style={[StyleSheet.absoluteFill, styles.dim]} pointerEvents="none" />
+      {/* A soft emerald wash behind the header gives the page depth without a heavy image. */}
+      <LinearGradient colors={[colors.scheme === 'light' ? 'rgba(18,165,118,0.10)' : 'rgba(43,217,159,0.07)', 'transparent']} style={styles.wash} pointerEvents="none" />
 
       <View style={[styles.top, { paddingTop: insets.top + 16 }]}>
-        <DemoBadge force="dark" />
-        <Text style={[styles.title, { color: WHITE }]}>{t('scan.title')}</Text>
-        <Text style={[styles.subtitle, { color: SILVER }]}>{t('scan.subtitle')}</Text>
+        <DemoBadge />
+        <Text style={[styles.title, { color: colors.foreground }]}>{t('scan.title')}</Text>
+        <Text style={[styles.subtitle, { color: colors.mutedForeground }]}>{t('scan.subtitle')}</Text>
       </View>
 
-      <View style={styles.center} pointerEvents="none">
-        <View style={styles.frame}>
-          {(['tl', 'tr', 'bl', 'br'] as const).map((c) => (
-            <View key={c} style={[styles.corner, styles[c], { borderColor: colors.primary }]} />
-          ))}
+      <View style={styles.stage}>
+        <View
+          style={[
+            styles.viewfinder,
+            { width: frameW, height: frameH, borderRadius: colors.radiusModal, backgroundColor: cameraOn ? '#05080F' : colors.card, borderColor: colors.border },
+            colors.elevation,
+          ]}
+        >
+          {cameraOn ? (
+            <CameraView
+              style={StyleSheet.absoluteFill}
+              facing="back"
+              barcodeScannerSettings={{ barcodeTypes: ['qr'] }}
+              onBarcodeScanned={scanning ? ({ data }) => { void resolve(data); } : undefined}
+            />
+          ) : (
+            <View style={styles.placeholder} pointerEvents="box-none">
+              <View style={[styles.placeholderIcon, { backgroundColor: colors.scheme === 'light' ? 'rgba(7,128,90,0.1)' : 'rgba(43,217,159,0.12)' }]}>
+                <Feather name={cameraOff ? 'camera-off' : 'maximize'} size={30} color={colors.primary} />
+              </View>
+              {cameraOff ? (
+                <>
+                  <Text style={[styles.permissionText, { color: colors.mutedForeground }]}>
+                    {permission!.canAskAgain ? t('scan.allowCamera') : 'Camera is off. Enable it in Settings, or enter the short code.'}
+                  </Text>
+                  <Pressable onPress={() => (permission!.canAskAgain ? requestPermission() : Linking.openSettings())} accessibilityRole="button" hitSlop={8}>
+                    <Text style={[styles.permissionLink, { color: colors.primary }]}>{permission!.canAskAgain ? t('scan.allow') : 'Settings'}</Text>
+                  </Pressable>
+                </>
+              ) : null}
+            </View>
+          )}
+
+          {/* Corner brackets and a sweeping scan line frame the target. */}
+          <View style={styles.brackets} pointerEvents="none">
+            {(['tl', 'tr', 'bl', 'br'] as const).map((c) => (
+              <View key={c} style={[styles.corner, styles[c], { borderColor: colors.primary }]} />
+            ))}
+            {cameraOn ? <Animated.View
+              style={[
+                styles.scanLine,
+                { backgroundColor: colors.primary, shadowColor: colors.primary, transform: [{ translateY: sweep.interpolate({ inputRange: [0, 1], outputRange: [28, frameH - 32] }) }] },
+              ]}
+            /> : null}
+          </View>
         </View>
       </View>
 
-
-      <View style={[styles.bottom, { paddingBottom: insets.bottom + 24 }]}>
-        {permission && !permission.granted ? (
-          <View style={[styles.permission, { backgroundColor: colors.card, borderColor: colors.border, borderRadius: colors.radius }]}>
-            <Feather name="camera-off" size={20} color={colors.mutedForeground} />
-            <Text style={[styles.permissionText, { color: colors.mutedForeground }]}>
-              {permission.canAskAgain ? t('scan.allowCamera') : 'Camera is off. Enable it in Settings, or enter the short code.'}
-            </Text>
-            <Pressable
-              onPress={() => (permission.canAskAgain ? requestPermission() : Linking.openSettings())}
-              accessibilityRole="button"
-              hitSlop={8}
-            >
-              <Text style={[styles.permissionLink, { color: colors.primary }]}>{permission.canAskAgain ? t('scan.allow') : 'Settings'}</Text>
-            </Pressable>
-          </View>
-        ) : null}
+      <View style={[styles.bottom, { paddingBottom: insets.bottom + 20 }]}>
         {SHOW_DEMO ? (
-          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.chips} style={styles.chipsRow}>
-            {DEMO_CODES.map((code) => (
-              <Pressable
-                key={code}
-                onPress={() => { Haptics.selectionAsync(); void resolve(code); }}
-                accessibilityRole="button"
-                accessibilityLabel={`Use demo code ${code}`}
-                style={[styles.chip, { backgroundColor: colors.card, borderColor: colors.border, borderRadius: colors.radiusPill }]}
-              >
-                <Text style={[styles.chipText, { color: colors.foreground }]}>{code}</Text>
-              </Pressable>
-            ))}
-          </ScrollView>
+          <>
+            <Text style={[styles.chipsLabel, { color: colors.mutedForeground }]}>TRY A DEMO CODE</Text>
+            <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.chips} style={styles.chipsRow}>
+              {DEMO_CODES.map((code) => (
+                <Pressable
+                  key={code}
+                  onPress={() => { Haptics.selectionAsync(); void resolve(code); }}
+                  accessibilityRole="button"
+                  accessibilityLabel={`Use demo code ${code}`}
+                  style={[styles.chip, { backgroundColor: colors.card, borderColor: colors.border, borderRadius: colors.radiusPill }]}
+                >
+                  <Text style={[styles.chipText, { color: colors.foreground }]}>{code}</Text>
+                </Pressable>
+              ))}
+            </ScrollView>
+          </>
         ) : null}
-        <Pressable
+        <PrimaryButton
+          label={t('scan.enterCode')}
+          icon="hash"
           onPress={() => {
-            Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
             setError(null);
             setCodeOpen(true);
           }}
-          accessibilityRole="button"
-          style={[styles.cta, { backgroundColor: colors.primary, borderRadius: colors.radiusPill }]}
-        >
-          <Feather name="hash" size={18} color={colors.primaryForeground} />
-          <Text style={[styles.ctaText, { color: colors.primaryForeground }]}>{t('scan.enterCode')}</Text>
-        </Pressable>
+        />
       </View>
 
       <CodeEntrySheet initialCode={initialCode} visible={codeOpen} loading={loading} error={error} onSubmit={resolve} onClose={() => setCodeOpen(false)} />
@@ -233,28 +262,30 @@ export default function ScanScreen() {
   );
 }
 
-const CORNER = 36;
+const CORNER = 34;
 const styles = StyleSheet.create({
   root: { flex: 1 },
-  dim: { backgroundColor: CAMERA_DIM },
+  wash: { position: 'absolute', top: 0, left: 0, right: 0, height: 320 },
   top: { paddingHorizontal: 24 },
-  title: { fontFamily: 'Inter_700Bold', fontSize: 28 },
-  subtitle: { fontFamily: 'Inter_400Regular', fontSize: 15, marginTop: 4 },
-  center: { ...StyleSheet.absoluteFillObject, alignItems: 'center', justifyContent: 'center' },
-  frame: { width: FRAME, height: FRAME },
+  title: { fontFamily: 'PlusJakartaSans_800ExtraBold', fontSize: 32, letterSpacing: -0.8, marginTop: 14 },
+  subtitle: { fontFamily: 'PlusJakartaSans_500Medium', fontSize: 15, lineHeight: 22, marginTop: 6 },
+  stage: { flex: 1, alignItems: 'center', justifyContent: 'center', paddingVertical: 12 },
+  viewfinder: { overflow: 'hidden', borderWidth: StyleSheet.hairlineWidth * 2 },
+  placeholder: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: 14, paddingHorizontal: 36 },
+  placeholderIcon: { width: 72, height: 72, borderRadius: 24, alignItems: 'center', justifyContent: 'center' },
+  brackets: { ...StyleSheet.absoluteFillObject, margin: 22 },
   corner: { position: 'absolute', width: CORNER, height: CORNER },
-  tl: { top: 0, left: 0, borderTopWidth: 4, borderLeftWidth: 4, borderTopLeftRadius: 16 },
-  tr: { top: 0, right: 0, borderTopWidth: 4, borderRightWidth: 4, borderTopRightRadius: 16 },
-  bl: { bottom: 0, left: 0, borderBottomWidth: 4, borderLeftWidth: 4, borderBottomLeftRadius: 16 },
-  br: { bottom: 0, right: 0, borderBottomWidth: 4, borderRightWidth: 4, borderBottomRightRadius: 16 },
-  permission: { marginBottom: 12, flexDirection: 'row', alignItems: 'center', gap: 12, padding: 16, borderWidth: 1 },
-  permissionText: { flex: 1, fontFamily: 'Inter_500Medium', fontSize: 14, lineHeight: 20 },
-  permissionLink: { fontFamily: 'Inter_700Bold', fontSize: 14 },
-  chipsRow: { flexGrow: 0, marginBottom: 16 },
-  chips: { gap: 8 },
-  chip: { borderWidth: 1, paddingHorizontal: 16, paddingVertical: 10 },
-  chipText: { fontFamily: 'Inter_600SemiBold', fontSize: 14, letterSpacing: 1 },
-  bottom: { flex: 1, justifyContent: 'flex-end', paddingHorizontal: 24 },
-  cta: { height: 56, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 10 },
-  ctaText: { fontFamily: 'Inter_700Bold', fontSize: 17 },
+  tl: { top: 0, left: 0, borderTopWidth: 4, borderLeftWidth: 4, borderTopLeftRadius: 18 },
+  tr: { top: 0, right: 0, borderTopWidth: 4, borderRightWidth: 4, borderTopRightRadius: 18 },
+  bl: { bottom: 0, left: 0, borderBottomWidth: 4, borderLeftWidth: 4, borderBottomLeftRadius: 18 },
+  br: { bottom: 0, right: 0, borderBottomWidth: 4, borderRightWidth: 4, borderBottomRightRadius: 18 },
+  scanLine: { position: 'absolute', left: 14, right: 14, top: -22, height: 2.5, borderRadius: 2, opacity: 0.85, shadowOpacity: 0.9, shadowRadius: 10, shadowOffset: { width: 0, height: 0 } },
+  permissionText: { fontFamily: 'PlusJakartaSans_500Medium', fontSize: 14, lineHeight: 21, textAlign: 'center' },
+  permissionLink: { fontFamily: 'PlusJakartaSans_700Bold', fontSize: 15 },
+  bottom: { paddingHorizontal: 24 },
+  chipsLabel: { fontFamily: 'PlusJakartaSans_700Bold', fontSize: 11, letterSpacing: 1.6, marginBottom: 10 },
+  chipsRow: { flexGrow: 0, marginBottom: 16, overflow: 'visible' },
+  chips: { gap: 8, paddingVertical: 4 },
+  chip: { borderWidth: StyleSheet.hairlineWidth * 2, paddingHorizontal: 18, paddingVertical: 11 },
+  chipText: { fontFamily: 'PlusJakartaSans_700Bold', fontSize: 14, letterSpacing: 1.2 },
 });

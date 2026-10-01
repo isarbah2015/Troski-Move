@@ -19,6 +19,6 @@ export function Stars({ rating }: { rating: number | null }) {
 
 const styles = StyleSheet.create({
   row: { flexDirection: 'row', alignItems: 'center', gap: 2 },
-  value: { fontFamily: 'Inter_600SemiBold', fontSize: 12, marginLeft: 6 },
-  unrated: { fontFamily: 'Inter_500Medium', fontSize: 12 },
+  value: { fontFamily: 'PlusJakartaSans_600SemiBold', fontSize: 12, marginLeft: 6 },
+  unrated: { fontFamily: 'PlusJakartaSans_500Medium', fontSize: 12 },
 });

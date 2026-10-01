@@ -39,7 +39,7 @@ export default function TodayScreen() {
   const current = currentStop ?? stops[0]?.name ?? null;
   const bonus = bonusFor(MOCK_BONUS.scans, MOCK_BONUS.avgRating);
   const tile = (width - GUTTER * 2 - GAP) / 2;
-  const card = { backgroundColor: colors.card, borderColor: colors.border, borderRadius: colors.radius };
+  const card = { backgroundColor: colors.card, borderColor: colors.border, borderRadius: colors.radius, ...colors.elevation };
 
   // Passengers who have paid for this vehicle and not yet alighted, refreshed every 10 seconds.
   const vehicleCode = data?.vehicle.shortCode;
@@ -142,7 +142,7 @@ export default function TodayScreen() {
               accessibilityRole="progressbar"
               accessibilityValue={{ min: 0, max: 100, now: Math.round(bonus.progress * 100) }}
             >
-              <View style={[styles.fill, { width: `${Math.round(bonus.progress * 100)}%`, backgroundColor: colors.primary, borderRadius: colors.radiusPill }]} />
+              <LinearGradient colors={colors.gradient} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }} style={[styles.fill, { width: `${Math.round(bonus.progress * 100)}%`, borderRadius: colors.radiusPill }]} />
             </View>
             <View style={styles.bonusRow}>
               <View style={styles.ratingRow}>
@@ -200,7 +200,7 @@ export default function TodayScreen() {
                 }}
                 accessibilityRole="button"
                 accessibilityLabel={`Passenger to ${p.alightingStop}, paid ${formatCedis(p.amountPaid)}${p.overstay ? ', past their stop' : ''}`}
-                style={[styles.pRow, { backgroundColor: colors.card, borderColor: p.overstay ? colors.accent : colors.border, borderRadius: colors.radius }]}
+                style={[styles.pRow, { backgroundColor: colors.card, borderColor: p.overstay ? colors.accent : colors.border, borderRadius: colors.radius, ...colors.elevation }]}
               >
                 <Feather name={p.overstay ? 'alert-triangle' : 'user-check'} size={18} color={p.overstay ? colors.accent : colors.primary} />
                 <View style={styles.pMain}>
@@ -264,47 +264,47 @@ export default function TodayScreen() {
 
 const styles = StyleSheet.create({
   scroll: { paddingHorizontal: GUTTER, paddingBottom: 40 },
-  kicker: { fontFamily: 'Inter_600SemiBold', fontSize: 12, letterSpacing: 1.4, marginBottom: 16 },
+  kicker: { fontFamily: 'PlusJakartaSans_600SemiBold', fontSize: 12, letterSpacing: 1.4, marginBottom: 16 },
   center: { paddingVertical: 80, alignItems: 'center' },
-  errorCard: { borderWidth: 1, padding: 24, alignItems: 'center', gap: 12 },
-  errorText: { fontFamily: 'Inter_500Medium', fontSize: 14, textAlign: 'center' },
-  retry: { height: 44, paddingHorizontal: 24, borderWidth: 1, alignItems: 'center', justifyContent: 'center' },
-  retryText: { fontFamily: 'Inter_600SemiBold', fontSize: 15 },
-  vehicle: { padding: 20, borderWidth: 1, marginBottom: GAP },
+  errorCard: { borderWidth: StyleSheet.hairlineWidth * 2, padding: 24, alignItems: 'center', gap: 12 },
+  errorText: { fontFamily: 'PlusJakartaSans_500Medium', fontSize: 14, textAlign: 'center' },
+  retry: { height: 44, paddingHorizontal: 24, borderWidth: StyleSheet.hairlineWidth * 2, alignItems: 'center', justifyContent: 'center' },
+  retryText: { fontFamily: 'PlusJakartaSans_600SemiBold', fontSize: 15 },
+  vehicle: { padding: 20, borderWidth: StyleSheet.hairlineWidth * 2, marginBottom: GAP },
   vehicleTop: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
   codeRow: { flexDirection: 'row', alignItems: 'center', gap: 10 },
-  code: { fontFamily: 'Inter_700Bold', fontSize: 22, letterSpacing: 1 },
-  pill: { flexDirection: 'row', alignItems: 'center', gap: 8, borderWidth: 1, paddingHorizontal: 12, height: 32 },
-  pillText: { fontFamily: 'Inter_700Bold', fontSize: 12 },
-  route: { fontFamily: 'Inter_600SemiBold', fontSize: 18, marginTop: 14 },
-  driver: { fontFamily: 'Inter_500Medium', fontSize: 14, marginTop: 4 },
-  card: { borderWidth: 1, padding: 20, marginBottom: GAP },
-  cardKicker: { fontFamily: 'Inter_600SemiBold', fontSize: 12, letterSpacing: 1.2 },
-  bigNumber: { fontFamily: 'Inter_700Bold', fontSize: 40, marginTop: 8 },
+  code: { fontFamily: 'PlusJakartaSans_700Bold', fontSize: 22, letterSpacing: 1 },
+  pill: { flexDirection: 'row', alignItems: 'center', gap: 8, borderWidth: StyleSheet.hairlineWidth * 2, paddingHorizontal: 12, height: 32 },
+  pillText: { fontFamily: 'PlusJakartaSans_700Bold', fontSize: 12 },
+  route: { fontFamily: 'PlusJakartaSans_600SemiBold', fontSize: 18, marginTop: 14 },
+  driver: { fontFamily: 'PlusJakartaSans_500Medium', fontSize: 14, marginTop: 4 },
+  card: { borderWidth: StyleSheet.hairlineWidth * 2, padding: 20, marginBottom: GAP },
+  cardKicker: { fontFamily: 'PlusJakartaSans_600SemiBold', fontSize: 12, letterSpacing: 1.2 },
+  bigNumber: { fontFamily: 'PlusJakartaSans_700Bold', fontSize: 40, marginTop: 8 },
   metaRow: { flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 8 },
-  meta: { fontFamily: 'Inter_500Medium', fontSize: 13 },
-  scans: { fontFamily: 'Inter_700Bold', fontSize: 22, marginTop: 8, marginBottom: 12 },
+  meta: { fontFamily: 'PlusJakartaSans_500Medium', fontSize: 13 },
+  scans: { fontFamily: 'PlusJakartaSans_700Bold', fontSize: 22, marginTop: 8, marginBottom: 12 },
   track: { height: 10, overflow: 'hidden' },
   fill: { height: 10 },
   bonusRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginTop: 10 },
   ratingRow: { flexDirection: 'row', alignItems: 'center', gap: 6 },
-  bonusAmount: { fontFamily: 'Inter_700Bold', fontSize: 16, marginTop: 10 },
-  hint: { fontFamily: 'Inter_400Regular', fontSize: 12, lineHeight: 17, marginTop: 6 },
+  bonusAmount: { fontFamily: 'PlusJakartaSans_700Bold', fontSize: 16, marginTop: 10 },
+  hint: { fontFamily: 'PlusJakartaSans_400Regular', fontSize: 12, lineHeight: 17, marginTop: 6 },
   grid: { flexDirection: 'row', flexWrap: 'wrap', gap: GAP },
-  stopBtn: { minHeight: 80, borderWidth: 1, padding: 14, justifyContent: 'center' },
-  stopIndex: { fontFamily: 'Inter_600SemiBold', fontSize: 11, letterSpacing: 1 },
-  stopName: { fontFamily: 'Inter_700Bold', fontSize: 20, marginTop: 4 },
-  pastBadge: { alignSelf: 'flex-start', flexDirection: 'row', alignItems: 'center', gap: 8, borderWidth: 1, paddingHorizontal: 12, paddingVertical: 6, marginBottom: 10 },
-  pastText: { fontFamily: 'Inter_700Bold', fontSize: 12 },
-  empty: { fontFamily: 'Inter_500Medium', fontSize: 14, marginBottom: 6 },
-  pRow: { flexDirection: 'row', alignItems: 'center', gap: 12, borderWidth: 1, padding: 14, marginBottom: 8 },
+  stopBtn: { minHeight: 80, borderWidth: StyleSheet.hairlineWidth * 2, padding: 14, justifyContent: 'center' },
+  stopIndex: { fontFamily: 'PlusJakartaSans_600SemiBold', fontSize: 11, letterSpacing: 1 },
+  stopName: { fontFamily: 'PlusJakartaSans_700Bold', fontSize: 20, marginTop: 4 },
+  pastBadge: { alignSelf: 'flex-start', flexDirection: 'row', alignItems: 'center', gap: 8, borderWidth: StyleSheet.hairlineWidth * 2, paddingHorizontal: 12, paddingVertical: 6, marginBottom: 10 },
+  pastText: { fontFamily: 'PlusJakartaSans_700Bold', fontSize: 12 },
+  empty: { fontFamily: 'PlusJakartaSans_500Medium', fontSize: 14, marginBottom: 6 },
+  pRow: { flexDirection: 'row', alignItems: 'center', gap: 12, borderWidth: StyleSheet.hairlineWidth * 2, padding: 14, marginBottom: 8 },
   pMain: { flex: 1 },
-  pName: { fontFamily: 'Inter_600SemiBold', fontSize: 15 },
-  pMeta: { fontFamily: 'Inter_400Regular', fontSize: 12, marginTop: 2 },
-  unpaid: { height: 48, marginTop: 8, marginBottom: 20, borderWidth: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8 },
-  unpaidText: { fontFamily: 'Inter_600SemiBold', fontSize: 14 },
+  pName: { fontFamily: 'PlusJakartaSans_600SemiBold', fontSize: 15 },
+  pMeta: { fontFamily: 'PlusJakartaSans_400Regular', fontSize: 12, marginTop: 2 },
+  unpaid: { height: 48, marginTop: 8, marginBottom: 20, borderWidth: StyleSheet.hairlineWidth * 2, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8 },
+  unpaidText: { fontFamily: 'PlusJakartaSans_600SemiBold', fontSize: 14 },
   onBoard: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, marginTop: 24, marginBottom: 20 },
-  onBoardText: { fontFamily: 'Inter_500Medium', fontSize: 14 },
-  endShift: { height: 56, borderWidth: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 10 },
-  endShiftText: { fontFamily: 'Inter_700Bold', fontSize: 16 },
+  onBoardText: { fontFamily: 'PlusJakartaSans_500Medium', fontSize: 14 },
+  endShift: { height: 56, borderWidth: StyleSheet.hairlineWidth * 2, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 10 },
+  endShiftText: { fontFamily: 'PlusJakartaSans_700Bold', fontSize: 16 },
 });

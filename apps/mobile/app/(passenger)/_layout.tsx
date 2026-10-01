@@ -12,12 +12,12 @@ export default function PassengerLayout() {
   return (
     <Tabs
       initialRouteName="index"
-      tabBar={(props) => <FloatingTabBar {...props} darkRoutes={['index']} />}
+      tabBar={(props) => <FloatingTabBar {...props} />}
       screenOptions={{
         headerShown: false,
         tabBarActiveTintColor: colors.primary,
         tabBarInactiveTintColor: colors.mutedForeground,
-        tabBarLabelStyle: { fontFamily: 'Inter_600SemiBold', fontSize: 11 },
+        tabBarLabelStyle: { fontFamily: 'PlusJakartaSans_600SemiBold', fontSize: 11 },
       }}
     >
       <Tabs.Screen name="index" options={{ title: t('tab.scan'), tabBarIcon: ({ color }) => <Feather name="maximize" size={22} color={color} /> }} />

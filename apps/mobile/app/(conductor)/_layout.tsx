@@ -22,7 +22,7 @@ export default function ConductorLayout() {
         headerShown: false,
         tabBarActiveTintColor: colors.primary,
         tabBarInactiveTintColor: colors.mutedForeground,
-        tabBarLabelStyle: { fontFamily: 'Inter_600SemiBold', fontSize: 11 },
+        tabBarLabelStyle: { fontFamily: 'PlusJakartaSans_600SemiBold', fontSize: 11 },
       }}
     >
       <Tabs.Screen name="today" options={{ title: 'Today', tabBarIcon: ({ color }) => <Feather name="check-square" size={22} color={color} /> }} />

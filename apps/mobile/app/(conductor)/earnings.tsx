@@ -16,6 +16,7 @@ import { sendOrQueue } from '@/lib/sync';
 import { showToast } from '@/lib/toast';
 import { EMERALD, ERROR, GOLD, HERO_GRADIENT, SILVER, WHITE } from '@/lib/colors';
 import { CEDI } from '@trotrolink/shared';
+import { PrimaryButton } from '@/components/PrimaryButton';
 
 type Field = 'ownerDrop' | 'conductorWage' | 'fuelCost';
 
@@ -112,7 +113,7 @@ export default function EarningsScreen() {
     ]);
   };
 
-  const card = { backgroundColor: colors.card, borderColor: colors.border, borderRadius: colors.radius };
+  const card = { backgroundColor: colors.card, borderColor: colors.border, borderRadius: colors.radius, ...colors.elevation };
 
   return (
     <KeyboardAwareScrollView
@@ -126,7 +127,7 @@ export default function EarningsScreen() {
       <Text style={[styles.title, { color: colors.foreground }]}>Earnings</Text>
       <Text style={[styles.sub, { color: colors.mutedForeground }]}>Today · {todayKey}</Text>
 
-      <View style={[styles.totalCard, { backgroundColor: colors.card, borderColor: colors.primary, borderRadius: colors.radius }]}>
+      <View style={[styles.totalCard, { backgroundColor: colors.card, borderColor: colors.primary, borderRadius: colors.radius, ...colors.elevation }]}>
         <Text style={[styles.kicker, { color: colors.primary }]}>TOTAL FARES COLLECTED</Text>
         <Text style={[styles.total, { color: colors.foreground }]}>{formatCedis(total)}</Text>
         <Text style={[styles.meta, { color: colors.mutedForeground }]}>{MOCK_TODAY.riders} riders · {formatOnline(MOCK_TODAY.hoursOnline)}</Text>
@@ -178,10 +179,7 @@ export default function EarningsScreen() {
         })}
       </View>
 
-      <Pressable onPress={saveDay} accessibilityRole="button" style={[styles.save, { backgroundColor: colors.primary, borderRadius: colors.radiusPill }]}>
-        <Feather name="check" size={18} color={colors.primaryForeground} />
-        <Text style={[styles.saveText, { color: colors.primaryForeground }]}>Save &amp; close day</Text>
-      </Pressable>
+      <PrimaryButton onPress={saveDay} icon="check" label="Save & close day" style={styles.save} />
 
       {__DEV__ ? (
         <Pressable
@@ -205,26 +203,26 @@ export default function EarningsScreen() {
 
 const styles = StyleSheet.create({
   scroll: { paddingHorizontal: 24, paddingBottom: 48 },
-  title: { fontFamily: 'Inter_700Bold', fontSize: 32 },
-  sub: { fontFamily: 'Inter_500Medium', fontSize: 14, marginTop: 4, marginBottom: 20 },
+  title: { fontFamily: 'PlusJakartaSans_800ExtraBold', letterSpacing: -0.8, fontSize: 32 },
+  sub: { fontFamily: 'PlusJakartaSans_500Medium', fontSize: 14, marginTop: 4, marginBottom: 20 },
   totalCard: { borderWidth: 1.5, padding: 20 },
-  kicker: { fontFamily: 'Inter_600SemiBold', fontSize: 12, letterSpacing: 1.2 },
-  total: { fontFamily: 'Inter_700Bold', fontSize: 40, marginTop: 8 },
-  meta: { fontFamily: 'Inter_500Medium', fontSize: 14, marginTop: 6 },
-  group: { borderWidth: 1, paddingHorizontal: 16 },
+  kicker: { fontFamily: 'PlusJakartaSans_600SemiBold', fontSize: 12, letterSpacing: 1.2 },
+  total: { fontFamily: 'PlusJakartaSans_700Bold', fontSize: 40, marginTop: 8 },
+  meta: { fontFamily: 'PlusJakartaSans_500Medium', fontSize: 14, marginTop: 6 },
+  group: { borderWidth: StyleSheet.hairlineWidth * 2, paddingHorizontal: 16 },
   splitRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', minHeight: 64 },
-  splitLabel: { fontFamily: 'Inter_600SemiBold', fontSize: 16 },
+  splitLabel: { fontFamily: 'PlusJakartaSans_600SemiBold', fontSize: 16 },
   inputWrap: { flexDirection: 'row', alignItems: 'center', borderWidth: 1.5, width: 132, height: 44, paddingHorizontal: 10 },
-  prefix: { fontFamily: 'Inter_600SemiBold', fontSize: 12 },
-  input: { flex: 1, textAlign: 'right', fontFamily: 'Inter_700Bold', fontSize: 16, paddingVertical: 0 },
+  prefix: { fontFamily: 'PlusJakartaSans_600SemiBold', fontSize: 12 },
+  input: { flex: 1, textAlign: 'right', fontFamily: 'PlusJakartaSans_700Bold', fontSize: 16, paddingVertical: 0 },
   netCard: { borderWidth: 1.5, padding: 20, marginTop: 16 },
-  net: { fontFamily: 'Inter_700Bold', fontSize: 36, marginTop: 8 },
-  warn: { fontFamily: 'Inter_500Medium', fontSize: 13, marginTop: 6 },
+  net: { fontFamily: 'PlusJakartaSans_700Bold', fontSize: 36, marginTop: 8 },
+  warn: { fontFamily: 'PlusJakartaSans_500Medium', fontSize: 13, marginTop: 6 },
   weekRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', minHeight: 48 },
-  weekDay: { fontFamily: 'Inter_700Bold', fontSize: 15 },
-  weekAmount: { fontFamily: 'Inter_600SemiBold', fontSize: 15 },
-  save: { height: 56, marginTop: 28, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 10 },
-  saveText: { fontFamily: 'Inter_700Bold', fontSize: 17 },
+  weekDay: { fontFamily: 'PlusJakartaSans_700Bold', fontSize: 15 },
+  weekAmount: { fontFamily: 'PlusJakartaSans_600SemiBold', fontSize: 15 },
+  save: { marginTop: 28 },
+  saveText: { fontFamily: 'PlusJakartaSans_700Bold', fontSize: 17 },
   devLink: { alignSelf: 'center', paddingVertical: 20 },
-  devText: { fontFamily: 'Inter_500Medium', fontSize: 12 },
+  devText: { fontFamily: 'PlusJakartaSans_500Medium', fontSize: 12 },
 });

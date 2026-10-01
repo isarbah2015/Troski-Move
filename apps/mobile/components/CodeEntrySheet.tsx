@@ -3,6 +3,7 @@ import { ActivityIndicator, KeyboardAvoidingView, Modal, Platform, Pressable, St
 import { useColors } from '@/hooks/useColors';
 import { SCRIM } from '@/lib/colors';
 import { useT } from '@/lib/i18n';
+import { PrimaryButton } from '@/components/PrimaryButton';
 
 type Props = {
   initialCode?: string;
@@ -45,15 +46,7 @@ export function CodeEntrySheet({ initialCode = '', visible, loading, error, onSu
             style={[styles.input, { color: colors.foreground, backgroundColor: colors.background, borderColor: error ? colors.destructive : colors.border, borderRadius: colors.radius }]}
           />
           {error ? <Text style={[styles.error, { color: colors.destructive }]} accessibilityRole="alert">{error}</Text> : null}
-          <Pressable
-            onPress={() => onSubmit(code)}
-            disabled={!ready}
-            accessibilityRole="button"
-            accessibilityState={{ disabled: !ready }}
-            style={[styles.cta, { backgroundColor: colors.primary, opacity: ready ? 1 : 0.4, borderRadius: colors.radiusPill }]}
-          >
-            {loading ? <ActivityIndicator color={colors.primaryForeground} /> : <Text style={[styles.ctaText, { color: colors.primaryForeground }]}>{t('code.find')}</Text>}
-          </Pressable>
+          <PrimaryButton onPress={() => onSubmit(code)} disabled={!ready} loading={loading} label={t('code.find')} style={styles.cta} />
         </View>
       </KeyboardAvoidingView>
     </Modal>
@@ -63,12 +56,12 @@ export function CodeEntrySheet({ initialCode = '', visible, loading, error, onSu
 const styles = StyleSheet.create({
   root: { flex: 1, justifyContent: 'flex-end' },
   scrim: { ...StyleSheet.absoluteFillObject, backgroundColor: SCRIM },
-  sheet: { padding: 24, paddingBottom: 36, borderWidth: 1, borderBottomWidth: 0 },
+  sheet: { padding: 24, paddingBottom: 36, borderWidth: StyleSheet.hairlineWidth * 2, borderBottomWidth: 0 },
   grabber: { alignSelf: 'center', width: 40, height: 4, borderRadius: 2, marginBottom: 20 },
-  title: { fontFamily: 'Inter_700Bold', fontSize: 22, marginBottom: 6 },
-  hint: { fontFamily: 'Inter_400Regular', fontSize: 14, marginBottom: 18 },
-  input: { fontFamily: 'Inter_700Bold', fontSize: 28, letterSpacing: 4, textAlign: 'center', borderWidth: 1, paddingVertical: 16 },
-  error: { fontFamily: 'Inter_500Medium', fontSize: 14, marginTop: 10 },
-  cta: { marginTop: 20, height: 56, alignItems: 'center', justifyContent: 'center' },
-  ctaText: { fontFamily: 'Inter_700Bold', fontSize: 17 },
+  title: { fontFamily: 'PlusJakartaSans_700Bold', fontSize: 22, marginBottom: 6 },
+  hint: { fontFamily: 'PlusJakartaSans_400Regular', fontSize: 14, marginBottom: 18 },
+  input: { fontFamily: 'PlusJakartaSans_700Bold', fontSize: 28, letterSpacing: 4, textAlign: 'center', borderWidth: StyleSheet.hairlineWidth * 2, paddingVertical: 16 },
+  error: { fontFamily: 'PlusJakartaSans_500Medium', fontSize: 14, marginTop: 10 },
+  cta: { marginTop: 20 },
+  ctaText: { fontFamily: 'PlusJakartaSans_700Bold', fontSize: 17 },
 });

@@ -1,5 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { AccessibilityInfo, Animated, Easing, LayoutChangeEvent, Platform, Pressable, StyleSheet, Text, View } from 'react-native';
+import { BlurView } from 'expo-blur';
 import * as Haptics from 'expo-haptics';
 import type { Tabs } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -51,7 +52,7 @@ function TabItem({ label, focused, compact, icon, onPress, onLongPress, testID }
         <Animated.View style={{ transform: [{ translateY: lift.interpolate({ inputRange: [0, 1], outputRange: [0, -2] }) }, { scale: lift.interpolate({ inputRange: [0, 1], outputRange: [1, 1.12] }) }] }}>
           {icon(color, focused)}
         </Animated.View>
-        <Text numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.85} style={[styles.label, { color, fontSize: compact ? 9.5 : 11, fontFamily: focused ? (compact ? 'Inter_600SemiBold' : 'Inter_700Bold') : 'Inter_500Medium' }]}>
+        <Text numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.85} style={[styles.label, { color, fontSize: compact ? 9.5 : 11, fontFamily: focused ? (compact ? 'PlusJakartaSans_600SemiBold' : 'PlusJakartaSans_700Bold') : 'PlusJakartaSans_500Medium' }]}>
           {label}
         </Text>
       </Animated.View>
@@ -108,14 +109,16 @@ export function FloatingTabBar({ state, descriptors, navigation, darkRoutes = []
         style={[
           styles.card,
           {
-            backgroundColor: colors.card,
+            backgroundColor: colors.glass,
             borderColor: colors.border,
-            borderRadius: colors.radiusModal,
-            shadowColor: EMERALD,
+            borderRadius: colors.radiusPill,
+            shadowColor: colors.scheme === 'light' ? '#0F172A' : EMERALD,
+            shadowOpacity: colors.scheme === 'light' ? 0.14 : 0.22,
             transform: [{ translateY: bob.interpolate({ inputRange: [0, 1], outputRange: [1, -2] }) }],
           },
         ]}
       >
+        <BlurView intensity={40} tint={colors.scheme === 'light' ? 'light' : 'dark'} style={[StyleSheet.absoluteFill, { borderRadius: colors.radiusPill, overflow: 'hidden' }]} pointerEvents="none" />
         {/* Sliding highlight pill */}
         {itemWidth > 0 ? (
           <Animated.View
@@ -125,9 +128,9 @@ export function FloatingTabBar({ state, descriptors, navigation, darkRoutes = []
               {
                 width: Math.max(0, itemWidth - inset * 2),
                 marginLeft: inset,
-                backgroundColor: `${EMERALD}1F`,
-                borderColor: `${EMERALD}55`,
-                borderRadius: colors.radius,
+                backgroundColor: `${EMERALD}${colors.scheme === 'light' ? '26' : '1F'}`,
+                borderColor: `${EMERALD}${colors.scheme === 'light' ? '66' : '55'}`,
+                borderRadius: colors.radiusPill,
                 transform: [{ translateX: slide.interpolate({ inputRange: [0, Math.max(1, count - 1)], outputRange: [0, itemWidth * Math.max(1, count - 1)] }) }],
               },
             ]}
@@ -163,18 +166,18 @@ export function FloatingTabBar({ state, descriptors, navigation, darkRoutes = []
 }
 
 const styles = StyleSheet.create({
-  wrap: { paddingHorizontal: 16, paddingTop: 6 },
+  wrap: { paddingHorizontal: 20, paddingTop: 6 },
   card: {
     flexDirection: 'row',
     padding: PAD,
     borderWidth: StyleSheet.hairlineWidth * 2,
     // The glow: a wide, low-opacity emerald shadow reads as the card hovering over the screen.
-    shadowOpacity: 0.28,
-    shadowRadius: 22,
+    shadowOpacity: 0.22,
+    shadowRadius: 26,
     shadowOffset: { width: 0, height: 10 },
     elevation: Platform.OS === 'android' ? 12 : 0,
   },
-  pill: { position: 'absolute', top: PAD, bottom: PAD, left: PAD, borderWidth: 1 },
+  pill: { position: 'absolute', top: PAD, bottom: PAD, left: PAD, borderWidth: StyleSheet.hairlineWidth * 2 },
   item: { flex: 1 },
   itemInner: { alignItems: 'center', justifyContent: 'center', paddingVertical: 9, paddingHorizontal: 2, gap: 3 },
   label: { textAlign: 'center' },

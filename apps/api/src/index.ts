@@ -15,6 +15,8 @@ app.use(express.urlencoded({ extended: false })); // USSD providers post forms
 app.use("/api", routes);
 
 // The union dashboard is one static page; it calls /api/union/* with the union key.
+// Self-hosted font files for the dashboard (no third-party requests).
+app.use("/fonts", express.static(fileURLToPath(new URL("../public/fonts", import.meta.url)), { maxAge: "30d" }));
 app.get("/union", (_req, res) => res.sendFile(fileURLToPath(new URL("../public/union.html", import.meta.url))));
 
 // Async route errors land here (Express 5 forwards rejected promises): log and answer with JSON.

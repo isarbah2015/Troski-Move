@@ -1,6 +1,7 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { AccessibilityInfo, Animated, Easing, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { Feather } from '@expo/vector-icons';
+import { LinearGradient } from 'expo-linear-gradient';
 import { useFocusEffect, useRouter } from 'expo-router';
 import * as Haptics from 'expo-haptics';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -25,8 +26,9 @@ import { showToast } from '@/lib/toast';
 import { useFocusPolling } from '@/lib/polling';
 import { sendOrQueue } from '@/lib/sync';
 import { applyServerTrip, tripProgress } from '@/lib/trip';
-import { EMERALD, GOLD, WHITE } from '@/lib/colors';
+import { EMERALD, GOLD, SILVER, WHITE } from '@/lib/colors';
 import { t as tt, useT } from '@/lib/i18n';
+import { PrimaryButton } from '@/components/PrimaryButton';
 
 function LiveBadge() {
   const colors = useColors();
@@ -49,9 +51,9 @@ function LiveBadge() {
   }, [pulse]);
 
   return (
-    <View style={[styles.live, { borderColor: colors.primary, borderRadius: colors.radiusPill }]} accessibilityLabel="Live">
-      <Animated.View style={[styles.liveDot, { backgroundColor: colors.primary, opacity: pulse }]} />
-      <Text style={[styles.liveText, { color: colors.primary }]}>{t('trip.live')}</Text>
+    <View style={[styles.live, { borderColor: EMERALD, borderRadius: colors.radiusPill }]} accessibilityLabel="Live">
+      <Animated.View style={[styles.liveDot, { backgroundColor: EMERALD, opacity: pulse }]} />
+      <Text style={[styles.liveText, { color: EMERALD }]}>{t('trip.live')}</Text>
     </View>
   );
 }
@@ -59,7 +61,7 @@ function LiveBadge() {
 function Stat({ icon, label, value }: { icon: React.ComponentProps<typeof Feather>['name']; label: string; value: string }) {
   const colors = useColors();
   return (
-    <View style={[styles.stat, { backgroundColor: colors.card, borderColor: colors.border, borderRadius: colors.radius }]}>
+    <View style={[styles.stat, { backgroundColor: colors.card, borderColor: colors.border, borderRadius: colors.radius, ...colors.elevation }]}>
       <Feather name={icon} size={16} color={colors.mutedForeground} />
       <Text style={[styles.statValue, { color: colors.foreground }]} numberOfLines={1} adjustsFontSizeToFit>{value}</Text>
       <Text style={[styles.statLabel, { color: colors.mutedForeground }]}>{label}</Text>
@@ -85,27 +87,29 @@ function ActiveTripView({ trip, onCleared, onConfirmAlighting }: { trip: ActiveT
       contentContainerStyle={[styles.scroll, { paddingTop: insets.top + 16 }]}
       showsVerticalScrollIndicator={false}
     >
-      <View style={styles.headRow}>
-        <Text style={[styles.kicker, { color: colors.mutedForeground }]}>{t('trip.progress')}</Text>
-        <LiveBadge />
-      </View>
-
-      <View style={[styles.paid, { backgroundColor: colors.secondary, borderColor: colors.primary, borderRadius: colors.radiusPill }]} accessibilityLabel={`Paid, trip ${trip.tripId}`}>
-        <PulseDot color={EMERALD} size={8} />
-        <Feather name="shield" size={14} color={EMERALD} />
-        <Text style={[styles.paidText, { color: WHITE }]}>PAID · {trip.tripId}</Text>
-      </View>
-
-      <Text style={[styles.to, { color: colors.foreground }]}>{t('trip.to', { stop: trip.alightingStop })}</Text>
-      {trip.customStopNote ? (
-        <View style={[styles.noteChip, { borderColor: colors.accent, borderRadius: colors.radiusPill }]}>
-          <Feather name="map-pin" size={12} color={colors.accent} />
-          <Text style={[styles.noteText, { color: colors.accent }]} numberOfLines={1}>{t('trip.gettingOff', { note: trip.customStopNote })}</Text>
+      <LinearGradient colors={colors.hero} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={[styles.hero, { borderRadius: colors.radiusModal }, colors.elevation]}>
+        <View style={styles.headRow}>
+          <Text style={[styles.kicker, { color: SILVER }]}>{t('trip.progress')}</Text>
+          <LiveBadge />
         </View>
-      ) : null}
-      <Text style={[styles.route, { color: colors.mutedForeground }]}>
-        {trip.vehicleShortCode} · {trip.routeName} · Driver {trip.driverName}
-      </Text>
+
+        <View style={[styles.paid, { backgroundColor: 'rgba(255,255,255,0.07)', borderColor: 'rgba(43,217,159,0.55)', borderRadius: colors.radiusPill }]} accessibilityLabel={`Paid, trip ${trip.tripId}`}>
+          <PulseDot color={EMERALD} size={8} />
+          <Feather name="shield" size={14} color={EMERALD} />
+          <Text style={[styles.paidText, { color: WHITE }]}>PAID · {trip.tripId}</Text>
+        </View>
+
+        <Text style={[styles.to, { color: WHITE }]}>{t('trip.to', { stop: trip.alightingStop })}</Text>
+        {trip.customStopNote ? (
+          <View style={[styles.noteChip, { borderColor: GOLD, borderRadius: colors.radiusPill }]}>
+            <Feather name="map-pin" size={12} color={GOLD} />
+            <Text style={[styles.noteText, { color: GOLD }]} numberOfLines={1}>{t('trip.gettingOff', { note: trip.customStopNote })}</Text>
+          </View>
+        ) : null}
+        <Text style={[styles.route, { color: SILVER }]}>
+          {trip.vehicleShortCode} · {trip.routeName} · Driver {trip.driverName}
+        </Text>
+      </LinearGradient>
 
       <View style={styles.stats}>
         <Stat icon="map-pin" label={t('trip.currentStop')} value={trip.currentStop} />
@@ -118,11 +122,11 @@ function ActiveTripView({ trip, onCleared, onConfirmAlighting }: { trip: ActiveT
         accessibilityRole="progressbar"
         accessibilityValue={{ min: 0, max: 100, now: Math.round(progress * 100) }}
       >
-        <View style={[styles.fill, { width: `${Math.round(progress * 100)}%`, backgroundColor: colors.primary, borderRadius: colors.radiusPill }]} />
+        <LinearGradient colors={colors.gradient} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }} style={[styles.fill, { width: `${Math.round(progress * 100)}%`, borderRadius: colors.radiusPill }]} />
       </View>
       <Text style={[styles.pct, { color: colors.mutedForeground }]}>{t('trip.rideDone', { pct: Math.round(progress * 100) })}</Text>
 
-      <View style={[styles.card, { backgroundColor: colors.card, borderColor: colors.border, borderRadius: colors.radius }]}>
+      <View style={[styles.card, { backgroundColor: colors.card, borderColor: colors.border, borderRadius: colors.radius, ...colors.elevation }]}>
         {trip.stops.map((s, i) => {
           const last = i === trip.stops.length - 1;
           const isDest = s.name === trip.alightingStop;
@@ -134,7 +138,7 @@ function ActiveTripView({ trip, onCleared, onConfirmAlighting }: { trip: ActiveT
                 </View>
                 {!last ? <View style={[styles.line, { backgroundColor: s.status === 'passed' ? colors.primary : colors.border }]} /> : null}
               </View>
-              <Text style={[styles.stopName, { color: s.status === 'upcoming' ? colors.mutedForeground : colors.foreground, fontFamily: s.status === 'current' ? 'Inter_700Bold' : 'Inter_500Medium' }]}>
+              <Text style={[styles.stopName, { color: s.status === 'upcoming' ? colors.mutedForeground : colors.foreground, fontFamily: s.status === 'current' ? 'PlusJakartaSans_700Bold' : 'PlusJakartaSans_500Medium' }]}>
                 {s.name}
               </Text>
               {isDest ? (
@@ -160,15 +164,7 @@ function ActiveTripView({ trip, onCleared, onConfirmAlighting }: { trip: ActiveT
       </View>
 
       {atDestination ? (
-        <Pressable
-          onPress={onConfirmAlighting}
-          accessibilityRole="button"
-          accessibilityLabel={`Confirm alighting at ${trip.alightingStop}`}
-          style={[styles.confirmBtn, { backgroundColor: colors.primary, borderRadius: colors.radiusPill }]}
-        >
-          <Feather name="check-circle" size={20} color={colors.primaryForeground} />
-          <Text style={[styles.primaryText, { color: colors.primaryForeground }]}>{t('trip.confirm')}</Text>
-        </Pressable>
+        <PrimaryButton onPress={onConfirmAlighting} icon="check-circle" label={t('trip.confirm')} accessibilityLabel={`Confirm alighting at ${trip.alightingStop}`} style={styles.confirmBtn} />
       ) : null}
 
       <Pressable
@@ -226,20 +222,10 @@ function EmptyState({ recent, onRate }: { recent: TripRecord | null; onRate: (t:
       </View>
       <Text style={[styles.emptyTitle, { color: colors.foreground }]}>{t('trip.empty.title')}</Text>
       <Text style={[styles.emptyBody, { color: colors.mutedForeground }]}>{t('trip.empty.body')}</Text>
-      <Pressable
-        onPress={() => {
-          Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-          router.navigate('/');
-        }}
-        accessibilityRole="button"
-        style={[styles.primaryBtn, { backgroundColor: colors.primary, borderRadius: colors.radiusPill }]}
-      >
-        <Feather name="maximize" size={18} color={colors.primaryForeground} />
-        <Text style={[styles.primaryText, { color: colors.primaryForeground }]}>{t('trip.empty.go')}</Text>
-      </Pressable>
+      <PrimaryButton onPress={() => router.navigate('/')} icon="maximize" label={t('trip.empty.go')} style={styles.primaryBtn} />
 
       {recent ? (
-        <View style={[styles.prompt, { backgroundColor: colors.card, borderColor: colors.border, borderRadius: colors.radius }]}>
+        <View style={[styles.prompt, { backgroundColor: colors.card, borderColor: colors.border, borderRadius: colors.radius, ...colors.elevation }]}>
           <Feather name="star" size={20} color={colors.accent} />
           <View style={styles.promptText}>
             <Text style={[styles.promptTitle, { color: colors.foreground }]}>{t('trip.rate.title', { stop: recent.alightingStop })}</Text>
@@ -436,50 +422,51 @@ export default function TripScreen() {
 const styles = StyleSheet.create({
   scroll: { paddingHorizontal: 24, paddingBottom: 40 },
   headRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 },
-  kicker: { fontFamily: 'Inter_600SemiBold', fontSize: 12, letterSpacing: 1.2 },
-  live: { flexDirection: 'row', alignItems: 'center', gap: 6, borderWidth: 1, paddingHorizontal: 10, paddingVertical: 4 },
+  kicker: { fontFamily: 'PlusJakartaSans_600SemiBold', fontSize: 12, letterSpacing: 1.2 },
+  live: { flexDirection: 'row', alignItems: 'center', gap: 6, borderWidth: StyleSheet.hairlineWidth * 2, paddingHorizontal: 10, paddingVertical: 4 },
   liveDot: { width: 8, height: 8, borderRadius: 4 },
-  liveText: { fontFamily: 'Inter_700Bold', fontSize: 11, letterSpacing: 1 },
-  noteChip: { alignSelf: 'flex-start', flexDirection: 'row', alignItems: 'center', gap: 6, borderWidth: 1, paddingHorizontal: 10, paddingVertical: 4, marginTop: 6 },
-  noteText: { fontFamily: 'Inter_600SemiBold', fontSize: 12, maxWidth: 260 },
-  paid: { alignSelf: 'flex-start', flexDirection: 'row', alignItems: 'center', gap: 8, borderWidth: 1, paddingHorizontal: 12, paddingVertical: 6, marginBottom: 10 },
-  paidText: { fontFamily: 'Inter_700Bold', fontSize: 12, letterSpacing: 0.5 },
-  to: { fontFamily: 'Inter_700Bold', fontSize: 32 },
-  route: { fontFamily: 'Inter_400Regular', fontSize: 14, lineHeight: 20, marginTop: 4, marginBottom: 20 },
+  liveText: { fontFamily: 'PlusJakartaSans_700Bold', fontSize: 11, letterSpacing: 1 },
+  noteChip: { alignSelf: 'flex-start', flexDirection: 'row', alignItems: 'center', gap: 6, borderWidth: StyleSheet.hairlineWidth * 2, paddingHorizontal: 10, paddingVertical: 4, marginTop: 6 },
+  noteText: { fontFamily: 'PlusJakartaSans_600SemiBold', fontSize: 12, maxWidth: 260 },
+  paid: { alignSelf: 'flex-start', flexDirection: 'row', alignItems: 'center', gap: 8, borderWidth: StyleSheet.hairlineWidth * 2, paddingHorizontal: 12, paddingVertical: 6, marginBottom: 10 },
+  paidText: { fontFamily: 'PlusJakartaSans_700Bold', fontSize: 12, letterSpacing: 0.5 },
+  to: { fontFamily: 'PlusJakartaSans_800ExtraBold', letterSpacing: -0.8, fontSize: 32 },
+  route: { fontFamily: 'PlusJakartaSans_500Medium', fontSize: 14, lineHeight: 20, marginTop: 6 },
+  hero: { padding: 22, marginBottom: 18, overflow: 'hidden' },
   stats: { flexDirection: 'row', gap: 10, marginBottom: 20 },
-  stat: { flex: 1, padding: 12, gap: 6, borderWidth: 1 },
-  statValue: { fontFamily: 'Inter_700Bold', fontSize: 17 },
-  statLabel: { fontFamily: 'Inter_500Medium', fontSize: 12 },
+  stat: { flex: 1, padding: 12, gap: 6, borderWidth: StyleSheet.hairlineWidth * 2 },
+  statValue: { fontFamily: 'PlusJakartaSans_700Bold', fontSize: 17 },
+  statLabel: { fontFamily: 'PlusJakartaSans_500Medium', fontSize: 12 },
   track: { height: 10, overflow: 'hidden' },
   fill: { height: 10 },
-  pct: { fontFamily: 'Inter_500Medium', fontSize: 12, marginTop: 8, marginBottom: 20 },
-  card: { borderWidth: 1, paddingVertical: 12, paddingHorizontal: 16, marginBottom: 20 },
+  pct: { fontFamily: 'PlusJakartaSans_500Medium', fontSize: 12, marginTop: 8, marginBottom: 20 },
+  card: { borderWidth: StyleSheet.hairlineWidth * 2, paddingVertical: 12, paddingHorizontal: 16, marginBottom: 20 },
   stopRow: { flexDirection: 'row', alignItems: 'center', minHeight: 44, gap: 14 },
   rail: { width: 18, alignItems: 'center', alignSelf: 'stretch', justifyContent: 'center' },
   dot: { width: 18, height: 18, borderRadius: 9, borderWidth: 2, alignItems: 'center', justifyContent: 'center', zIndex: 1 },
   line: { position: 'absolute', top: '50%', bottom: -22, width: 2 },
   stopName: { flex: 1, fontSize: 16 },
   destPill: { paddingHorizontal: 10, paddingVertical: 4 },
-  destText: { fontFamily: 'Inter_600SemiBold', fontSize: 11 },
+  destText: { fontFamily: 'PlusJakartaSans_600SemiBold', fontSize: 11 },
   receipt: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 20 },
   receiptItem: { flexDirection: 'row', alignItems: 'center', gap: 8 },
-  receiptText: { fontFamily: 'Inter_600SemiBold', fontSize: 14 },
-  secondaryBtn: { height: 56, borderWidth: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 10 },
-  secondaryText: { fontFamily: 'Inter_600SemiBold', fontSize: 16 },
+  receiptText: { fontFamily: 'PlusJakartaSans_600SemiBold', fontSize: 14 },
+  secondaryBtn: { height: 56, borderWidth: StyleSheet.hairlineWidth * 2, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 10 },
+  secondaryText: { fontFamily: 'PlusJakartaSans_600SemiBold', fontSize: 16 },
   devRow: { alignItems: 'center' },
   devLink: { alignSelf: 'center', paddingVertical: 12 },
-  confirmBtn: { height: 56, marginBottom: 12, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 10 },
-  prompt: { flexDirection: 'row', alignItems: 'center', gap: 12, borderWidth: 1, padding: 14, marginTop: 28, alignSelf: 'stretch' },
+  confirmBtn: { marginBottom: 12 },
+  prompt: { flexDirection: 'row', alignItems: 'center', gap: 12, borderWidth: StyleSheet.hairlineWidth * 2, padding: 14, marginTop: 28, alignSelf: 'stretch' },
   promptText: { flex: 1 },
-  promptTitle: { fontFamily: 'Inter_600SemiBold', fontSize: 14 },
-  promptBody: { fontFamily: 'Inter_400Regular', fontSize: 12, marginTop: 2 },
-  promptBtn: { borderWidth: 1, paddingHorizontal: 14, height: 36, alignItems: 'center', justifyContent: 'center' },
-  promptBtnText: { fontFamily: 'Inter_700Bold', fontSize: 13 },
-  devText: { fontFamily: 'Inter_500Medium', fontSize: 12 },
+  promptTitle: { fontFamily: 'PlusJakartaSans_600SemiBold', fontSize: 14 },
+  promptBody: { fontFamily: 'PlusJakartaSans_400Regular', fontSize: 12, marginTop: 2 },
+  promptBtn: { borderWidth: StyleSheet.hairlineWidth * 2, paddingHorizontal: 14, height: 36, alignItems: 'center', justifyContent: 'center' },
+  promptBtnText: { fontFamily: 'PlusJakartaSans_700Bold', fontSize: 13 },
+  devText: { fontFamily: 'PlusJakartaSans_500Medium', fontSize: 12 },
   empty: { flex: 1, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 32 },
-  emptyBadge: { width: 80, height: 80, borderWidth: 1, alignItems: 'center', justifyContent: 'center', marginBottom: 24 },
-  emptyTitle: { fontFamily: 'Inter_700Bold', fontSize: 24, marginBottom: 8 },
-  emptyBody: { fontFamily: 'Inter_400Regular', fontSize: 15, lineHeight: 22, textAlign: 'center', marginBottom: 28 },
-  primaryBtn: { height: 56, paddingHorizontal: 32, flexDirection: 'row', alignItems: 'center', gap: 10 },
-  primaryText: { fontFamily: 'Inter_700Bold', fontSize: 17 },
+  emptyBadge: { width: 80, height: 80, borderWidth: StyleSheet.hairlineWidth * 2, alignItems: 'center', justifyContent: 'center', marginBottom: 24 },
+  emptyTitle: { fontFamily: 'PlusJakartaSans_700Bold', fontSize: 24, marginBottom: 8 },
+  emptyBody: { fontFamily: 'PlusJakartaSans_400Regular', fontSize: 15, lineHeight: 22, textAlign: 'center', marginBottom: 28 },
+  primaryBtn: { alignSelf: 'stretch', marginHorizontal: 24 },
+  primaryText: { fontFamily: 'PlusJakartaSans_700Bold', fontSize: 17 },
 });

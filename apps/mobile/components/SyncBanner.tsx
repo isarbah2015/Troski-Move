@@ -29,6 +29,6 @@ export function SyncBanner() {
 }
 
 const styles = StyleSheet.create({
-  banner: { position: 'absolute', alignSelf: 'center', flexDirection: 'row', alignItems: 'center', gap: 8, borderWidth: 1, paddingHorizontal: 14, paddingVertical: 7, zIndex: 90 },
-  text: { fontFamily: 'Inter_600SemiBold', fontSize: 12 },
+  banner: { position: 'absolute', alignSelf: 'center', flexDirection: 'row', alignItems: 'center', gap: 8, borderWidth: StyleSheet.hairlineWidth * 2, paddingHorizontal: 14, paddingVertical: 7, zIndex: 90 },
+  text: { fontFamily: 'PlusJakartaSans_600SemiBold', fontSize: 12 },
 });

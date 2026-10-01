@@ -82,7 +82,7 @@ Database: Neon or Supabase. API: Fly.io or Railway. Web: Vercel. Mobile: Expo EA
 
 ## 10. Design tokens (locked) — `packages/shared/src/design.ts`
 Dark default, light auto. Background `#0B1220` · Surface `#121A2B` · Primary navy `#0B1F3A` · Accent emerald `#10B981` · Highlight gold `#D4A437` · Text `#FFFFFF` / secondary `#94A3B8` · Border `#1E293B` · Error `#EF4444`.
-Font Inter 400/500/600/700 only. Radii: card 16, modal 24, pill 999. Feather icons. Haptics on every payment, scan and rating. One primary action per screen. Passenger pays in ≤ 3 taps; conductor marks a stop in 1 tap.
+Font Plus Jakarta Sans 400–800 (self-hosted in the union dashboard). Radii: card 20, modal 32, pill 999. Surfaces: soft shadows in light, hairline borders in dark; gradient emerald primary button. Feather icons. Haptics on every payment, scan and rating. One primary action per screen. Passenger pays in ≤ 3 taps; conductor marks a stop in 1 tap.
 
 ## 11. First task (scaffold only — no product features)
 Monorepo scaffold per §3 · `pnpm-workspace.yaml` (`apps/*`, `packages/*`) · `packages/shared` with design tokens · `packages/config` base tsconfig · `apps/api` skeleton (Express 5 + Drizzle + health) · `infra/docker-compose.yml` · this brief.

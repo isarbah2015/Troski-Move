@@ -57,15 +57,15 @@ export function PassengerSheet({ trip, onClose, onConfirmAlight }: Props) {
 
 const styles = StyleSheet.create({
   root: { flex: 1, justifyContent: 'flex-end' },
-  sheet: { padding: 24, paddingBottom: 36, borderWidth: 1, borderBottomWidth: 0 },
+  sheet: { padding: 24, paddingBottom: 36, borderWidth: StyleSheet.hairlineWidth * 2, borderBottomWidth: 0 },
   grabber: { alignSelf: 'center', width: 40, height: 4, borderRadius: 2, marginBottom: 16 },
-  paid: { alignSelf: 'flex-start', flexDirection: 'row', alignItems: 'center', gap: 8, borderWidth: 1, paddingHorizontal: 12, paddingVertical: 6 },
-  paidText: { fontFamily: 'Inter_700Bold', fontSize: 12, letterSpacing: 0.5 },
-  title: { fontFamily: 'Inter_700Bold', fontSize: 24, marginTop: 14 },
-  sub: { fontFamily: 'Inter_500Medium', fontSize: 14, marginTop: 4 },
+  paid: { alignSelf: 'flex-start', flexDirection: 'row', alignItems: 'center', gap: 8, borderWidth: StyleSheet.hairlineWidth * 2, paddingHorizontal: 12, paddingVertical: 6 },
+  paidText: { fontFamily: 'PlusJakartaSans_700Bold', fontSize: 12, letterSpacing: 0.5 },
+  title: { fontFamily: 'PlusJakartaSans_700Bold', fontSize: 24, marginTop: 14 },
+  sub: { fontFamily: 'PlusJakartaSans_500Medium', fontSize: 14, marginTop: 4 },
   qrWrap: { alignItems: 'center', marginVertical: 20 },
   qrBox: { padding: 12, backgroundColor: QR_BG },
-  hint: { fontFamily: 'Inter_400Regular', fontSize: 12, marginTop: 10 },
+  hint: { fontFamily: 'PlusJakartaSans_400Regular', fontSize: 12, marginTop: 10 },
   cta: { height: 54, alignItems: 'center', justifyContent: 'center' },
-  ctaText: { fontFamily: 'Inter_700Bold', fontSize: 16 },
+  ctaText: { fontFamily: 'PlusJakartaSans_700Bold', fontSize: 16 },
 });

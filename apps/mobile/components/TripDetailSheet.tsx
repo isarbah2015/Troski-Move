@@ -9,6 +9,7 @@ import { useColors } from '@/hooks/useColors';
 import { formatCedis } from '@/lib/api';
 import { formatWhen } from '@/lib/profile';
 import { QR_BG, QR_FG, SCRIM } from '@/lib/colors';
+import { PrimaryButton } from '@/components/PrimaryButton';
 
 type Props = { trip: TripRecord | null; rating?: TripRating | null; onClose: () => void; onRideAgain: (vehicleCode: string) => void };
 
@@ -91,17 +92,7 @@ export function TripDetailSheet({ trip, rating, onClose, onRideAgain }: Props) {
                 </View>
               </View>
 
-              <Pressable
-                onPress={() => {
-                  Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-                  onRideAgain(trip.vehicleShortCode);
-                }}
-                accessibilityRole="button"
-                style={[styles.cta, { backgroundColor: colors.primary, borderRadius: colors.radiusPill }]}
-              >
-                <Feather name="rotate-cw" size={18} color={colors.primaryForeground} />
-                <Text style={[styles.ctaText, { color: colors.primaryForeground }]}>Ride again</Text>
-              </Pressable>
+              <PrimaryButton onPress={() => onRideAgain(trip.vehicleShortCode)} icon="rotate-cw" label="Ride again" style={styles.cta} />
             </ScrollView>
           </View>
         ) : null}
@@ -112,27 +103,27 @@ export function TripDetailSheet({ trip, rating, onClose, onRideAgain }: Props) {
 
 const styles = StyleSheet.create({
   root: { flex: 1, justifyContent: 'flex-end' },
-  sheet: { padding: 24, paddingBottom: 32, borderWidth: 1, borderBottomWidth: 0, maxHeight: '90%' },
+  sheet: { padding: 24, paddingBottom: 32, borderWidth: StyleSheet.hairlineWidth * 2, borderBottomWidth: 0, maxHeight: '90%' },
   grabber: { alignSelf: 'center', width: 40, height: 4, borderRadius: 2, marginBottom: 18 },
-  title: { fontFamily: 'Inter_700Bold', fontSize: 24 },
-  sub: { fontFamily: 'Inter_500Medium', fontSize: 14, marginTop: 4 },
+  title: { fontFamily: 'PlusJakartaSans_700Bold', fontSize: 24 },
+  sub: { fontFamily: 'PlusJakartaSans_500Medium', fontSize: 14, marginTop: 4 },
   ratingRow: { marginTop: 10 },
   ratingBlock: { marginTop: 10, gap: 6 },
   ratingLine: { flexDirection: 'row', alignItems: 'center', gap: 12 },
-  ratingLabel: { fontFamily: 'Inter_500Medium', fontSize: 13, width: 78 },
-  comment: { fontFamily: 'Inter_400Regular', fontSize: 14, lineHeight: 20, marginTop: 4 },
+  ratingLabel: { fontFamily: 'PlusJakartaSans_500Medium', fontSize: 13, width: 78 },
+  comment: { fontFamily: 'PlusJakartaSans_400Regular', fontSize: 14, lineHeight: 20, marginTop: 4 },
   qrWrap: { alignItems: 'center', marginVertical: 20 },
   qrBox: { padding: 12, backgroundColor: QR_BG },
-  ref: { fontFamily: 'Inter_600SemiBold', fontSize: 13, letterSpacing: 0.5, marginTop: 10 },
-  box: { borderWidth: 1, paddingHorizontal: 16 },
+  ref: { fontFamily: 'PlusJakartaSans_600SemiBold', fontSize: 13, letterSpacing: 0.5, marginTop: 10 },
+  box: { borderWidth: StyleSheet.hairlineWidth * 2, paddingHorizontal: 16 },
   stopRow: { flexDirection: 'row', justifyContent: 'space-between', paddingVertical: 12 },
-  stopName: { fontFamily: 'Inter_600SemiBold', fontSize: 15 },
-  stopTime: { fontFamily: 'Inter_500Medium', fontSize: 14 },
+  stopName: { fontFamily: 'PlusJakartaSans_600SemiBold', fontSize: 15 },
+  stopTime: { fontFamily: 'PlusJakartaSans_500Medium', fontSize: 14 },
   fareRow: { flexDirection: 'row', justifyContent: 'space-between', paddingVertical: 12 },
-  fareLabel: { fontFamily: 'Inter_500Medium', fontSize: 14 },
-  fareValue: { fontFamily: 'Inter_600SemiBold', fontSize: 14 },
-  fareTotalLabel: { fontFamily: 'Inter_700Bold', fontSize: 16 },
-  fareTotal: { fontFamily: 'Inter_700Bold', fontSize: 16 },
-  cta: { height: 56, marginTop: 20, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 10 },
-  ctaText: { fontFamily: 'Inter_700Bold', fontSize: 17 },
+  fareLabel: { fontFamily: 'PlusJakartaSans_500Medium', fontSize: 14 },
+  fareValue: { fontFamily: 'PlusJakartaSans_600SemiBold', fontSize: 14 },
+  fareTotalLabel: { fontFamily: 'PlusJakartaSans_700Bold', fontSize: 16 },
+  fareTotal: { fontFamily: 'PlusJakartaSans_700Bold', fontSize: 16 },
+  cta: { marginTop: 20 },
+  ctaText: { fontFamily: 'PlusJakartaSans_700Bold', fontSize: 17 },
 });

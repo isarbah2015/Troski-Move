@@ -53,6 +53,6 @@ export function ToastHost() {
 }
 
 const styles = StyleSheet.create({
-  toast: { position: 'absolute', alignSelf: 'center', flexDirection: 'row', alignItems: 'center', gap: 10, paddingHorizontal: 18, paddingVertical: 12, borderWidth: 1, zIndex: 100 },
-  text: { fontFamily: 'Inter_600SemiBold', fontSize: 14 },
+  toast: { position: 'absolute', alignSelf: 'center', flexDirection: 'row', alignItems: 'center', gap: 10, paddingHorizontal: 18, paddingVertical: 12, borderWidth: StyleSheet.hairlineWidth * 2, zIndex: 100 },
+  text: { fontFamily: 'PlusJakartaSans_600SemiBold', fontSize: 14 },
 });

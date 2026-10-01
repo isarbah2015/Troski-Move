@@ -6,6 +6,7 @@ import { formatCedis } from '@/lib/api';
 import { EMERALD, ERROR, SCRIM_STRONG } from '@/lib/colors';
 import { Approx } from '@/components/Approx';
 import { useT } from '@/lib/i18n';
+import { PrimaryButton } from '@/components/PrimaryButton';
 
 export type PaymentPhase = 'sending' | 'pending' | 'success' | 'failed' | 'timeout';
 
@@ -62,9 +63,7 @@ export function PaymentSheet({ phase, amount, destination, message, simulator, o
 
             {bad ? (
               <View style={styles.actions}>
-                <Pressable onPress={onRetry} accessibilityRole="button" style={[styles.primary, { backgroundColor: colors.primary, borderRadius: colors.radiusPill }]}>
-                  <Text style={[styles.primaryText, { color: colors.primaryForeground }]}>{t('pay.retry')}</Text>
-                </Pressable>
+                <PrimaryButton onPress={onRetry} label={t('pay.retry')} style={styles.primary} />
                 <Pressable onPress={onClose} accessibilityRole="button" style={styles.cancel}>
                   <Text style={[styles.cancelText, { color: colors.mutedForeground }]}>{t('pay.cancel')}</Text>
                 </Pressable>
@@ -79,17 +78,17 @@ export function PaymentSheet({ phase, amount, destination, message, simulator, o
 
 const styles = StyleSheet.create({
   root: { flex: 1, alignItems: 'center', justifyContent: 'center', padding: 24 },
-  card: { width: '100%', maxWidth: 380, borderWidth: 1, padding: 28, alignItems: 'center' },
+  card: { width: '100%', maxWidth: 380, borderWidth: StyleSheet.hairlineWidth * 2, padding: 28, alignItems: 'center' },
   badge: { width: 64, height: 64, borderRadius: 32, alignItems: 'center', justifyContent: 'center', marginBottom: 16 },
-  title: { fontFamily: 'Inter_700Bold', fontSize: 22, textAlign: 'center' },
-  amount: { fontFamily: 'Inter_700Bold', fontSize: 34, marginTop: 14 },
-  sub: { fontFamily: 'Inter_500Medium', fontSize: 14, marginTop: 2 },
-  body: { fontFamily: 'Inter_500Medium', fontSize: 15, lineHeight: 22, textAlign: 'center', marginTop: 18 },
-  sim: { borderWidth: 1, paddingHorizontal: 12, paddingVertical: 5, marginTop: 16 },
-  simText: { fontFamily: 'Inter_600SemiBold', fontSize: 11 },
+  title: { fontFamily: 'PlusJakartaSans_700Bold', fontSize: 22, textAlign: 'center' },
+  amount: { fontFamily: 'PlusJakartaSans_700Bold', fontSize: 34, marginTop: 14 },
+  sub: { fontFamily: 'PlusJakartaSans_500Medium', fontSize: 14, marginTop: 2 },
+  body: { fontFamily: 'PlusJakartaSans_500Medium', fontSize: 15, lineHeight: 22, textAlign: 'center', marginTop: 18 },
+  sim: { borderWidth: StyleSheet.hairlineWidth * 2, paddingHorizontal: 12, paddingVertical: 5, marginTop: 16 },
+  simText: { fontFamily: 'PlusJakartaSans_600SemiBold', fontSize: 11 },
   actions: { alignSelf: 'stretch', marginTop: 22 },
-  primary: { height: 52, alignItems: 'center', justifyContent: 'center' },
-  primaryText: { fontFamily: 'Inter_700Bold', fontSize: 16 },
+  primary: { alignSelf: 'stretch' },
+  primaryText: { fontFamily: 'PlusJakartaSans_700Bold', fontSize: 16 },
   cancel: { alignItems: 'center', paddingVertical: 14 },
-  cancelText: { fontFamily: 'Inter_500Medium', fontSize: 15 },
+  cancelText: { fontFamily: 'PlusJakartaSans_500Medium', fontSize: 15 },
 });

@@ -14,6 +14,7 @@ import { useConductorVehicle } from '@/lib/conductor';
 import { getQrState, saveQrState, type QrState } from '@/lib/storage';
 import { showToast } from '@/lib/toast';
 import { QR_BG, QR_FG, SILVER } from '@/lib/colors';
+import { PrimaryButton } from '@/components/PrimaryButton';
 
 const QR_SIZE = 240;
 
@@ -95,7 +96,7 @@ export default function MyQrScreen() {
     ]);
   };
 
-  const card = { backgroundColor: colors.card, borderColor: colors.border, borderRadius: colors.radius };
+  const card = { backgroundColor: colors.card, borderColor: colors.border, borderRadius: colors.radius, ...colors.elevation };
   const via = data ? data.route.stops.slice(1, -1).map((s) => s.name).join(' – ') : '';
 
   return (
@@ -132,24 +133,8 @@ export default function MyQrScreen() {
           </View>
 
           <View style={styles.actions}>
-            <Pressable
-              onPress={() => void download()}
-              disabled={busy !== null}
-              accessibilityRole="button"
-              style={[styles.action, { backgroundColor: colors.primary, borderColor: colors.primary, borderRadius: colors.radiusPill, opacity: busy && busy !== 'download' ? 0.5 : 1 }]}
-            >
-              {busy === 'download' ? <ActivityIndicator color={colors.primaryForeground} /> : <Feather name="download" size={18} color={colors.primaryForeground} />}
-              <Text style={[styles.actionText, { color: colors.primaryForeground }]}>Download PNG</Text>
-            </Pressable>
-            <Pressable
-              onPress={() => void print()}
-              disabled={busy !== null}
-              accessibilityRole="button"
-              style={[styles.action, { borderColor: colors.border, borderRadius: colors.radiusPill, opacity: busy && busy !== 'print' ? 0.5 : 1 }]}
-            >
-              {busy === 'print' ? <ActivityIndicator color={colors.foreground} /> : <Feather name="printer" size={18} color={colors.foreground} />}
-              <Text style={[styles.actionText, { color: colors.foreground }]}>Print</Text>
-            </Pressable>
+            <PrimaryButton onPress={() => void download()} disabled={busy !== null && busy !== 'download'} loading={busy === 'download'} icon="download" label="Download" style={styles.action} />
+            <PrimaryButton variant="ghost" onPress={() => void print()} disabled={busy !== null && busy !== 'print'} loading={busy === 'print'} icon="printer" label="Print" style={styles.action} />
           </View>
 
           <View style={[styles.warning, { borderColor: colors.accent, borderRadius: colors.radius }]}>
@@ -176,26 +161,26 @@ export default function MyQrScreen() {
 
 const styles = StyleSheet.create({
   scroll: { paddingHorizontal: 24, paddingBottom: 40 },
-  title: { fontFamily: 'Inter_700Bold', fontSize: 32, marginBottom: 20 },
+  title: { fontFamily: 'PlusJakartaSans_800ExtraBold', letterSpacing: -0.8, fontSize: 32, marginBottom: 20 },
   center: { paddingVertical: 80, alignItems: 'center' },
-  errorCard: { borderWidth: 1, padding: 24, alignItems: 'center', gap: 12 },
-  errorText: { fontFamily: 'Inter_500Medium', fontSize: 14, textAlign: 'center' },
-  retry: { height: 44, paddingHorizontal: 24, borderWidth: 1, alignItems: 'center', justifyContent: 'center' },
-  retryText: { fontFamily: 'Inter_600SemiBold', fontSize: 15 },
+  errorCard: { borderWidth: StyleSheet.hairlineWidth * 2, padding: 24, alignItems: 'center', gap: 12 },
+  errorText: { fontFamily: 'PlusJakartaSans_500Medium', fontSize: 14, textAlign: 'center' },
+  retry: { height: 44, paddingHorizontal: 24, borderWidth: StyleSheet.hairlineWidth * 2, alignItems: 'center', justifyContent: 'center' },
+  retryText: { fontFamily: 'PlusJakartaSans_600SemiBold', fontSize: 15 },
   sticker: { alignSelf: 'center', alignItems: 'center', backgroundColor: QR_BG, padding: 24 },
-  stickerLabel: { fontFamily: 'Inter_600SemiBold', fontSize: 12, letterSpacing: 2, color: SILVER, marginTop: 20 },
-  stickerCode: { fontFamily: 'Inter_700Bold', fontSize: 44, letterSpacing: 12, color: QR_FG, marginTop: 4, paddingLeft: 12 },
+  stickerLabel: { fontFamily: 'PlusJakartaSans_600SemiBold', fontSize: 12, letterSpacing: 2, color: SILVER, marginTop: 20 },
+  stickerCode: { fontFamily: 'PlusJakartaSans_700Bold', fontSize: 44, letterSpacing: 12, color: QR_FG, marginTop: 4, paddingLeft: 12 },
   routeBox: { marginTop: 20, alignItems: 'center' },
-  routeLine: { fontFamily: 'Inter_600SemiBold', fontSize: 16 },
-  via: { fontFamily: 'Inter_500Medium', fontSize: 14, marginTop: 4, textAlign: 'center' },
+  routeLine: { fontFamily: 'PlusJakartaSans_600SemiBold', fontSize: 16 },
+  via: { fontFamily: 'PlusJakartaSans_500Medium', fontSize: 14, marginTop: 4, textAlign: 'center' },
   actions: { flexDirection: 'row', gap: 12, marginTop: 24 },
-  action: { flex: 1, height: 56, borderWidth: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8 },
-  actionText: { fontFamily: 'Inter_700Bold', fontSize: 15 },
-  warning: { flexDirection: 'row', gap: 12, borderWidth: 1, padding: 14, marginTop: 20 },
+  action: { flex: 1 },
+  actionText: { fontFamily: 'PlusJakartaSans_700Bold', fontSize: 15 },
+  warning: { flexDirection: 'row', gap: 12, borderWidth: StyleSheet.hairlineWidth * 2, padding: 14, marginTop: 20 },
   warningText: { flex: 1 },
-  warningTitle: { fontFamily: 'Inter_700Bold', fontSize: 13 },
-  warningBody: { fontFamily: 'Inter_500Medium', fontSize: 12, marginTop: 2, lineHeight: 17 },
-  regen: { marginTop: 28, height: 56, borderWidth: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 10 },
-  regenText: { fontFamily: 'Inter_700Bold', fontSize: 16 },
-  version: { fontFamily: 'Inter_500Medium', fontSize: 12, textAlign: 'center', marginTop: 12 },
+  warningTitle: { fontFamily: 'PlusJakartaSans_700Bold', fontSize: 13 },
+  warningBody: { fontFamily: 'PlusJakartaSans_500Medium', fontSize: 12, marginTop: 2, lineHeight: 17 },
+  regen: { marginTop: 28, height: 56, borderWidth: StyleSheet.hairlineWidth * 2, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 10 },
+  regenText: { fontFamily: 'PlusJakartaSans_700Bold', fontSize: 16 },
+  version: { fontFamily: 'PlusJakartaSans_500Medium', fontSize: 12, textAlign: 'center', marginTop: 12 },
 });

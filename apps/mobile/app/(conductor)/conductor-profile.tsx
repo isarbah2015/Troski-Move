@@ -54,7 +54,7 @@ export default function ConductorProfileScreen() {
       () => api.conductorLogout(),
     );
 
-  const card = { backgroundColor: colors.card, borderColor: colors.border, borderRadius: colors.radius };
+  const card = { backgroundColor: colors.card, borderColor: colors.border, borderRadius: colors.radius, ...colors.elevation };
 
   return (
     <ScrollView style={{ backgroundColor: colors.background }} contentContainerStyle={[styles.scroll, { paddingTop: insets.top + 16 }]} showsVerticalScrollIndicator={false}>
@@ -103,16 +103,16 @@ export default function ConductorProfileScreen() {
 
 const styles = StyleSheet.create({
   scroll: { paddingHorizontal: 24, paddingBottom: 48 },
-  title: { fontFamily: 'Inter_700Bold', fontSize: 32, marginBottom: -8 },
+  title: { fontFamily: 'PlusJakartaSans_800ExtraBold', letterSpacing: -0.8, fontSize: 32, marginBottom: -8 },
   center: { paddingVertical: 40, alignItems: 'center' },
-  errorCard: { borderWidth: 1, padding: 24, alignItems: 'center', gap: 12 },
-  errorText: { fontFamily: 'Inter_500Medium', fontSize: 14, textAlign: 'center' },
-  retry: { height: 44, paddingHorizontal: 24, borderWidth: 1, alignItems: 'center', justifyContent: 'center' },
-  retryText: { fontFamily: 'Inter_600SemiBold', fontSize: 15 },
-  infoCard: { borderWidth: 1, paddingHorizontal: 16 },
+  errorCard: { borderWidth: StyleSheet.hairlineWidth * 2, padding: 24, alignItems: 'center', gap: 12 },
+  errorText: { fontFamily: 'PlusJakartaSans_500Medium', fontSize: 14, textAlign: 'center' },
+  retry: { height: 44, paddingHorizontal: 24, borderWidth: StyleSheet.hairlineWidth * 2, alignItems: 'center', justifyContent: 'center' },
+  retryText: { fontFamily: 'PlusJakartaSans_600SemiBold', fontSize: 15 },
+  infoCard: { borderWidth: StyleSheet.hairlineWidth * 2, paddingHorizontal: 16 },
   infoRow: { flexDirection: 'row', alignItems: 'center', gap: 12, minHeight: 56 },
-  infoLabel: { fontFamily: 'Inter_500Medium', fontSize: 14, width: 84 },
-  infoValue: { flex: 1, textAlign: 'right', fontFamily: 'Inter_700Bold', fontSize: 15 },
-  signOut: { marginTop: 28, height: 56, borderWidth: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 10 },
-  signOutText: { fontFamily: 'Inter_700Bold', fontSize: 16 },
+  infoLabel: { fontFamily: 'PlusJakartaSans_500Medium', fontSize: 14, width: 84 },
+  infoValue: { flex: 1, textAlign: 'right', fontFamily: 'PlusJakartaSans_700Bold', fontSize: 15 },
+  signOut: { marginTop: 28, height: 56, borderWidth: StyleSheet.hairlineWidth * 2, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 10 },
+  signOutText: { fontFamily: 'PlusJakartaSans_700Bold', fontSize: 16 },
 });

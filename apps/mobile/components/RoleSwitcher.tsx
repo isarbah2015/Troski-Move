@@ -27,7 +27,7 @@ export function RoleSwitcher({ role, onChange }: { role: Role; onChange: (next: 
 }
 
 const styles = StyleSheet.create({
-  segment: { flexDirection: 'row', borderWidth: 1, padding: 4 },
+  segment: { flexDirection: 'row', borderWidth: StyleSheet.hairlineWidth * 2, padding: 4 },
   btn: { flex: 1, height: 44, alignItems: 'center', justifyContent: 'center' },
-  text: { fontFamily: 'Inter_700Bold', fontSize: 15 },
+  text: { fontFamily: 'PlusJakartaSans_700Bold', fontSize: 15 },
 });

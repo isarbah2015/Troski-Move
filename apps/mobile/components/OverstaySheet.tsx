@@ -6,6 +6,7 @@ import { useColors } from '@/hooks/useColors';
 import { formatCedis } from '@/lib/api';
 import { GOLD, SCRIM_STRONG } from '@/lib/colors';
 import { useT } from '@/lib/i18n';
+import { PrimaryButton } from '@/components/PrimaryButton';
 
 type Props = {
   declaredStop: string;
@@ -47,9 +48,7 @@ export function OverstaySheet({ declaredStop, overstay, onPay, onGetOff }: Props
                 {left > 0 ? t('over.timer', { n: left }) : t('over.charging')}
               </Text>
             </View>
-            <Pressable onPress={onPay} accessibilityRole="button" style={[styles.pay, { backgroundColor: colors.primary, borderRadius: colors.radiusPill }]}>
-              <Text style={[styles.payText, { color: colors.primaryForeground }]}>{t('over.pay', { amount: formatCedis(overstay.extraFare) })}</Text>
-            </Pressable>
+            <PrimaryButton onPress={onPay} label={t('over.pay', { amount: formatCedis(overstay.extraFare) })} style={styles.pay} />
             <Pressable onPress={onGetOff} accessibilityRole="button" style={[styles.off, { borderColor: colors.border, borderRadius: colors.radiusPill }]}>
               <Text style={[styles.offText, { color: colors.foreground }]}>{t('over.off')}</Text>
             </Pressable>
@@ -64,12 +63,12 @@ const styles = StyleSheet.create({
   root: { flex: 1, alignItems: 'center', justifyContent: 'center', padding: 24 },
   card: { width: '100%', maxWidth: 380, borderWidth: 1.5, padding: 26, alignItems: 'center' },
   badge: { width: 60, height: 60, borderRadius: 30, alignItems: 'center', justifyContent: 'center', marginBottom: 14 },
-  title: { fontFamily: 'Inter_700Bold', fontSize: 22, textAlign: 'center' },
-  body: { fontFamily: 'Inter_500Medium', fontSize: 16, lineHeight: 23, textAlign: 'center', marginTop: 10 },
-  timer: { flexDirection: 'row', alignItems: 'center', gap: 8, borderWidth: 1, paddingHorizontal: 14, paddingVertical: 7, marginTop: 16 },
-  timerText: { fontFamily: 'Inter_600SemiBold', fontSize: 13 },
-  pay: { height: 54, alignSelf: 'stretch', marginTop: 20, alignItems: 'center', justifyContent: 'center' },
-  payText: { fontFamily: 'Inter_700Bold', fontSize: 17 },
-  off: { height: 52, alignSelf: 'stretch', marginTop: 10, borderWidth: 1, alignItems: 'center', justifyContent: 'center' },
-  offText: { fontFamily: 'Inter_600SemiBold', fontSize: 16 },
+  title: { fontFamily: 'PlusJakartaSans_700Bold', fontSize: 22, textAlign: 'center' },
+  body: { fontFamily: 'PlusJakartaSans_500Medium', fontSize: 16, lineHeight: 23, textAlign: 'center', marginTop: 10 },
+  timer: { flexDirection: 'row', alignItems: 'center', gap: 8, borderWidth: StyleSheet.hairlineWidth * 2, paddingHorizontal: 14, paddingVertical: 7, marginTop: 16 },
+  timerText: { fontFamily: 'PlusJakartaSans_600SemiBold', fontSize: 13 },
+  pay: { alignSelf: 'stretch', marginTop: 20 },
+  payText: { fontFamily: 'PlusJakartaSans_700Bold', fontSize: 17 },
+  off: { height: 52, alignSelf: 'stretch', marginTop: 10, borderWidth: StyleSheet.hairlineWidth * 2, alignItems: 'center', justifyContent: 'center' },
+  offText: { fontFamily: 'PlusJakartaSans_600SemiBold', fontSize: 16 },
 });

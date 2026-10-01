@@ -67,7 +67,7 @@ export default function LeaderboardScreen() {
       {loading ? (
         <View style={styles.center}><ActivityIndicator color={colors.primary} /></View>
       ) : error || !data ? (
-        <View style={[styles.stateCard, { backgroundColor: colors.card, borderColor: colors.border, borderRadius: colors.radius }]}>
+        <View style={[styles.stateCard, { backgroundColor: colors.card, borderColor: colors.border, borderRadius: colors.radius, ...colors.elevation }]}>
           <Feather name="wifi-off" size={22} color={colors.mutedForeground} />
           <Text style={[styles.stateText, { color: colors.mutedForeground }]}>Couldn&apos;t load the leaderboard. Check your connection.</Text>
           <Pressable onPress={() => void load(forceEmpty)} accessibilityRole="button" style={[styles.retry, { borderColor: colors.border, borderRadius: colors.radiusPill }]}>
@@ -75,7 +75,7 @@ export default function LeaderboardScreen() {
           </Pressable>
         </View>
       ) : data.entries.length === 0 ? (
-        <View style={[styles.stateCard, { backgroundColor: colors.card, borderColor: colors.border, borderRadius: colors.radius }]}>
+        <View style={[styles.stateCard, { backgroundColor: colors.card, borderColor: colors.border, borderRadius: colors.radius, ...colors.elevation }]}>
           <Feather name="star" size={22} color={colors.mutedForeground} />
           <Text style={[styles.stateText, { color: colors.mutedForeground }]}>No ratings yet today. Rate a driver after your trip.</Text>
         </View>
@@ -95,7 +95,7 @@ export default function LeaderboardScreen() {
                   accessibilityLabel={`Rank ${e.rank}, ${e.shortCode}, ${e.driverName}, rated ${e.avgRating.toFixed(1)} from ${e.totalRatings} ratings`}
                   style={[
                     styles.row,
-                    { backgroundColor: colors.card, borderColor: first ? GOLD : colors.border, borderRadius: colors.radius },
+                    { backgroundColor: colors.card, borderColor: first ? GOLD : colors.border, borderRadius: colors.radius, ...colors.elevation },
                     first && { shadowColor: GOLD, shadowOpacity: 0.45, shadowRadius: 14, shadowOffset: { width: 0, height: 0 } },
                   ]}
                 >
@@ -120,7 +120,7 @@ export default function LeaderboardScreen() {
           {data.you ? (
             <>
               <SectionHeader>Your rank</SectionHeader>
-              <View style={[styles.you, { backgroundColor: colors.card, borderColor: colors.primary, borderRadius: colors.radius }]}>
+              <View style={[styles.you, { backgroundColor: colors.card, borderColor: colors.primary, borderRadius: colors.radius, ...colors.elevation }]}>
                 <View style={styles.youRow}>
                   <Text style={[styles.youMain, { color: colors.primary }]}>#{data.you.rank} · {data.you.shortCode} ·</Text>
                   <Feather name="star" size={16} color={colors.accent} />
@@ -155,29 +155,29 @@ export default function LeaderboardScreen() {
 const styles = StyleSheet.create({
   scroll: { paddingHorizontal: 24, paddingBottom: 40 },
   headRow: { flexDirection: 'row', alignItems: 'center', gap: 10, marginBottom: 8 },
-  title: { fontFamily: 'Inter_700Bold', fontSize: 28 },
-  sub: { fontFamily: 'Inter_500Medium', fontSize: 14, lineHeight: 20 },
-  sample: { alignSelf: 'flex-start', borderWidth: 1, paddingHorizontal: 12, paddingVertical: 4, marginTop: 10 },
-  sampleText: { fontFamily: 'Inter_600SemiBold', fontSize: 11 },
+  title: { fontFamily: 'PlusJakartaSans_800ExtraBold', letterSpacing: -0.8, fontSize: 28 },
+  sub: { fontFamily: 'PlusJakartaSans_500Medium', fontSize: 14, lineHeight: 20 },
+  sample: { alignSelf: 'flex-start', borderWidth: StyleSheet.hairlineWidth * 2, paddingHorizontal: 12, paddingVertical: 4, marginTop: 10 },
+  sampleText: { fontFamily: 'PlusJakartaSans_600SemiBold', fontSize: 11 },
   center: { paddingVertical: 80, alignItems: 'center' },
-  stateCard: { borderWidth: 1, padding: 28, alignItems: 'center', gap: 12, marginTop: 24 },
-  stateText: { fontFamily: 'Inter_500Medium', fontSize: 15, textAlign: 'center', lineHeight: 22 },
-  retry: { height: 44, paddingHorizontal: 24, borderWidth: 1, alignItems: 'center', justifyContent: 'center' },
-  retryText: { fontFamily: 'Inter_600SemiBold', fontSize: 15 },
+  stateCard: { borderWidth: StyleSheet.hairlineWidth * 2, padding: 28, alignItems: 'center', gap: 12, marginTop: 24 },
+  stateText: { fontFamily: 'PlusJakartaSans_500Medium', fontSize: 15, textAlign: 'center', lineHeight: 22 },
+  retry: { height: 44, paddingHorizontal: 24, borderWidth: StyleSheet.hairlineWidth * 2, alignItems: 'center', justifyContent: 'center' },
+  retryText: { fontFamily: 'PlusJakartaSans_600SemiBold', fontSize: 15 },
   list: { marginTop: 20, gap: 10 },
-  row: { flexDirection: 'row', alignItems: 'center', borderWidth: 1, padding: 16, gap: 14 },
+  row: { flexDirection: 'row', alignItems: 'center', borderWidth: StyleSheet.hairlineWidth * 2, padding: 16, gap: 14 },
   rankCol: { width: 44, alignItems: 'center', gap: 2 },
-  rank: { fontFamily: 'Inter_700Bold', fontSize: 28 },
+  rank: { fontFamily: 'PlusJakartaSans_800ExtraBold', letterSpacing: -0.8, fontSize: 28 },
   mid: { flex: 1 },
-  code: { fontFamily: 'Inter_700Bold', fontSize: 18, letterSpacing: 0.5 },
-  driver: { fontFamily: 'Inter_500Medium', fontSize: 14, marginTop: 2 },
-  count: { fontFamily: 'Inter_400Regular', fontSize: 12, marginTop: 2 },
+  code: { fontFamily: 'PlusJakartaSans_700Bold', fontSize: 18, letterSpacing: 0.5 },
+  driver: { fontFamily: 'PlusJakartaSans_500Medium', fontSize: 14, marginTop: 2 },
+  count: { fontFamily: 'PlusJakartaSans_400Regular', fontSize: 12, marginTop: 2 },
   right: { flexDirection: 'row', alignItems: 'center', gap: 6 },
-  avg: { fontFamily: 'Inter_700Bold', fontSize: 20 },
+  avg: { fontFamily: 'PlusJakartaSans_700Bold', fontSize: 20 },
   you: { borderWidth: 1.5, padding: 18, gap: 6 },
   youRow: { flexDirection: 'row', alignItems: 'center', gap: 6 },
-  youMain: { fontFamily: 'Inter_700Bold', fontSize: 18 },
-  youMeta: { fontFamily: 'Inter_500Medium', fontSize: 13 },
+  youMain: { fontFamily: 'PlusJakartaSans_700Bold', fontSize: 18 },
+  youMeta: { fontFamily: 'PlusJakartaSans_500Medium', fontSize: 13 },
   devLink: { alignSelf: 'center', paddingVertical: 24 },
-  devText: { fontFamily: 'Inter_500Medium', fontSize: 12 },
+  devText: { fontFamily: 'PlusJakartaSans_500Medium', fontSize: 12 },
 });

@@ -1,6 +1,7 @@
 import React, { useCallback, useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { Feather } from '@expo/vector-icons';
+import { LinearGradient } from 'expo-linear-gradient';
 import { useFocusEffect, useRouter } from 'expo-router';
 import * as Haptics from 'expo-haptics';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -28,7 +29,7 @@ import {
   type Role,
 } from '@/lib/storage';
 import { showToast } from '@/lib/toast';
-import { GOLD } from '@/lib/colors';
+import { GOLD, SILVER, WHITE } from '@/lib/colors';
 import { useT } from '@/lib/i18n';
 import { CEDI } from '@trotrolink/shared';
 
@@ -84,26 +85,28 @@ export default function ProfileScreen() {
       router.navigate('/');
     });
 
-  const card = { backgroundColor: colors.card, borderColor: colors.border, borderRadius: colors.radius };
+  const card = { backgroundColor: colors.card, borderColor: colors.border, borderRadius: colors.radius, ...colors.elevation };
 
   return (
     <ScrollView style={{ backgroundColor: colors.background }} contentContainerStyle={[styles.scroll, { paddingTop: insets.top + 16 }]} showsVerticalScrollIndicator={false}>
       <Text style={[styles.title, { color: colors.foreground }]}>{t('profile.title')}</Text>
 
-      {/* User card */}
-      <View style={[styles.userCard, card]}>
-        <View style={[styles.avatar, { backgroundColor: colors.secondary }]}>
-          <Feather name="user" size={26} color={GOLD} />
-        </View>
-        <View style={styles.userText}>
-          <Text style={[styles.name, { color: colors.foreground }]}>{person.name}</Text>
-          <Text style={[styles.phone, { color: colors.mutedForeground }]}>{maskPhone(person.phone)}</Text>
-          <View style={styles.verifiedRow}>
-            <Feather name={person.verified ? 'check-circle' : 'alert-circle'} size={14} color={person.verified ? colors.primary : colors.mutedForeground} />
-            <Text style={[styles.verified, { color: person.verified ? colors.primary : colors.mutedForeground }]}>{person.verified ? 'Verified' : 'Not verified'}</Text>
+      {/* User card: a navy hero with a gold-ringed avatar */}
+      <LinearGradient colors={colors.hero} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={[styles.userCard, { borderRadius: colors.radius }, colors.elevation]}>
+        <View style={styles.avatarRing}>
+          <View style={[styles.avatar, { backgroundColor: '#0A1A33' }]}>
+            <Feather name="user" size={26} color={GOLD} />
           </View>
         </View>
-      </View>
+        <View style={styles.userText}>
+          <Text style={[styles.name, { color: WHITE }]}>{person.name}</Text>
+          <Text style={[styles.phone, { color: SILVER }]}>{maskPhone(person.phone)}</Text>
+          <View style={[styles.verifiedPill, { backgroundColor: person.verified ? 'rgba(43,217,159,0.16)' : 'rgba(148,163,184,0.16)' }]}>
+            <Feather name={person.verified ? 'check-circle' : 'alert-circle'} size={13} color={person.verified ? '#2BD99F' : SILVER} />
+            <Text style={[styles.verified, { color: person.verified ? '#2BD99F' : SILVER }]}>{person.verified ? 'Verified' : 'Not verified'}</Text>
+          </View>
+        </View>
+      </LinearGradient>
 
       {/* Stats */}
       <View style={styles.stats}>
@@ -248,34 +251,36 @@ export default function ProfileScreen() {
 
 const styles = StyleSheet.create({
   scroll: { paddingHorizontal: 24, paddingBottom: 48 },
-  title: { fontFamily: 'Inter_700Bold', fontSize: 32, marginBottom: 20 },
-  userCard: { flexDirection: 'row', alignItems: 'center', gap: 16, padding: 20, borderWidth: 1 },
+  title: { fontFamily: 'PlusJakartaSans_800ExtraBold', fontSize: 32, letterSpacing: -0.8, marginBottom: 20 },
+  userCard: { flexDirection: 'row', alignItems: 'center', gap: 16, padding: 22, overflow: 'hidden' },
+  avatarRing: { width: 68, height: 68, borderRadius: 34, borderWidth: 2, borderColor: GOLD, alignItems: 'center', justifyContent: 'center' },
+  verifiedPill: { flexDirection: 'row', alignItems: 'center', gap: 6, alignSelf: 'flex-start', paddingHorizontal: 10, paddingVertical: 4, borderRadius: 999, marginTop: 8 },
   avatar: { width: 60, height: 60, borderRadius: 30, alignItems: 'center', justifyContent: 'center' },
   userText: { flex: 1 },
-  name: { fontFamily: 'Inter_700Bold', fontSize: 20 },
-  phone: { fontFamily: 'Inter_500Medium', fontSize: 14, marginTop: 2 },
+  name: { fontFamily: 'PlusJakartaSans_700Bold', fontSize: 20 },
+  phone: { fontFamily: 'PlusJakartaSans_500Medium', fontSize: 14, marginTop: 2 },
   verifiedRow: { flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 8 },
-  verified: { fontFamily: 'Inter_600SemiBold', fontSize: 13 },
+  verified: { fontFamily: 'PlusJakartaSans_600SemiBold', fontSize: 13 },
   stats: { flexDirection: 'row', gap: 10, marginTop: 12 },
-  stat: { flex: 1, borderWidth: 1, paddingVertical: 16, paddingHorizontal: 8, alignItems: 'center' },
-  statValue: { fontFamily: 'Inter_700Bold', fontSize: 22 },
-  statLabel: { fontFamily: 'Inter_500Medium', fontSize: 12, marginTop: 4 },
-  emptyHistory: { borderWidth: 1, padding: 24, alignItems: 'center', gap: 10 },
-  emptyText: { fontFamily: 'Inter_500Medium', fontSize: 14, textAlign: 'center' },
-  reported: { alignSelf: 'flex-start', flexDirection: 'row', alignItems: 'center', gap: 5, borderWidth: 1, paddingHorizontal: 8, height: 22, marginTop: 6 },
-  reportedText: { fontFamily: 'Inter_600SemiBold', fontSize: 11 },
-  rateChip: { alignSelf: 'flex-start', flexDirection: 'row', alignItems: 'center', gap: 6, borderWidth: 1, paddingHorizontal: 10, height: 26 },
-  rateChipText: { fontFamily: 'Inter_700Bold', fontSize: 12 },
-  tripRow: { flexDirection: 'row', alignItems: 'center', borderWidth: 1, padding: 16, marginBottom: 10 },
+  stat: { flex: 1, borderWidth: StyleSheet.hairlineWidth * 2, paddingVertical: 16, paddingHorizontal: 8, alignItems: 'center' },
+  statValue: { fontFamily: 'PlusJakartaSans_800ExtraBold', fontSize: 24, letterSpacing: -0.4 },
+  statLabel: { fontFamily: 'PlusJakartaSans_500Medium', fontSize: 12, marginTop: 4 },
+  emptyHistory: { borderWidth: StyleSheet.hairlineWidth * 2, padding: 24, alignItems: 'center', gap: 10 },
+  emptyText: { fontFamily: 'PlusJakartaSans_500Medium', fontSize: 14, textAlign: 'center' },
+  reported: { alignSelf: 'flex-start', flexDirection: 'row', alignItems: 'center', gap: 5, borderWidth: StyleSheet.hairlineWidth * 2, paddingHorizontal: 8, height: 22, marginTop: 6 },
+  reportedText: { fontFamily: 'PlusJakartaSans_600SemiBold', fontSize: 11 },
+  rateChip: { alignSelf: 'flex-start', flexDirection: 'row', alignItems: 'center', gap: 6, borderWidth: StyleSheet.hairlineWidth * 2, paddingHorizontal: 10, height: 26 },
+  rateChipText: { fontFamily: 'PlusJakartaSans_700Bold', fontSize: 12 },
+  tripRow: { flexDirection: 'row', alignItems: 'center', borderWidth: StyleSheet.hairlineWidth * 2, padding: 16, marginBottom: 10 },
   tripMain: { flex: 1 },
-  tripRoute: { fontFamily: 'Inter_700Bold', fontSize: 16 },
-  tripMeta: { fontFamily: 'Inter_500Medium', fontSize: 13, marginTop: 3 },
-  payCard: { flexDirection: 'row', alignItems: 'center', gap: 14, borderWidth: 1, padding: 16 },
+  tripRoute: { fontFamily: 'PlusJakartaSans_700Bold', fontSize: 16 },
+  tripMeta: { fontFamily: 'PlusJakartaSans_500Medium', fontSize: 13, marginTop: 3 },
+  payCard: { flexDirection: 'row', alignItems: 'center', gap: 14, borderWidth: StyleSheet.hairlineWidth * 2, padding: 16 },
   payIcon: { width: 44, height: 44, borderRadius: 14, alignItems: 'center', justifyContent: 'center' },
-  payName: { fontFamily: 'Inter_700Bold', fontSize: 16 },
-  payNumber: { fontFamily: 'Inter_500Medium', fontSize: 14, marginTop: 2 },
-  signOut: { marginTop: 28, height: 56, borderWidth: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 10 },
-  signOutText: { fontFamily: 'Inter_700Bold', fontSize: 16 },
+  payName: { fontFamily: 'PlusJakartaSans_700Bold', fontSize: 16 },
+  payNumber: { fontFamily: 'PlusJakartaSans_500Medium', fontSize: 14, marginTop: 2 },
+  signOut: { marginTop: 28, height: 56, borderWidth: StyleSheet.hairlineWidth * 2, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 10 },
+  signOutText: { fontFamily: 'PlusJakartaSans_700Bold', fontSize: 16 },
   devRow: { alignItems: 'center', gap: 14, paddingTop: 20 },
-  devText: { fontFamily: 'Inter_500Medium', fontSize: 12 },
+  devText: { fontFamily: 'PlusJakartaSans_500Medium', fontSize: 12 },
 });

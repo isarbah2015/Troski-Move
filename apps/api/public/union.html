@@ -3,57 +3,245 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="color-scheme" content="light dark">
 <title>TrotroLink · Union dashboard</title>
 <style>
-  :root { --bg:#F4F7FB; --card:#fff; --text:#0B1220; --muted:#475569; --border:#D5DDE8; --accent:#047857; --on-accent:#fff; --gold:#A16207; --err:#DC2626; --navy:#0B1F3A; }
-  @media (prefers-color-scheme: dark) { :root { --bg:#0B1220; --card:#121A2B; --text:#fff; --muted:#94A3B8; --border:#1E293B; --accent:#10B981; --on-accent:#0B1F3A; --gold:#D4A437; --err:#EF4444; } }
-  * { box-sizing: border-box; }
-  body { margin:0; font-family: Inter, system-ui, -apple-system, Segoe UI, sans-serif; background:var(--bg); color:var(--text); }
-  header { display:flex; align-items:center; justify-content:space-between; gap:12px; padding:16px 24px; border-bottom:1px solid var(--border); background:var(--card); position:sticky; top:0; z-index:5; flex-wrap:wrap; }
-  h1 { font-size:18px; margin:0; } h1 small { color:var(--muted); font-weight:500; margin-left:8px; }
-  nav { display:flex; gap:6px; flex-wrap:wrap; padding:12px 24px 0; }
-  nav button { border:1px solid var(--border); background:var(--card); color:var(--muted); padding:8px 14px; border-radius:999px; font:600 13px inherit; cursor:pointer; }
-  nav button[aria-selected="true"] { background:var(--accent); color:var(--on-accent); border-color:var(--accent); }
-  main { padding:16px 24px 48px; max-width:1200px; margin:0 auto; }
-  .grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(180px,1fr)); gap:12px; }
-  .card { background:var(--card); border:1px solid var(--border); border-radius:16px; padding:16px; }
-  .stat b { display:block; font-size:28px; margin-top:6px; } .stat span { color:var(--muted); font-size:13px; }
-  table { width:100%; border-collapse:collapse; font-size:14px; } th,td { text-align:left; padding:10px 8px; border-bottom:1px solid var(--border); vertical-align:top; }
-  th { color:var(--muted); font-weight:600; font-size:12px; text-transform:uppercase; letter-spacing:.06em; }
-  .pill { display:inline-block; padding:2px 10px; border-radius:999px; border:1px solid var(--border); font-size:12px; font-weight:600; }
-  .ok { color:var(--accent); border-color:var(--accent); } .warn { color:var(--gold); border-color:var(--gold); } .bad { color:var(--err); border-color:var(--err); }
-  button.act { border:1px solid var(--border); background:var(--card); color:var(--text); padding:6px 12px; border-radius:10px; font:600 12px inherit; cursor:pointer; }
-  button.danger { color:var(--err); border-color:var(--err); }
-  input, select { padding:10px 12px; border-radius:12px; border:1px solid var(--border); background:var(--bg); color:var(--text); font:500 14px inherit; }
-  .muted { color:var(--muted); } .empty { padding:32px; text-align:center; color:var(--muted); }
-  .ussd { max-width:360px; margin:0 auto; } .screen { background:#0b1220; color:#d1fae5; font-family:ui-monospace,Menlo,monospace; padding:16px; border-radius:14px; min-height:200px; white-space:pre-wrap; border:2px solid var(--border); }
-  .row { display:flex; gap:8px; margin-top:12px; } .row input { flex:1; }
-  #login { max-width:420px; margin:80px auto; } #login .row { margin-top:16px; }
-  [hidden] { display:none !important; } pre { white-space:pre-wrap; font-size:12px; background:var(--bg); padding:10px; border-radius:10px; border:1px solid var(--border); max-height:240px; overflow:auto; }
+  @font-face { font-family:'Plus Jakarta Sans'; font-weight:400; font-display:swap; src:url(/fonts/PlusJakartaSans_400Regular.ttf) format('truetype'); }
+  @font-face { font-family:'Plus Jakarta Sans'; font-weight:500; font-display:swap; src:url(/fonts/PlusJakartaSans_500Medium.ttf) format('truetype'); }
+  @font-face { font-family:'Plus Jakarta Sans'; font-weight:600; font-display:swap; src:url(/fonts/PlusJakartaSans_600SemiBold.ttf) format('truetype'); }
+  @font-face { font-family:'Plus Jakarta Sans'; font-weight:700; font-display:swap; src:url(/fonts/PlusJakartaSans_700Bold.ttf) format('truetype'); }
+  @font-face { font-family:'Plus Jakarta Sans'; font-weight:800; font-display:swap; src:url(/fonts/PlusJakartaSans_800ExtraBold.ttf) format('truetype'); }
+
+  /* Tokens. Light is the default; dark follows the OS unless the viewer picks a theme with the toggle. */
+  :root {
+    color-scheme: light;
+    --bg:#F3F5F9; --surface:#FFFFFF; --surface-2:#F7F9FC; --text:#0A1020; --muted:#566178; --faint:#8791A5;
+    --border:rgba(15,23,42,.09); --border-strong:rgba(15,23,42,.16);
+    --accent:#07805A; --accent-soft:rgba(7,128,90,.10); --on-accent:#fff; --accent-grad:linear-gradient(135deg,#12A576,#066B4C);
+    --gold:#9A6700; --gold-soft:rgba(154,103,0,.10); --err:#D93036; --err-soft:rgba(217,48,54,.10);
+    --hero:linear-gradient(135deg,#12315C,#0A1A33);
+    --shadow:0 1px 2px rgba(15,23,42,.04),0 12px 32px rgba(15,23,42,.07);
+    --bar:#12A576; --bar-gold:#C98A00; --track:rgba(15,23,42,.06);
+  }
+  @media (prefers-color-scheme: dark) { :root:where(:not([data-theme="light"])) {
+    color-scheme: dark;
+    --bg:#060A13; --surface:#0E1524; --surface-2:#121B2E; --text:#F6F8FC; --muted:#8A97AE; --faint:#5F6C84;
+    --border:rgba(255,255,255,.08); --border-strong:rgba(255,255,255,.16);
+    --accent:#2BD99F; --accent-soft:rgba(43,217,159,.12); --on-accent:#04130D; --accent-grad:linear-gradient(135deg,#4CE8B4,#16B887);
+    --gold:#E7B85A; --gold-soft:rgba(231,184,90,.12); --err:#F2555A; --err-soft:rgba(242,85,90,.12);
+    --shadow:0 1px 0 rgba(255,255,255,.03) inset,0 16px 40px rgba(0,0,0,.35);
+    --bar:#2BD99F; --bar-gold:#E7B85A; --track:rgba(255,255,255,.06);
+  } }
+  :root[data-theme="dark"] {
+    color-scheme: dark;
+    --bg:#060A13; --surface:#0E1524; --surface-2:#121B2E; --text:#F6F8FC; --muted:#8A97AE; --faint:#5F6C84;
+    --border:rgba(255,255,255,.08); --border-strong:rgba(255,255,255,.16);
+    --accent:#2BD99F; --accent-soft:rgba(43,217,159,.12); --on-accent:#04130D; --accent-grad:linear-gradient(135deg,#4CE8B4,#16B887);
+    --gold:#E7B85A; --gold-soft:rgba(231,184,90,.12); --err:#F2555A; --err-soft:rgba(242,85,90,.12);
+    --shadow:0 1px 0 rgba(255,255,255,.03) inset,0 16px 40px rgba(0,0,0,.35);
+    --bar:#2BD99F; --bar-gold:#E7B85A; --track:rgba(255,255,255,.06);
+  }
+
+  * { box-sizing:border-box; }
+  html { -webkit-text-size-adjust:100%; }
+  body { margin:0; font-family:'Plus Jakarta Sans',system-ui,-apple-system,'Segoe UI',sans-serif; background:var(--bg); color:var(--text); font-size:14px; line-height:1.5; -webkit-font-smoothing:antialiased; }
+  [hidden] { display:none !important; }
+  button, input, select { font:inherit; color:inherit; }
+  svg { display:block; }
+  .ico { width:18px; height:18px; fill:none; stroke:currentColor; stroke-width:1.8; stroke-linecap:round; stroke-linejoin:round; flex:none; }
+
+  /* Shell */
+  .shell { display:grid; grid-template-columns:260px 1fr; min-height:100vh; }
+  aside { position:sticky; top:0; height:100vh; padding:22px 16px; display:flex; flex-direction:column; gap:22px; border-right:1px solid var(--border); background:var(--surface); }
+  .brand { display:flex; align-items:center; gap:12px; padding:4px 8px; }
+  .mark { width:38px; height:38px; border-radius:12px; background:var(--accent-grad); display:grid; place-items:center; color:var(--on-accent); box-shadow:0 8px 20px rgba(7,128,90,.28); }
+  .brand b { display:block; font-size:16px; font-weight:800; letter-spacing:-.3px; }
+  .brand span { display:block; font-size:12px; color:var(--muted); font-weight:500; }
+  .navlabel { font-size:11px; font-weight:700; letter-spacing:.14em; color:var(--faint); padding:0 12px; margin-bottom:-10px; }
+  nav { display:flex; flex-direction:column; gap:4px; }
+  nav button { display:flex; align-items:center; gap:12px; width:100%; padding:11px 12px; border:0; border-radius:12px; background:transparent; color:var(--muted); font-weight:600; cursor:pointer; text-align:left; transition:background .15s,color .15s; }
+  nav button:hover { background:var(--surface-2); color:var(--text); }
+  nav button[aria-selected="true"] { background:var(--accent-soft); color:var(--accent); }
+  nav button .count { margin-left:auto; font-size:11px; font-weight:700; padding:2px 8px; border-radius:999px; background:var(--err-soft); color:var(--err); }
+  .side-foot { margin-top:auto; display:flex; flex-direction:column; gap:12px; }
+  .status { display:flex; align-items:center; gap:10px; padding:12px; border-radius:14px; background:var(--surface-2); border:1px solid var(--border); font-size:12px; color:var(--muted); font-weight:500; }
+  .status b { display:block; color:var(--text); font-weight:700; font-size:13px; }
+  .pulse { width:9px; height:9px; border-radius:50%; background:var(--accent); box-shadow:0 0 0 0 var(--accent); animation:pulse 2.2s infinite; flex:none; }
+  @keyframes pulse { 70% { box-shadow:0 0 0 8px transparent; } 100% { box-shadow:0 0 0 0 transparent; } }
+  @media (prefers-reduced-motion: reduce) { .pulse { animation:none; } * { transition:none !important; } }
+
+  .main { min-width:0; }
+  header.top { position:sticky; top:0; z-index:10; display:flex; align-items:center; justify-content:space-between; gap:16px; padding:18px 36px; background:color-mix(in srgb, var(--bg) 82%, transparent); backdrop-filter:blur(14px); -webkit-backdrop-filter:blur(14px); border-bottom:1px solid var(--border); }
+  header.top h1 { margin:0; font-size:24px; font-weight:800; letter-spacing:-.6px; }
+  header.top p { margin:2px 0 0; color:var(--muted); font-size:13px; font-weight:500; }
+  .actions { display:flex; gap:10px; align-items:center; }
+  .btn { display:inline-flex; align-items:center; gap:8px; height:40px; padding:0 16px; border-radius:999px; border:1px solid var(--border-strong); background:var(--surface); color:var(--text); font-weight:600; cursor:pointer; transition:transform .12s,box-shadow .12s; }
+  .btn:hover { box-shadow:var(--shadow); } .btn:active { transform:scale(.97); }
+  .btn.icon { width:40px; padding:0; justify-content:center; }
+  .btn.primary { background:var(--accent-grad); color:var(--on-accent); border-color:transparent; box-shadow:0 8px 20px rgba(7,128,90,.25); }
+  .btn:focus-visible, nav button:focus-visible, input:focus-visible, select:focus-visible, summary:focus-visible { outline:2px solid var(--accent); outline-offset:2px; }
+  main { padding:28px 36px 64px; max-width:1360px; margin:0 auto; }
+
+  /* Cards, KPIs */
+  .card { background:var(--surface); border:1px solid var(--border); border-radius:20px; box-shadow:var(--shadow); }
+  .pad { padding:22px; }
+  .grid { display:grid; gap:16px; }
+  .kpis { grid-template-columns:1.35fr repeat(4,1fr); }
+  .kpi { padding:20px; display:flex; flex-direction:column; gap:12px; }
+  .kpi .top { display:flex; align-items:center; justify-content:space-between; color:var(--muted); font-weight:600; font-size:13px; }
+  .kpi .chip { width:34px; height:34px; border-radius:11px; display:grid; place-items:center; background:var(--accent-soft); color:var(--accent); }
+  .kpi .chip.gold { background:var(--gold-soft); color:var(--gold); } .kpi .chip.err { background:var(--err-soft); color:var(--err); }
+  .kpi .num { font-size:34px; font-weight:800; letter-spacing:-1px; line-height:1; font-variant-numeric:tabular-nums; }
+  .kpi .sub { font-size:12px; color:var(--muted); font-weight:500; }
+  .kpi.hero { background:var(--hero); color:#fff; border-color:transparent; position:relative; overflow:hidden; }
+  .kpi.hero::after { content:''; position:absolute; right:-60px; top:-60px; width:200px; height:200px; border-radius:50%; background:radial-gradient(closest-side,rgba(43,217,159,.35),transparent); }
+  .kpi.hero .top { color:#9FB0CC; } .kpi.hero .chip { background:rgba(255,255,255,.1); color:#2BD99F; } .kpi.hero .sub { color:#9FB0CC; } .kpi.hero .num { font-size:44px; }
+  .kpi.hero > * { position:relative; z-index:1; }
+  .two { grid-template-columns:1fr 1fr; margin-top:16px; } .split { grid-template-columns:1.4fr 1fr; margin-top:16px; }
+  h2.sec { margin:0 0 4px; font-size:16px; font-weight:800; letter-spacing:-.2px; } p.hint { margin:0 0 18px; color:var(--muted); font-size:13px; }
+
+  /* Bar charts: one series per chart, so the title names it and no legend box is needed. */
+  .bars { display:flex; flex-direction:column; gap:12px; }
+  .bar-row { display:grid; grid-template-columns:78px 1fr 64px; align-items:center; gap:12px; font-weight:600; }
+  .bar-row .lab { font-size:13px; } .bar-row .lab small { display:block; color:var(--muted); font-weight:500; font-size:11px; }
+  .track { height:14px; background:var(--track); border-radius:7px; overflow:hidden; }
+  .fill { height:100%; border-radius:0 5px 5px 0; background:var(--bar); width:0; transition:width .7s cubic-bezier(.2,.8,.2,1); }
+  .fill.gold { background:var(--bar-gold); }
+  .bar-row .val { text-align:right; font-variant-numeric:tabular-nums; font-weight:700; }
+  .bar-row:hover .track { outline:1px solid var(--border-strong); }
+  .tip { position:fixed; z-index:50; pointer-events:none; padding:8px 12px; border-radius:10px; background:var(--text); color:var(--bg); font-size:12px; font-weight:600; box-shadow:0 8px 24px rgba(0,0,0,.25); opacity:0; transform:translateY(4px); transition:opacity .12s,transform .12s; }
+  .tip.on { opacity:1; transform:none; }
+
+  /* Activity feed */
+  .feed { list-style:none; margin:0; padding:0; display:flex; flex-direction:column; }
+  .feed li { display:flex; align-items:center; gap:14px; padding:12px 0; border-top:1px solid var(--border); } .feed li:first-child { border-top:0; padding-top:0; }
+  .avatar { width:38px; height:38px; border-radius:12px; display:grid; place-items:center; background:var(--accent-soft); color:var(--accent); font-weight:800; font-size:12px; flex:none; }
+  .feed .what { flex:1; min-width:0; } .feed .what b { display:block; font-weight:700; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; } .feed .what span { color:var(--muted); font-size:12px; }
+  .feed .amt { font-weight:800; font-variant-numeric:tabular-nums; }
+
+  /* Tables */
+  .tablewrap { overflow:auto; border-radius:20px; }
+  table { width:100%; border-collapse:collapse; font-size:13.5px; }
+  th { position:sticky; top:0; background:var(--surface-2); text-align:left; padding:13px 16px; font-size:11px; font-weight:700; letter-spacing:.1em; text-transform:uppercase; color:var(--muted); border-bottom:1px solid var(--border); white-space:nowrap; }
+  td { padding:15px 16px; border-bottom:1px solid var(--border); vertical-align:top; } tbody tr:last-child td { border-bottom:0; }
+  tbody tr { transition:background .12s; } tbody tr:hover { background:var(--surface-2); }
+  .mono { font-variant-numeric:tabular-nums; } .muted { color:var(--muted); } .nowrap { white-space:nowrap; }
+  .veh { display:inline-block; padding:3px 10px; border-radius:8px; background:var(--surface-2); border:1px solid var(--border); font-weight:700; letter-spacing:.04em; font-size:12px; }
+  .pill { display:inline-flex; align-items:center; gap:6px; padding:3px 11px; border-radius:999px; font-size:12px; font-weight:700; background:var(--surface-2); color:var(--muted); text-transform:capitalize; }
+  .pill::before { content:''; width:6px; height:6px; border-radius:50%; background:currentColor; }
+  .pill.ok { background:var(--accent-soft); color:var(--accent); } .pill.warn { background:var(--gold-soft); color:var(--gold); } .pill.bad { background:var(--err-soft); color:var(--err); }
+  .stars { color:var(--gold); font-weight:700; } .stars::before { content:'★ '; }
+  .empty { padding:56px 24px; text-align:center; color:var(--muted); }
+  .empty b { display:block; color:var(--text); font-size:16px; margin-bottom:4px; }
+  input, select { height:42px; padding:0 14px; border-radius:12px; border:1px solid var(--border-strong); background:var(--surface-2); font-weight:500; }
+  select { cursor:pointer; padding-right:10px; }
+  button.act { height:34px; padding:0 14px; border-radius:10px; border:1px solid var(--border-strong); background:var(--surface); font-weight:600; cursor:pointer; }
+  button.act.danger { color:var(--err); border-color:color-mix(in srgb, var(--err) 45%, transparent); }
+  details summary { cursor:pointer; color:var(--accent); font-weight:600; font-size:12px; margin-top:6px; }
+  pre { white-space:pre-wrap; font-size:12px; background:var(--surface-2); padding:12px; border-radius:12px; border:1px solid var(--border); max-height:240px; overflow:auto; }
+  h3.sec { margin:28px 0 12px; font-size:16px; font-weight:800; }
+
+  /* USSD phone */
+  .phone { max-width:360px; margin:8px auto; padding:14px; border-radius:36px; background:var(--hero); box-shadow:var(--shadow); }
+  .phone .screen { background:#050A14; color:#C7F9E4; font-family:ui-monospace,Menlo,monospace; padding:18px; border-radius:24px; min-height:240px; white-space:pre-wrap; font-size:13px; line-height:1.6; }
+  .row { display:flex; gap:8px; margin-top:12px; } .row input { flex:1; min-width:0; }
+  .phone .row input { background:rgba(255,255,255,.08); color:#fff; border-color:rgba(255,255,255,.14); }
+  .phone .row .act { background:rgba(255,255,255,.1); color:#fff; border-color:rgba(255,255,255,.18); }
+
+  /* Login */
+  #login { min-height:100vh; display:grid; place-items:center; padding:24px; background:radial-gradient(60% 50% at 50% 0%, var(--accent-soft), transparent), var(--bg); }
+  #login .card { width:100%; max-width:420px; padding:36px; text-align:center; }
+  #login .mark { margin:0 auto 18px; width:54px; height:54px; border-radius:18px; }
+  #login h1 { margin:0 0 6px; font-size:24px; font-weight:800; letter-spacing:-.5px; } #login p { margin:0 0 22px; color:var(--muted); }
+  #login .row { margin-top:0; } #loginErr { margin:12px 0 0 !important; color:var(--err) !important; min-height:20px; font-weight:600; }
+
+  @media (max-width:1100px) { .kpis { grid-template-columns:repeat(2,1fr); } .kpi.hero { grid-column:1 / -1; } .two, .split { grid-template-columns:1fr; } }
+  @media (max-width:860px) {
+    .shell { grid-template-columns:1fr; } aside { position:static; height:auto; flex-direction:row; align-items:center; flex-wrap:wrap; padding:14px 16px; gap:10px; border-right:0; border-bottom:1px solid var(--border); }
+    .navlabel, .side-foot .status { display:none; } nav { flex-direction:row; overflow-x:auto; width:100%; order:3; padding-bottom:2px; } nav button { width:auto; white-space:nowrap; padding:9px 14px; }
+    .side-foot { margin:0 0 0 auto; } header.top, main { padding-left:16px; padding-right:16px; } header.top h1 { font-size:20px; }
+    .bar-row { grid-template-columns:64px 1fr 56px; }
+  }
 </style>
 </head>
 <body>
-<section id="login" class="card" hidden>
-  <h1>Union dashboard</h1>
-  <p class="muted">Enter the union key to continue.</p>
-  <div class="row"><input id="key" type="password" placeholder="Union key" aria-label="Union key" autocomplete="off"><button class="act" id="go">Open</button></div>
-  <p id="loginErr" class="muted"></p>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <defs>
+    <symbol id="i-bus" viewBox="0 0 24 24"><rect x="4" y="3" width="16" height="15" rx="3"/><path d="M4 11h16M8 21v-3M16 21v-3"/><circle cx="8.5" cy="14.5" r=".6"/><circle cx="15.5" cy="14.5" r=".6"/></symbol>
+    <symbol id="i-grid" viewBox="0 0 24 24"><rect x="3" y="3" width="7.5" height="7.5" rx="2"/><rect x="13.5" y="3" width="7.5" height="7.5" rx="2"/><rect x="3" y="13.5" width="7.5" height="7.5" rx="2"/><rect x="13.5" y="13.5" width="7.5" height="7.5" rx="2"/></symbol>
+    <symbol id="i-list" viewBox="0 0 24 24"><path d="M8 6h13M8 12h13M8 18h13"/><circle cx="3.5" cy="6" r="1"/><circle cx="3.5" cy="12" r="1"/><circle cx="3.5" cy="18" r="1"/></symbol>
+    <symbol id="i-flag" viewBox="0 0 24 24"><path d="M5 21V4m0 0h11l-2 4 2 4H5"/></symbol>
+    <symbol id="i-star" viewBox="0 0 24 24"><path d="m12 3 2.7 5.6 6.1.9-4.4 4.3 1 6.1L12 17l-5.4 2.9 1-6.1L3.2 9.5l6.1-.9z"/></symbol>
+    <symbol id="i-pin" viewBox="0 0 24 24"><path d="M12 21s7-6.2 7-11.5A7 7 0 0 0 5 9.5C5 14.800 12 21 12 21z"/><circle cx="12" cy="9.5" r="2.5"/></symbol>
+    <symbol id="i-users" viewBox="0 0 24 24"><circle cx="9" cy="8" r="3.5"/><path d="M2.5 20a6.5 6.5 0 0 1 13 0M16 4.6a3.5 3.5 0 0 1 0 6.8M18.500 14a6.500 6.500 0 0 1 3 6"/></symbol>
+    <symbol id="i-phone" viewBox="0 0 24 24"><rect x="6.500" y="2" width="11" height="20" rx="3"/><path d="M11 18.500h2"/></symbol>
+    <symbol id="i-refresh" viewBox="0 0 24 24"><path d="M20 11a8 8 0 0 0-14.500-4M4 5v4h4M4 13a8 8 0 0 0 14.500 4M20 19v-4h-4"/></symbol>
+    <symbol id="i-moon" viewBox="0 0 24 24"><path d="M20 14.500A8.500 8.500 0 0 1 9.500 4 8.500 8.500 0 1 0 20 14.500z"/></symbol>
+    <symbol id="i-sun" viewBox="0 0 24 24"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.900 4.900l1.400 1.400M17.700 17.700l1.400 1.400M2 12h2M20 12h2M4.900 19.100l1.400-1.400M17.700 6.300l1.400-1.400"/></symbol>
+    <symbol id="i-lock" viewBox="0 0 24 24"><rect x="4.500" y="10.500" width="15" height="10" rx="3"/><path d="M8 10.500V8a4 4 0 0 1 8 0v2.500"/></symbol>
+    <symbol id="i-cedi" viewBox="0 0 24 24"><path d="M17.500 7.500A6 6 0 1 0 17.500 16.500M12 3v18"/></symbol>
+    <symbol id="i-alert" viewBox="0 0 24 24"><path d="M12 3.500 2.500 20h19z"/><path d="M12 10v4.500M12 17.500v.1"/></symbol>
+  </defs>
+</svg>
+
+<section id="login" hidden>
+  <div class="card">
+    <div class="mark"><svg class="ico" style="width:26px;height:26px"><use href="#i-bus"/></svg></div>
+    <h1>Union dashboard</h1>
+    <p>Enter the union key to continue.</p>
+    <div class="row"><input id="key" type="password" placeholder="Union key" aria-label="Union key" autocomplete="off"><button class="btn primary" id="go">Open</button></div>
+    <p id="loginErr" role="alert"></p>
+  </div>
 </section>
 
-<div id="app" hidden>
-  <header><h1>TrotroLink <small>Union dashboard</small></h1><button class="act" id="refresh">Refresh</button></header>
-  <nav role="tablist" id="tabs"></nav>
-  <main id="view" aria-live="polite"></main>
+<div id="app" class="shell" hidden>
+  <aside>
+    <div class="brand"><div class="mark"><svg class="ico" style="width:22px;height:22px"><use href="#i-bus"/></svg></div><div><b>TrotroLink</b><span>GPRTU union</span></div></div>
+    <div class="navlabel">WORKSPACE</div>
+    <nav role="tablist" id="tabs" aria-label="Sections"></nav>
+    <div class="side-foot">
+      <div class="status"><span class="pulse"></span><div><b>Live</b><span id="stamp">Connecting…</span></div></div>
+    </div>
+  </aside>
+  <div class="main">
+    <header class="top">
+      <div><h1 id="title">Overview</h1><p id="subtitle"></p></div>
+      <div class="actions">
+        <button class="btn icon" id="theme" aria-label="Switch light or dark theme"><svg class="ico"><use href="#i-moon"/></svg></button>
+        <button class="btn primary" id="refresh"><svg class="ico"><use href="#i-refresh"/></svg>Refresh</button>
+      </div>
+    </header>
+    <main id="view" aria-live="polite"></main>
+  </div>
 </div>
+<div class="tip" id="tip" role="tooltip"></div>
 
 <script>
-const TABS = [['overview','Overview'],['transactions','Transactions'],['disputes','Disputes'],['ratings','Ratings'],['stops','Stop suggestions'],['conductors','Conductors'],['ussd','USSD tester']];
+const TABS = [
+  ['overview','Overview','i-grid','Today across every vehicle'],
+  ['transactions','Transactions','i-list','Every fare paid, with the official fare beside it'],
+  ['disputes','Disputes','i-flag','Passenger reports, with the evidence attached'],
+  ['ratings','Ratings','i-star','How passengers rate drivers and conductors'],
+  ['stops','Stop suggestions','i-pin','Where passengers get off between official stops'],
+  ['conductors','Conductors','i-users','PIN status and resets'],
+  ['ussd','USSD tester','i-phone','Try the *123# flow as a handset would'],
+];
 const $ = (s) => document.querySelector(s);
 const esc = (v) => String(v ?? '').replace(/[&<>"']/g, (c) => ({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' }[c]));
 const cedi = (n) => '₵' + Number(n).toFixed(2);
 const when = (iso) => iso ? new Date(iso).toLocaleString('en-GB', { day:'numeric', month:'short', hour:'2-digit', minute:'2-digit' }) : '—';
+const icon = (id) => `<svg class="ico"><use href="#${id}"/></svg>`;
 let key = sessionStorage.getItem('unionKey') || '';
 let tab = 'overview';
+let openDisputes = 0;
+
+/* Theme: follow the OS until the viewer chooses; remember the choice. */
+function applyTheme(t) { if (t) document.documentElement.dataset.theme = t; else delete document.documentElement.dataset.theme; syncThemeIcon(); }
+function currentTheme() { return document.documentElement.dataset.theme || (matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light'); }
+function syncThemeIcon() { $('#theme use').setAttribute('href', currentTheme() === 'dark' ? '#i-sun' : '#i-moon'); }
+try { const saved = localStorage.getItem('unionTheme'); if (saved) document.documentElement.dataset.theme = saved; } catch {}
+$('#theme').onclick = () => { const next = currentTheme() === 'dark' ? 'light' : 'dark'; applyTheme(next); try { localStorage.setItem('unionTheme', next); } catch {} };
+syncThemeIcon();
 
 async function api(path, opts = {}) {
   const res = await fetch('/api' + path, { ...opts, headers: { 'Content-Type': 'application/json', 'x-union-key': key, ...(opts.headers || {}) } });
@@ -64,43 +252,76 @@ async function api(path, opts = {}) {
 function showLogin(msg = '') { $('#app').hidden = true; $('#login').hidden = false; $('#loginErr').textContent = msg; }
 function showApp() { $('#login').hidden = true; $('#app').hidden = false; renderTabs(); load(); }
 function renderTabs() {
-  $('#tabs').innerHTML = TABS.map(([id, label]) => `<button role="tab" aria-selected="${id === tab}" data-tab="${id}">${label}</button>`).join('');
+  $('#tabs').innerHTML = TABS.map(([id, label, ic]) => `<button role="tab" aria-selected="${id === tab}" data-tab="${id}">${icon(ic)}${label}${id === 'disputes' && openDisputes ? `<span class="count">${openDisputes}</span>` : ''}</button>`).join('');
   document.querySelectorAll('[data-tab]').forEach((b) => b.onclick = () => { tab = b.dataset.tab; renderTabs(); load(); });
+  const t = TABS.find((x) => x[0] === tab); $('#title').textContent = t[1]; $('#subtitle').textContent = t[3];
 }
-const table = (heads, rows) => rows.length ? `<div class="card" style="overflow:auto"><table><thead><tr>${heads.map((h) => `<th>${h}</th>`).join('')}</tr></thead><tbody>${rows.join('')}</tbody></table></div>` : '<div class="card empty">Nothing here yet.</div>';
+
+const table = (heads, rows, emptyTitle = 'Nothing here yet', emptyText = 'New activity will appear here as it happens.') => rows.length
+  ? `<div class="card tablewrap"><table><thead><tr>${heads.map((h) => `<th>${h}</th>`).join('')}</tr></thead><tbody>${rows.join('')}</tbody></table></div>`
+  : `<div class="card empty"><b>${emptyTitle}</b>${emptyText}</div>`;
+const initials = (s) => esc(String(s || '?').split(/\s|→|-/).filter(Boolean).slice(0, 2).map((w) => w[0]).join('').toUpperCase());
+
+/* One-series horizontal bar chart: rounded data ends on a quiet track, a direct value label, hover tooltip. */
+function barChart(rows, { fmt, max, gold }) {
+  if (!rows.length) return '<div class="empty">No data yet.</div>';
+  const top = max ?? Math.max(...rows.map((r) => r.value), 1);
+  return `<div class="bars" role="list">${rows.map((r) => `<div class="bar-row" role="listitem" data-tip="${esc(r.tip)}"><div class="lab">${esc(r.label)}${r.sub ? `<small>${esc(r.sub)}</small>` : ''}</div><div class="track"><div class="fill ${gold ? 'gold' : ''}" data-w="${Math.max(2, (r.value / top) * 100)}"></div></div><div class="val">${fmt(r.value)}</div></div>`).join('')}</div>`;
+}
 
 const views = {
   async overview() {
-    const o = await api('/union/overview');
-    const s = (label, v) => `<div class="card stat"><span>${label}</span><b>${v}</b></div>`;
-    return `<div class="grid">${s('Trips (24 h)', o.tripsToday)}${s('Fares (24 h)', cedi(o.revenueToday))}${s('Trips in progress', o.activeTrips)}${s('Open disputes', o.openDisputes)}${s('Open overcharge reports', o.openOvercharges)}${s('Average rating (24 h)', o.avgRating24h ?? '—')}${s('Ratings (24 h)', o.ratings24h)}</div>`;
+    const [o, tx, rt, ds] = await Promise.all([api('/union/overview'), api('/union/transactions'), api('/union/ratings'), api('/union/disputes')]);
+    openDisputes = o.openDisputes; renderTabs();
+    const byVeh = {};
+    tx.transactions.forEach((x) => { (byVeh[x.vehicle] ??= { fares: 0, n: 0 }); byVeh[x.vehicle].fares += Number(x.paid); byVeh[x.vehicle].n += 1; });
+    const fares = Object.entries(byVeh).sort((a, b) => b[1].fares - a[1].fares).map(([v, d]) => ({ label: v, sub: `${d.n} trips`, value: d.fares, tip: `${v}: ${cedi(d.fares)} from ${d.n} trips` }));
+    const ratings = [...rt.vehicles].sort((a, b) => b.avgDriver - a.avgDriver).map((v) => ({ label: v.vehicle, sub: v.driver, value: Number(v.avgDriver), tip: `${v.vehicle} (${v.driver}): ${v.avgDriver} driver, ${v.avgConductor} conductor, ${v.n} ratings` }));
+    const kpi = (cls, ic, label, value, sub, chip = '') => `<div class="card kpi ${cls}"><div class="top"><span>${label}</span><span class="chip ${chip}">${icon(ic)}</span></div><div class="num">${value}</div><div class="sub">${sub}</div></div>`;
+    const feed = tx.transactions.slice(0, 6).map((x) => `<li><span class="avatar">${initials(x.vehicle)}</span><div class="what"><b>${esc(x.from)} → ${esc(x.to)}</b><span>${esc(x.vehicle)} · ${when(x.at)}</span></div><span class="amt">${cedi(x.paid)}</span></li>`).join('');
+    const open = ds.disputes.filter((d) => d.status === 'open' || d.status === 'investigating').slice(0, 4).map((x) => `<li><span class="avatar" style="background:var(--${x.disputeType === 'overcharge' ? 'err' : 'gold'}-soft);color:var(--${x.disputeType === 'overcharge' ? 'err' : 'gold'})">${icon('i-alert')}</span><div class="what"><b style="text-transform:capitalize">${esc(x.disputeType.replace(/_/g, ' '))}</b><span>${esc((x.description || '').slice(0, 70))}</span></div><span class="pill ${x.status === 'open' ? 'bad' : 'warn'}">${esc(x.status)}</span></li>`).join('');
+    return `<div class="grid kpis">
+        ${kpi('hero', 'i-cedi', 'Fares collected · 24 h', cedi(o.revenueToday), `${o.tripsToday} trips across ${fares.length || 0} vehicles`)}
+        ${kpi('', 'i-bus', 'Trips in progress', o.activeTrips, 'Passengers on board now')}
+        ${kpi('', 'i-flag', 'Open disputes', o.openDisputes, `${o.openOvercharges} overcharge ${o.openOvercharges === 1 ? 'report' : 'reports'}`, o.openDisputes ? 'err' : '')}
+        ${kpi('', 'i-star', 'Average rating', o.avgRating24h != null ? Number(o.avgRating24h).toFixed(1) : '—', `${o.ratings24h} ratings · 24 h`, 'gold')}
+        ${kpi('', 'i-list', 'Trips · 24 h', o.tripsToday, 'Paid and started')}
+      </div>
+      <div class="grid two">
+        <section class="card pad"><h2 class="sec">Fares by vehicle</h2><p class="hint">Cedis collected in the last 24 hours</p>${barChart(fares, { fmt: cedi })}</section>
+        <section class="card pad"><h2 class="sec">Driver rating by vehicle</h2><p class="hint">Average out of 5</p>${barChart(ratings, { fmt: (v) => v.toFixed(1), max: 5, gold: true })}</section>
+      </div>
+      <div class="grid split">
+        <section class="card pad"><h2 class="sec">Latest trips</h2><p class="hint">Most recent payments</p>${feed ? `<ul class="feed">${feed}</ul>` : '<div class="empty">No trips yet.</div>'}</section>
+        <section class="card pad"><h2 class="sec">Needs attention</h2><p class="hint">Reports waiting for the union</p>${open ? `<ul class="feed">${open}</ul>` : '<div class="empty"><b>All clear</b>No open reports.</div>'}</section>
+      </div>`;
   },
   async transactions() {
     const { transactions: t } = await api('/union/transactions');
-    return table(['Time','Trip','Vehicle','Route','Fare','Paid','GPS at alighting'], t.map((x) => `<tr><td>${when(x.at)}</td><td>${esc(x.tripRef)}</td><td>${esc(x.vehicle)}</td><td>${esc(x.from)} → ${esc(x.to)}${x.customStop ? `<br><span class="muted">near: ${esc(x.customStop)}</span>` : ''}</td><td>${cedi(x.officialFare)}</td><td>${cedi(x.paid)}${x.paid > x.officialFare ? ' <span class="muted">(rounded up)</span>' : ''}</td><td>${x.gps ? `<span class="pill ${x.gps.status === 'near' ? 'ok' : 'warn'}">${x.gps.status} · ${x.gps.distanceM} m</span>` : '<span class="muted">—</span>'}</td></tr>`));
+    return table(['Time','Trip','Vehicle','Route','Official fare','Paid','GPS at alighting'], t.map((x) => `<tr><td class="nowrap muted">${when(x.at)}</td><td class="mono">${esc(x.tripRef)}</td><td><span class="veh">${esc(x.vehicle)}</span></td><td>${esc(x.from)} → ${esc(x.to)}${x.customStop ? `<br><span class="muted">near: ${esc(x.customStop)}</span>` : ''}</td><td class="mono">${cedi(x.officialFare)}</td><td class="mono"><b>${cedi(x.paid)}</b>${x.paid > x.officialFare ? ' <span class="muted">rounded up</span>' : ''}</td><td>${x.gps ? `<span class="pill ${x.gps.status === 'near' ? 'ok' : 'warn'}">${esc(x.gps.status)} · ${x.gps.distanceM} m</span>` : '<span class="muted">—</span>'}</td></tr>`), 'No transactions yet');
   },
   async disputes() {
     const { disputes: d } = await api('/union/disputes');
-    return table(['Filed','Type','Status','Details','Action'], d.map((x) => `<tr><td>${when(x.createdAt)}</td><td><span class="pill ${x.disputeType === 'overcharge' ? 'bad' : 'warn'}">${esc(x.disputeType.replace(/_/g,' '))}</span></td><td>${esc(x.status)}</td><td>${esc(x.description || '')}<details><summary class="muted">Evidence</summary><pre>${esc(JSON.stringify(x.evidence, null, 2))}</pre></details></td><td><select data-dispute="${x.id}" aria-label="Status"><option ${x.status==='open'?'selected':''}>open</option><option ${x.status==='investigating'?'selected':''}>investigating</option><option ${x.status==='resolved'?'selected':''}>resolved</option><option ${x.status==='rejected'?'selected':''}>rejected</option></select></td></tr>`));
+    return table(['Filed','Type','Status','Details','Action'], d.map((x) => `<tr><td class="nowrap muted">${when(x.createdAt)}</td><td><span class="pill ${x.disputeType === 'overcharge' ? 'bad' : 'warn'}">${esc(x.disputeType.replace(/_/g,' '))}</span></td><td><span class="pill ${x.status === 'resolved' ? 'ok' : x.status === 'open' ? 'bad' : ''}">${esc(x.status)}</span></td><td>${esc(x.description || '')}<details><summary>View evidence</summary><pre>${esc(JSON.stringify(x.evidence, null, 2))}</pre></details></td><td><select data-dispute="${x.id}" aria-label="Status"><option ${x.status==='open'?'selected':''}>open</option><option ${x.status==='investigating'?'selected':''}>investigating</option><option ${x.status==='resolved'?'selected':''}>resolved</option><option ${x.status==='rejected'?'selected':''}>rejected</option></select></td></tr>`), 'No reports', 'Passenger reports will appear here with their evidence.');
   },
   async ratings() {
     const { vehicles: v, comments: c } = await api('/union/ratings');
-    return `<h3>By vehicle</h3>${table(['Vehicle','Driver','Driver ★','Conductor ★','Ratings'], v.map((x) => `<tr><td>${esc(x.vehicle)}</td><td>${esc(x.driver)}</td><td>${x.avgDriver}</td><td>${x.avgConductor}</td><td>${x.n}</td></tr>`))}<h3>Latest comments</h3>${table(['When','Vehicle','Driver ★','Conductor ★','Comment'], c.map((x) => `<tr><td>${when(x.at)}</td><td>${esc(x.vehicle)}</td><td>${x.driver}</td><td>${x.conductor}</td><td>${esc(x.comment)}</td></tr>`))}`;
+    return `${table(['Vehicle','Driver','Driver rating','Conductor rating','Ratings'], v.map((x) => `<tr><td><span class="veh">${esc(x.vehicle)}</span></td><td>${esc(x.driver)}</td><td><span class="stars">${x.avgDriver}</span></td><td><span class="stars">${x.avgConductor}</span></td><td class="mono">${x.n}</td></tr>`), 'No ratings yet')}<h3 class="sec">Latest comments</h3>${table(['When','Vehicle','Driver','Conductor','Comment'], c.map((x) => `<tr><td class="nowrap muted">${when(x.at)}</td><td><span class="veh">${esc(x.vehicle)}</span></td><td><span class="stars">${x.driver}</span></td><td><span class="stars">${x.conductor}</span></td><td>${esc(x.comment)}</td></tr>`), 'No comments yet')}`;
   },
   async stops() {
     const { suggestions: s } = await api('/union/stop-suggestions');
-    return `<p class="muted">Where passengers say they got off between anchors. Frequent places are candidates for new anchors.</p>${table(['Passenger said','After anchor','Times','Example vehicle'], s.map((x) => `<tr><td>${esc(x.note)}</td><td>${esc(x.after)}</td><td>${x.n}</td><td>${esc(x.vehicle)}</td></tr>`))}`;
+    return `<p class="muted" style="margin:0 0 16px">Where passengers say they got off between anchors. Frequent places are candidates for new anchors.</p>${table(['Passenger said','After anchor','Times','Example vehicle'], s.map((x) => `<tr><td>${esc(x.note)}</td><td>${esc(x.after)}</td><td class="mono">${x.n}</td><td><span class="veh">${esc(x.vehicle)}</span></td></tr>`), 'No suggestions yet', 'When passengers type their own drop-off, it shows up here.')}`;
   },
   async conductors() {
     const { conductors: c } = await api('/union/conductors');
-    return `<p class="muted">Resetting a PIN ends the conductor's sessions. They then choose a new PIN with "First time? Set up your PIN".</p>${table(['Vehicle','Conductor','Driver','PIN','Last sign-in','Action'], c.map((x) => `<tr><td>${esc(x.vehicle)}</td><td>${esc(x.conductor)}</td><td>${esc(x.driver)}</td><td>${x.lockedUntil ? '<span class="pill bad">locked</span>' : x.hasPin ? '<span class="pill ok">set</span>' : '<span class="pill">not set up</span>'}</td><td>${when(x.lastLoginAt)}</td><td>${x.hasPin ? `<button class="act danger" data-reset="${esc(x.vehicle)}">Reset PIN</button>` : ''}</td></tr>`))}`;
+    return `<p class="muted" style="margin:0 0 16px">Resetting a PIN ends the conductor's sessions. They then choose a new PIN with “First time? Set up your PIN”.</p>${table(['Vehicle','Conductor','Driver','PIN','Last sign-in','Action'], c.map((x) => `<tr><td><span class="veh">${esc(x.vehicle)}</span></td><td>${esc(x.conductor)}</td><td>${esc(x.driver)}</td><td>${x.lockedUntil ? '<span class="pill bad">locked</span>' : x.hasPin ? '<span class="pill ok">set</span>' : '<span class="pill">not set up</span>'}</td><td class="muted">${when(x.lastLoginAt)}</td><td>${x.hasPin ? `<button class="act danger" data-reset="${esc(x.vehicle)}">Reset PIN</button>` : ''}</td></tr>`), 'No conductors')}`;
   },
   async ussd() {
-    return `<div class="ussd card"><p class="muted">Simulates dialling the USSD code. Real handsets reach this through Africa's Talking.</p>
+    return `<div class="phone"><div class="screen" id="screen" aria-live="polite">Press Dial to start.</div>
       <div class="row"><input id="phone" value="+233244000111" aria-label="Caller phone number"></div>
-      <div class="screen" id="screen" aria-live="polite">Press Dial to start.</div>
       <div class="row"><input id="entry" placeholder="Your reply" aria-label="Your reply"><button class="act" id="send">Send</button></div>
-      <div class="row"><button class="act" id="dial">Dial *123#</button></div></div>`;
+      <div class="row"><button class="btn primary" id="dial" style="flex:1;justify-content:center">Dial *123#</button></div></div>
+      <p class="muted" style="text-align:center">Simulates dialling the USSD code. Real handsets reach this through Africa's Talking.</p>`;
   },
 };
 
@@ -115,15 +336,26 @@ async function ussdStep(input) {
   $('#entry').value = ''; $('#entry').focus();
 }
 
+/* Hover tooltip for chart bars. */
+const tip = $('#tip');
+document.addEventListener('pointermove', (e) => {
+  const row = e.target.closest && e.target.closest('[data-tip]');
+  if (!row) { tip.classList.remove('on'); return; }
+  tip.textContent = row.dataset.tip; tip.classList.add('on');
+  tip.style.left = Math.min(e.clientX + 14, innerWidth - tip.offsetWidth - 12) + 'px'; tip.style.top = (e.clientY + 16) + 'px';
+});
+
 async function load() {
   const el = $('#view');
   el.innerHTML = '<div class="card empty">Loading…</div>';
   try {
     el.innerHTML = await views[tab]();
+    requestAnimationFrame(() => document.querySelectorAll('.fill[data-w]').forEach((f) => { f.style.width = f.dataset.w + '%'; }));
+    $('#stamp').textContent = 'Updated ' + new Date().toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' });
     document.querySelectorAll('[data-dispute]').forEach((s) => s.onchange = async () => { await api(`/union/disputes/${s.dataset.dispute}/status`, { method: 'POST', body: JSON.stringify({ status: s.value }) }); });
     document.querySelectorAll('[data-reset]').forEach((b) => b.onclick = async () => { if (!confirm(`Reset the PIN for ${b.dataset.reset}? The conductor will have to choose a new one.`)) return; await api(`/union/conductors/${b.dataset.reset}/reset-pin`, { method: 'POST' }); load(); });
     if (tab === 'ussd') { $('#dial').onclick = () => ussdStep(null); $('#send').onclick = () => $('#entry').value && ussdStep($('#entry').value.trim()); $('#entry').onkeydown = (e) => e.key === 'Enter' && $('#send').click(); }
-  } catch (e) { if (e.message !== 'unauthorized') el.innerHTML = `<div class="card empty">Could not load: ${esc(e.message)}</div>`; }
+  } catch (e) { if (e.message !== 'unauthorized') el.innerHTML = `<div class="card empty"><b>Could not load</b>${esc(e.message)}</div>`; }
 }
 
 $('#refresh').onclick = load;

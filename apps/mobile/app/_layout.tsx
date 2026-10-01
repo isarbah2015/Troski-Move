@@ -13,12 +13,13 @@ import { SyncBanner } from '@/components/SyncBanner';
 import { ToastHost } from '@/components/ToastHost';
 import { useSyncLoop } from '@/lib/sync';
 import {
-  Inter_400Regular,
-  Inter_500Medium,
-  Inter_600SemiBold,
-  Inter_700Bold,
+  PlusJakartaSans_400Regular,
+  PlusJakartaSans_500Medium,
+  PlusJakartaSans_600SemiBold,
+  PlusJakartaSans_700Bold,
+  PlusJakartaSans_800ExtraBold,
   useFonts,
-} from '@expo-google-fonts/inter';
+} from '@expo-google-fonts/plus-jakarta-sans';
 import { Stack } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import * as SplashScreen from 'expo-splash-screen';
@@ -42,7 +43,7 @@ function RootLayoutNav() {
         headerBackTitle: 'Back',
         headerStyle: { backgroundColor: colors.card },
         headerTintColor: colors.foreground,
-        headerTitleStyle: { fontFamily: 'Inter_600SemiBold' },
+        headerTitleStyle: { fontFamily: 'PlusJakartaSans_600SemiBold' },
         contentStyle: { backgroundColor: colors.background },
       }}
     >
@@ -56,10 +57,11 @@ function RootLayoutNav() {
 
 export default function RootLayout() {
   const [fontsLoaded, fontError] = useFonts({
-    Inter_400Regular,
-    Inter_500Medium,
-    Inter_600SemiBold,
-    Inter_700Bold,
+    PlusJakartaSans_400Regular,
+    PlusJakartaSans_500Medium,
+    PlusJakartaSans_600SemiBold,
+    PlusJakartaSans_700Bold,
+    PlusJakartaSans_800ExtraBold,
   });
 
   useEffect(() => {

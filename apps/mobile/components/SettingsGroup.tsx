@@ -51,7 +51,7 @@ export function SettingsGroup({ onDeleteAccount }: { onDeleteAccount?: () => voi
   }, []);
 
   return (
-    <View style={[styles.group, { backgroundColor: colors.card, borderColor: colors.border, borderRadius: colors.radius }]}>
+    <View style={[styles.group, { backgroundColor: colors.card, borderColor: colors.border, borderRadius: colors.radius, ...colors.elevation }]}>
       <Row icon="globe" label={t('set.language')} value={NATIVE_NAME[language]} onPress={() => setLanguageOpen(true)} />
       <Row icon={theme === 'light' ? 'sun' : 'moon'} label={t('set.appearance')} value={APPEARANCE_LABEL[theme]} onPress={() => setThemeOpen(true)} divider />
       <View style={[styles.row, styles.divider, { borderTopColor: colors.border }]}>
@@ -121,10 +121,10 @@ export function SettingsGroup({ onDeleteAccount }: { onDeleteAccount?: () => voi
 }
 
 const styles = StyleSheet.create({
-  group: { borderWidth: 1, paddingHorizontal: 16 },
+  group: { borderWidth: StyleSheet.hairlineWidth * 2, paddingHorizontal: 16 },
   row: { flexDirection: 'row', alignItems: 'center', gap: 14, minHeight: 56 },
   divider: { borderTopWidth: StyleSheet.hairlineWidth },
   switchWrap: { height: 31, justifyContent: 'center' },
-  label: { flex: 1, fontFamily: 'Inter_600SemiBold', fontSize: 16 },
-  value: { fontFamily: 'Inter_500Medium', fontSize: 14 },
+  label: { flex: 1, fontFamily: 'PlusJakartaSans_600SemiBold', fontSize: 16 },
+  value: { fontFamily: 'PlusJakartaSans_500Medium', fontSize: 14 },
 });

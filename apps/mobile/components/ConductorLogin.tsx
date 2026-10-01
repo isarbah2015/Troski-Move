@@ -9,6 +9,7 @@ import { useColors } from '@/hooks/useColors';
 import { api } from '@/lib/api';
 import { saveSession } from '@/lib/conductorSession';
 import { getConductorVehicleCode, setRole } from '@/lib/storage';
+import { PrimaryButton } from '@/components/PrimaryButton';
 
 type Mode = 'login' | 'setup';
 
@@ -56,7 +57,7 @@ export function ConductorLogin() {
     }
   };
 
-  const field = (focus?: boolean) => [styles.input, { color: colors.foreground, backgroundColor: colors.card, borderColor: error && focus ? colors.destructive : colors.border, borderRadius: colors.radius }];
+  const field = (focus?: boolean) => [styles.input, { color: colors.foreground, backgroundColor: colors.card, borderColor: error && focus ? colors.destructive : colors.border, borderRadius: colors.radius, ...colors.elevation }];
 
   return (
     <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={{ flex: 1, backgroundColor: colors.background }}>
@@ -92,9 +93,7 @@ export function ConductorLogin() {
 
         {error ? <Text style={[styles.error, { color: colors.destructive }]} accessibilityRole="alert">{error}</Text> : null}
 
-        <Pressable onPress={() => void submit()} disabled={!ready} accessibilityRole="button" accessibilityState={{ disabled: !ready }} style={[styles.cta, { backgroundColor: colors.primary, opacity: ready ? 1 : 0.4, borderRadius: colors.radiusPill }]}>
-          {busy ? <ActivityIndicator color={colors.primaryForeground} /> : <Text style={[styles.ctaText, { color: colors.primaryForeground }]}>{setup ? 'Set PIN and sign in' : 'Sign in'}</Text>}
-        </Pressable>
+        <PrimaryButton onPress={() => void submit()} disabled={!ready} loading={busy} label={setup ? 'Set PIN and sign in' : 'Sign in'} style={styles.cta} />
 
         <Pressable
           onPress={() => {
@@ -126,15 +125,15 @@ export function ConductorLogin() {
 
 const styles = StyleSheet.create({
   scroll: { paddingHorizontal: 24 },
-  badge: { width: 72, height: 72, borderWidth: 1, alignItems: 'center', justifyContent: 'center', marginBottom: 20 },
-  title: { fontFamily: 'Inter_700Bold', fontSize: 30 },
-  sub: { fontFamily: 'Inter_400Regular', fontSize: 15, lineHeight: 22, marginTop: 6, marginBottom: 8 },
-  label: { fontFamily: 'Inter_600SemiBold', fontSize: 12, letterSpacing: 1.3, marginTop: 20, marginBottom: 8 },
-  input: { borderWidth: 1, height: 56, paddingHorizontal: 16, fontFamily: 'Inter_600SemiBold', fontSize: 18 },
+  badge: { width: 72, height: 72, borderWidth: StyleSheet.hairlineWidth * 2, alignItems: 'center', justifyContent: 'center', marginBottom: 20 },
+  title: { fontFamily: 'PlusJakartaSans_800ExtraBold', letterSpacing: -0.8, fontSize: 30 },
+  sub: { fontFamily: 'PlusJakartaSans_400Regular', fontSize: 15, lineHeight: 22, marginTop: 6, marginBottom: 8 },
+  label: { fontFamily: 'PlusJakartaSans_600SemiBold', fontSize: 12, letterSpacing: 1.3, marginTop: 20, marginBottom: 8 },
+  input: { borderWidth: StyleSheet.hairlineWidth * 2, height: 56, paddingHorizontal: 16, fontFamily: 'PlusJakartaSans_600SemiBold', fontSize: 18 },
   pin: { letterSpacing: 10, textAlign: 'center', fontSize: 24 },
-  error: { fontFamily: 'Inter_500Medium', fontSize: 14, marginTop: 12 },
-  cta: { height: 56, marginTop: 28, alignItems: 'center', justifyContent: 'center' },
-  ctaText: { fontFamily: 'Inter_700Bold', fontSize: 17 },
+  error: { fontFamily: 'PlusJakartaSans_500Medium', fontSize: 14, marginTop: 12 },
+  cta: { marginTop: 28 },
+  ctaText: { fontFamily: 'PlusJakartaSans_700Bold', fontSize: 17 },
   link: { alignSelf: 'center', paddingVertical: 14 },
-  linkText: { fontFamily: 'Inter_600SemiBold', fontSize: 15 },
+  linkText: { fontFamily: 'PlusJakartaSans_600SemiBold', fontSize: 15 },
 });

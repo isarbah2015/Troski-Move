@@ -17,6 +17,6 @@ export default function PrivacyScreen() {
 
 const styles = StyleSheet.create({
   body: { padding: 24 },
-  h: { fontFamily: 'Inter_700Bold', fontSize: 28, marginBottom: 12 },
-  p: { fontFamily: 'Inter_400Regular', fontSize: 15, lineHeight: 22 },
+  h: { fontFamily: 'PlusJakartaSans_800ExtraBold', letterSpacing: -0.8, fontSize: 28, marginBottom: 12 },
+  p: { fontFamily: 'PlusJakartaSans_400Regular', fontSize: 15, lineHeight: 22 },
 });

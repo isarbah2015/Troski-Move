@@ -13,4 +13,4 @@ export function Approx({ amount, style }: { amount: number; style?: StyleProp<Te
   return <Text style={[styles.text, { color: colors.mutedForeground }, style]} accessibilityLabel={`About ${text.replace('≈ ', '')}`}>{text}</Text>;
 }
 
-const styles = StyleSheet.create({ text: { fontFamily: 'Inter_500Medium', fontSize: 14 } });
+const styles = StyleSheet.create({ text: { fontFamily: 'PlusJakartaSans_500Medium', fontSize: 14 } });

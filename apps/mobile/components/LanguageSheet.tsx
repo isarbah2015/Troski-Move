@@ -49,10 +49,10 @@ export function LanguageSheet({ visible, selected, onSelect, onClose }: Props) {
 
 const styles = StyleSheet.create({
   root: { flex: 1, justifyContent: 'flex-end' },
-  sheet: { padding: 24, paddingBottom: 40, borderWidth: 1, borderBottomWidth: 0 },
+  sheet: { padding: 24, paddingBottom: 40, borderWidth: StyleSheet.hairlineWidth * 2, borderBottomWidth: 0 },
   grabber: { alignSelf: 'center', width: 40, height: 4, borderRadius: 2, marginBottom: 20 },
-  title: { fontFamily: 'Inter_700Bold', fontSize: 22, marginBottom: 16 },
-  row: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', borderWidth: 1, padding: 16, marginBottom: 10 },
-  label: { fontFamily: 'Inter_600SemiBold', fontSize: 16 },
-  note: { fontFamily: 'Inter_400Regular', fontSize: 13, lineHeight: 18, marginTop: 4 },
+  title: { fontFamily: 'PlusJakartaSans_700Bold', fontSize: 22, marginBottom: 16 },
+  row: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', borderWidth: StyleSheet.hairlineWidth * 2, padding: 16, marginBottom: 10 },
+  label: { fontFamily: 'PlusJakartaSans_600SemiBold', fontSize: 16 },
+  note: { fontFamily: 'PlusJakartaSans_400Regular', fontSize: 13, lineHeight: 18, marginTop: 4 },
 });

@@ -12,5 +12,5 @@ export function SectionHeader({ children }: { children: string }) {
 }
 
 const styles = StyleSheet.create({
-  text: { fontFamily: 'Inter_600SemiBold', fontSize: 12, letterSpacing: 1.4, marginTop: 28, marginBottom: 10 },
+  text: { fontFamily: 'PlusJakartaSans_600SemiBold', fontSize: 12, letterSpacing: 1.4, marginTop: 28, marginBottom: 10 },
 });

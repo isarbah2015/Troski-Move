@@ -18,5 +18,5 @@ export function CediIcon({ size = 22, color }: { size?: number; color: string })
 }
 
 const styles = StyleSheet.create({
-  glyph: { fontFamily: 'Inter_700Bold', textAlign: 'center', includeFontPadding: false },
+  glyph: { fontFamily: 'PlusJakartaSans_700Bold', textAlign: 'center', includeFontPadding: false },
 });

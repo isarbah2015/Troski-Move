@@ -23,7 +23,7 @@ export default function VisitorGuide() {
       <Text style={[styles.title, { color: colors.foreground }]}>Visiting Ghana?</Text>
       <Text style={[styles.sub, { color: colors.mutedForeground }]}>Everything you need to ride a trotro with TrotroLink.</Text>
       {STEPS.map((s) => (
-        <View key={s.title} style={[styles.card, { backgroundColor: colors.card, borderColor: colors.border, borderRadius: colors.radius }]}>
+        <View key={s.title} style={[styles.card, { backgroundColor: colors.card, borderColor: colors.border, borderRadius: colors.radius, ...colors.elevation }]}>
           <View style={[styles.icon, { backgroundColor: colors.secondary }]}>
             {s.icon === 'cedi' ? <CediIcon size={20} color="#D4A437" /> : <Feather name={s.icon} size={20} color="#D4A437" />}
           </View>
@@ -43,13 +43,13 @@ export default function VisitorGuide() {
 
 const styles = StyleSheet.create({
   body: { padding: 24, paddingBottom: 48 },
-  title: { fontFamily: 'Inter_700Bold', fontSize: 30 },
-  sub: { fontFamily: 'Inter_400Regular', fontSize: 15, lineHeight: 22, marginTop: 6, marginBottom: 20 },
-  card: { flexDirection: 'row', gap: 14, borderWidth: 1, padding: 16, marginBottom: 12 },
+  title: { fontFamily: 'PlusJakartaSans_800ExtraBold', letterSpacing: -0.8, fontSize: 30 },
+  sub: { fontFamily: 'PlusJakartaSans_400Regular', fontSize: 15, lineHeight: 22, marginTop: 6, marginBottom: 20 },
+  card: { flexDirection: 'row', gap: 14, borderWidth: StyleSheet.hairlineWidth * 2, padding: 16, marginBottom: 12 },
   icon: { width: 44, height: 44, borderRadius: 14, alignItems: 'center', justifyContent: 'center' },
   text: { flex: 1 },
-  cardTitle: { fontFamily: 'Inter_700Bold', fontSize: 16 },
-  cardBody: { fontFamily: 'Inter_400Regular', fontSize: 14, lineHeight: 21, marginTop: 4 },
+  cardTitle: { fontFamily: 'PlusJakartaSans_700Bold', fontSize: 16 },
+  cardBody: { fontFamily: 'PlusJakartaSans_400Regular', fontSize: 14, lineHeight: 21, marginTop: 4 },
   help: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, paddingVertical: 20 },
-  helpText: { fontFamily: 'Inter_600SemiBold', fontSize: 14 },
+  helpText: { fontFamily: 'PlusJakartaSans_600SemiBold', fontSize: 14 },
 });
