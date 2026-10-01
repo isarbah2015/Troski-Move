@@ -15,6 +15,7 @@ import { getConductorVehicleCode, getDailySplits, saveDailySplit, type DailySpli
 import { sendOrQueue } from '@/lib/sync';
 import { showToast } from '@/lib/toast';
 import { EMERALD, ERROR, GOLD, HERO_GRADIENT, SILVER, WHITE } from '@/lib/colors';
+import { CEDI } from '@trotrolink/shared';
 
 type Field = 'ownerDrop' | 'conductorWage' | 'fuelCost';
 
@@ -31,7 +32,7 @@ function SplitInput({ label, value, onChange }: { label: string; value: string; 
     <View style={styles.splitRow}>
       <Text style={[styles.splitLabel, { color: colors.foreground }]}>{label}</Text>
       <View style={[styles.inputWrap, { borderColor: focused ? colors.primary : colors.border, backgroundColor: colors.background, borderRadius: 12 }]}>
-        <Text style={[styles.prefix, { color: colors.mutedForeground }]}>GHS</Text>
+        <Text style={[styles.prefix, { color: colors.mutedForeground }]}>{CEDI}</Text>
         <TextInput
           value={value}
           onChangeText={onChange}

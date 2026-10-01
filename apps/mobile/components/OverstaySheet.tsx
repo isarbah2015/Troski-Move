@@ -5,6 +5,7 @@ import * as Haptics from 'expo-haptics';
 import { useColors } from '@/hooks/useColors';
 import { formatCedis } from '@/lib/api';
 import { GOLD, SCRIM_STRONG } from '@/lib/colors';
+import { useT } from '@/lib/i18n';
 
 type Props = {
   declaredStop: string;
@@ -16,6 +17,7 @@ type Props = {
 /** The vehicle has gone past the passenger's stop: extend the trip, or get off now. After the countdown the extension is charged automatically. */
 export function OverstaySheet({ declaredStop, overstay, onPay, onGetOff }: Props) {
   const colors = useColors();
+  const t = useT();
   const [left, setLeft] = useState(0);
 
   useEffect(() => {
@@ -35,21 +37,21 @@ export function OverstaySheet({ declaredStop, overstay, onPay, onGetOff }: Props
             <View style={[styles.badge, { backgroundColor: colors.secondary }]}>
               <Feather name="alert-triangle" size={28} color={GOLD} />
             </View>
-            <Text style={[styles.title, { color: colors.foreground }]}>You&apos;ve passed {declaredStop}</Text>
+            <Text style={[styles.title, { color: colors.foreground }]}>{t('over.title', { stop: declaredStop })}</Text>
             <Text style={[styles.body, { color: colors.mutedForeground }]}>
-              Extend to {overstay.stop} for {formatCedis(overstay.extraFare)} more?
+              {t('over.body', { stop: overstay.stop, amount: formatCedis(overstay.extraFare) })}
             </Text>
             <View style={[styles.timer, { borderColor: colors.border, borderRadius: colors.radiusPill }]}>
               <Feather name="clock" size={14} color={colors.accent} />
               <Text style={[styles.timerText, { color: colors.foreground }]}>
-                {left > 0 ? `Charged automatically in ${left}s` : 'Charging…'}
+                {left > 0 ? t('over.timer', { n: left }) : t('over.charging')}
               </Text>
             </View>
             <Pressable onPress={onPay} accessibilityRole="button" style={[styles.pay, { backgroundColor: colors.primary, borderRadius: colors.radiusPill }]}>
-              <Text style={[styles.payText, { color: colors.primaryForeground }]}>Pay {formatCedis(overstay.extraFare)}</Text>
+              <Text style={[styles.payText, { color: colors.primaryForeground }]}>{t('over.pay', { amount: formatCedis(overstay.extraFare) })}</Text>
             </Pressable>
             <Pressable onPress={onGetOff} accessibilityRole="button" style={[styles.off, { borderColor: colors.border, borderRadius: colors.radiusPill }]}>
-              <Text style={[styles.offText, { color: colors.foreground }]}>Get off now</Text>
+              <Text style={[styles.offText, { color: colors.foreground }]}>{t('over.off')}</Text>
             </Pressable>
           </View>
         ) : null}

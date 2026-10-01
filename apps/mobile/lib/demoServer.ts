@@ -5,7 +5,7 @@
  * roles (switched in Profile) see each other's activity. It is used when EXPO_PUBLIC_API_URL is not set.
  */
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { SEED_ROUTES, parseScannedCode, type RouteStop } from '@trotrolink/shared';
+import { alightCheck, SEED_ROUTES, parseScannedCode, type RouteStop } from '@trotrolink/shared';
 
 const KEY = 'demoDb';
 const APPROVE_MS = 3000;
@@ -14,10 +14,10 @@ const SESSION_MS = 12 * 3_600_000;
 
 type Trip = {
   tripId: string; deviceId: string; vehicleCode: string; boarding: string; alighting: string; current: string; paid: number;
-  startedAt: number; arrivedAt?: number; active: boolean; lastMarkAt?: number;
+  startedAt: number; arrivedAt?: number; active: boolean; lastMarkAt?: number; customStopNote?: string; alightGps?: { status: 'near' | 'far'; distanceM: number };
   overstayStop?: string; overstayAt?: number; autoExtendedAt?: number;
 };
-type Payment = { ref: string; tripId: string; deviceId: string; vehicleCode: string; boarding: string; alighting: string; amount: number; createdAt: number; status: 'PENDING' | 'SUCCESSFUL' | 'FAILED'; extendsTrip?: string };
+type Payment = { ref: string; tripId: string; deviceId: string; vehicleCode: string; boarding: string; alighting: string; amount: number; createdAt: number; status: 'PENDING' | 'SUCCESSFUL' | 'FAILED'; extendsTrip?: string; customStopNote?: string };
 type Db = {
   trips: Trip[]; payments: Payment[];
   conductors: Record<string, { pin: string; failed: number; lockedUntil?: number }>;
@@ -91,7 +91,7 @@ function settle(d: Db, p: Payment) {
     }
     return;
   }
-  d.trips.push({ tripId: p.tripId, deviceId: p.deviceId, vehicleCode: p.vehicleCode, boarding: p.boarding, alighting: p.alighting, current: p.boarding, paid: p.amount, startedAt: p.createdAt, active: true });
+  d.trips.push({ tripId: p.tripId, deviceId: p.deviceId, vehicleCode: p.vehicleCode, boarding: p.boarding, alighting: p.alighting, current: p.boarding, paid: p.amount, startedAt: p.createdAt, active: true, customStopNote: p.customStopNote });
   d.events.push({ vehicle: p.vehicleCode, type: 'boarded', stop: stops[idx(stops, p.boarding)]!.name, at: Date.now() });
 }
 
@@ -129,7 +129,7 @@ function serverTrip(t: Trip) {
     tripId: t.tripId, passengerId: guestId(t.deviceId), vehicleCode: t.vehicleCode, boardingStop: t.boarding, alightingStop: t.alighting,
     currentStop: t.current, stopsRemaining: Math.max(0, idx(stops, t.alighting) - idx(stops, t.current)),
     etaMinutes: eta(stops, idx(stops, t.current), idx(stops, t.alighting)), startedAt: new Date(t.startedAt).toISOString(),
-    lastStopMarkedAt: t.lastMarkAt ? new Date(t.lastMarkAt).toISOString() : null, amountPaid: t.paid, overstay,
+    lastStopMarkedAt: t.lastMarkAt ? new Date(t.lastMarkAt).toISOString() : null, amountPaid: t.paid, customStopNote: t.customStopNote ?? null, overstay,
   };
 }
 
@@ -162,7 +162,7 @@ async function route(method: string, path: string, query: URLSearchParams, body:
     if (!v) fail(404, 'Vehicle not found');
     return {
       vehicle: { id: v!.id, shortCode: v!.shortCode, driverName: v!.driverName, conductorName: v!.conductorName },
-      route: { routeId: v!.route.routeId, name: v!.route.routeName, origin: v!.route.origin, destination: v!.route.destination, stops: v!.route.stops.map((s) => ({ name: s.name, etaMinutes: s.etaMinutes, officialFare: s.fare, amountToPay: due(s.fare) })) },
+      route: { routeId: v!.route.routeId, name: v!.route.routeName, origin: v!.route.origin, destination: v!.route.destination, stops: v!.route.stops.map((s) => ({ name: s.name, etaMinutes: s.etaMinutes, officialFare: s.fare, amountToPay: due(s.fare), lat: s.lat, lng: s.lng })) },
     };
   }
 
@@ -178,7 +178,7 @@ async function route(method: string, path: string, query: URLSearchParams, body:
     if (Math.abs(Number(body.amount) - due(fare)) > 0.001) fail(400, 'Amount does not match the fare for this trip', { amountDue: due(fare) });
     const same = d.payments.find((p) => p.tripId === body.tripId) ?? d.payments.find((p) => p.deviceId === body.deviceId && p.vehicleCode === v!.shortCode && p.alighting === stops[to]!.name && p.status === 'PENDING' && !p.extendsTrip);
     if (same) return { referenceId: same.ref, tripId: same.tripId, status: same.status, simulator: true };
-    const p: Payment = { ref: `demo-${Date.now().toString(36)}${Math.random().toString(36).slice(2, 6)}`, tripId: String(body.tripId), deviceId: String(body.deviceId), vehicleCode: v!.shortCode, boarding: stops[from]!.name, alighting: stops[to]!.name, amount: due(fare), createdAt: Date.now(), status: 'PENDING' };
+    const p: Payment = { ref: `demo-${Date.now().toString(36)}${Math.random().toString(36).slice(2, 6)}`, tripId: String(body.tripId), deviceId: String(body.deviceId), vehicleCode: v!.shortCode, boarding: stops[from]!.name, alighting: stops[to]!.name, amount: due(fare), createdAt: Date.now(), status: 'PENDING', customStopNote: body.customStopNote ? String(body.customStopNote).slice(0, 120) : undefined };
     d.payments.push(p);
     await save();
     return { referenceId: p.ref, tripId: p.tripId, status: 'PENDING', simulator: true };
@@ -268,6 +268,10 @@ async function route(method: string, path: string, query: URLSearchParams, body:
   }
   if (post && (path === '/trips/alight' || path === '/trips/getoff')) {
     const t = d.trips.find((x) => x.tripId === body.tripId); if (!t) fail(404, 'Trip not found');
+    // GPS check: informational only, never blocks alighting.
+    const stops = vehicle(t!.vehicleCode)!.route.stops;
+    const check = typeof body.lat === 'number' && typeof body.lng === 'number' ? alightCheck(stops[idx(stops, t!.alighting)], { lat: body.lat, lng: body.lng }) : null;
+    if (check) t!.alightGps = check;
     endTrip(d, t!, t!.alighting); await save(); return { ok: true };
   }
   if (post && path === '/trips/extend') {
@@ -321,7 +325,7 @@ async function route(method: string, path: string, query: URLSearchParams, body:
   if (post && path === '/disputes') {
     const t = d.trips.find((x) => x.tripId === body.tripId); if (!t) fail(404, 'Trip not found');
     if (t!.deviceId !== body.deviceId) fail(403, 'This is not your trip');
-    d.disputes.push({ id: d.disputes.length + 1, type: body.reason, description: body.description ?? null, trip: t, events: d.events.filter((e) => e.vehicle === t!.vehicleCode).slice(-40), filedAt: new Date().toISOString() });
+    d.disputes.push({ id: d.disputes.length + 1, type: body.reason, description: body.description ?? null, trip: { ...t }, events: d.events.filter((e) => e.vehicle === t!.vehicleCode).slice(-40), filedAt: new Date().toISOString() });
     await save(); return { ok: true, disputeId: d.disputes.length };
   }
   if (post && path === '/disputes/unpaid') {

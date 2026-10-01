@@ -5,6 +5,7 @@ import * as Haptics from 'expo-haptics';
 import type { DisputeReason } from '@trotrolink/shared';
 import { useColors } from '@/hooks/useColors';
 import { SCRIM } from '@/lib/colors';
+import { useT } from '@/lib/i18n';
 
 export const REPORT_REASONS: ReadonlyArray<{ key: DisputeReason; label: string; hint: string; icon: React.ComponentProps<typeof Feather>['name'] }> = [
   { key: 'overcharge', label: 'Overcharge', hint: 'I was asked to pay more than the official fare', icon: 'alert-circle' },
@@ -20,6 +21,7 @@ type Props = { visible: boolean; onSubmit: (reason: DisputeReason, description?:
 /** Step 1: pick what went wrong. Step 2: add an optional note and send. */
 export function ReportSheet({ visible, onSubmit, onClose }: Props) {
   const colors = useColors();
+  const t = useT();
   const [reason, setReason] = useState<DisputeReason | null>(null);
   const [note, setNote] = useState('');
   const [busy, setBusy] = useState(false);
@@ -40,10 +42,10 @@ export function ReportSheet({ visible, onSubmit, onClose }: Props) {
         <Pressable style={[styles.scrim, { backgroundColor: SCRIM }]} onPress={onClose} accessibilityLabel="Close" />
         <View style={[styles.sheet, { backgroundColor: colors.card, borderColor: colors.border, borderTopLeftRadius: colors.radiusModal, borderTopRightRadius: colors.radiusModal }]}>
           <View style={[styles.grabber, { backgroundColor: colors.border }]} />
-          <Text style={[styles.title, { color: colors.foreground }]}>Report an issue</Text>
+          <Text style={[styles.title, { color: colors.foreground }]}>{t('report.title')}</Text>
           {!chosen ? (
             <>
-              <Text style={[styles.sub, { color: colors.mutedForeground }]}>What went wrong on this trip?</Text>
+              <Text style={[styles.sub, { color: colors.mutedForeground }]}>{t('report.what')}</Text>
               {REPORT_REASONS.map((r) => (
                 <Pressable
                   key={r.key}
@@ -96,7 +98,7 @@ export function ReportSheet({ visible, onSubmit, onClose }: Props) {
                 accessibilityRole="button"
                 style={[styles.send, { backgroundColor: colors.primary, opacity: busy ? 0.5 : 1, borderRadius: colors.radiusPill }]}
               >
-                <Text style={[styles.sendText, { color: colors.primaryForeground }]}>Send report</Text>
+                <Text style={[styles.sendText, { color: colors.primaryForeground }]}>{t('report.send')}</Text>
               </Pressable>
             </>
           )}

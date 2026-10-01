@@ -30,6 +30,7 @@ export async function payForTrip(p: {
   stop: Stop;
   boardingStop: string;
   tripId: string;
+  customStopNote?: string;
   onPending: (info: { referenceId: string; simulator: boolean; tripId: string }) => void;
 }): Promise<PayOutcome> {
   let referenceId: string;
@@ -42,6 +43,7 @@ export async function payForTrip(p: {
       boardingStop: p.boardingStop,
       alightingStop: p.stop.name,
       amount: p.stop.amountToPay,
+      ...(p.customStopNote ? { customStopNote: p.customStopNote } : {}),
       payerPhone: await payerPhone(),
     });
     referenceId = started.referenceId;

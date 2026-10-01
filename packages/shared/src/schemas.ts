@@ -12,6 +12,8 @@ export const Stop = z.object({
   etaMinutes: z.number(),
   officialFare: z.number(),
   amountToPay: z.number(),
+  lat: z.number().optional(),
+  lng: z.number().optional(),
 });
 export type Stop = z.infer<typeof Stop>;
 
@@ -48,11 +50,13 @@ export const ActiveTrip = z.object({
   etaMinutes: z.number().nonnegative(),
   amountPaid: z.number(),
   startedAt: z.string(),
-  stops: z.array(z.object({ name: z.string(), status: TripStopStatus, etaMinutes: z.number().optional() })),
+  stops: z.array(z.object({ name: z.string(), status: TripStopStatus, etaMinutes: z.number().optional(), lat: z.number().optional(), lng: z.number().optional() })),
   // Optional so trips saved before these fields existed still load.
   vehicleId: z.number().optional(),
   conductorName: z.string().optional(),
   arrivedAt: z.string().optional(),
+  customStopNote: z.string().optional(),
+  lastStopMarkedAt: z.string().nullable().optional(),
 });
 export type ActiveTrip = z.infer<typeof ActiveTrip>;
 
@@ -81,6 +85,7 @@ export const TripRecord = z.object({
   driverName: z.string().optional(),
   conductorName: z.string().optional(),
   arrivedAt: z.string().optional(),
+  customStopNote: z.string().optional(),
 });
 export type TripRecord = z.infer<typeof TripRecord>;
 
@@ -171,7 +176,13 @@ export const StopMarkResponse = z.object({ ok: z.literal(true), passengersNotifi
 export type StopMarkResponse = z.infer<typeof StopMarkResponse>;
 
 /** `POST /api/trips/alight`: the passenger confirms they got off (rating is optional). */
-export const AlightBody = z.object({ tripId: z.string().min(1), deviceId: z.string().min(8).max(64).optional() });
+export const AlightBody = z.object({
+  tripId: z.string().min(1),
+  deviceId: z.string().min(8).max(64).optional(),
+  /** Optional: where the phone was when the passenger confirmed. The server compares it with the stop; it never blocks alighting. */
+  lat: z.number().min(-90).max(90).optional(),
+  lng: z.number().min(-180).max(180).optional(),
+});
 export type AlightBody = z.infer<typeof AlightBody>;
 
 export const ServerTrip = z.object({
@@ -186,6 +197,7 @@ export const ServerTrip = z.object({
   startedAt: z.string(),
   lastStopMarkedAt: z.string().nullable(),
   amountPaid: z.number(),
+  customStopNote: z.string().nullable().optional(),
   /** Set while the vehicle is past the passenger's stop: the stop reached, what extending costs, and when it is charged automatically. */
   overstay: z.object({ stop: z.string(), extraFare: z.number(), deadline: z.string() }).nullable().optional(),
 });
@@ -243,6 +255,8 @@ export const InitiatePaymentBody = z
     boardingStop: z.string().optional(),
     alightingStop: z.string().min(1),
     amount: z.number().positive(),
+    /** The passenger's stop is between anchors: `alightingStop` is the nearest anchor behind it, and this is where they actually get off. */
+    customStopNote: z.string().trim().max(120).optional(),
     /** The MoMo wallet to charge (MSISDN, e.g. 233244567889). Sandbox falls back to MTN's test number. */
     payerPhone: z.string().regex(/^\+?\d{9,15}$/).optional(),
   })

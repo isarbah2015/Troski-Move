@@ -4,6 +4,8 @@ import { Feather } from '@expo/vector-icons';
 import { useColors } from '@/hooks/useColors';
 import { formatCedis } from '@/lib/api';
 import { EMERALD, ERROR, SCRIM_STRONG } from '@/lib/colors';
+import { Approx } from '@/components/Approx';
+import { useT } from '@/lib/i18n';
 
 export type PaymentPhase = 'sending' | 'pending' | 'success' | 'failed' | 'timeout';
 
@@ -18,18 +20,20 @@ type Props = {
 };
 
 const COPY: Record<PaymentPhase, { title: string; body: string }> = {
-  sending: { title: 'Sending request…', body: 'Sending request to your phone…' },
-  pending: { title: 'Approve on your phone', body: 'Check your phone for the MoMo prompt and enter your PIN.' },
-  success: { title: 'Payment received', body: 'Your trip is starting.' },
-  failed: { title: 'Payment failed', body: 'The payment did not go through.' },
-  timeout: { title: 'Payment timed out', body: 'Payment timed out. Try again.' },
+  sending: { title: 'pay.sendingTitle', body: 'pay.sending' },
+  pending: { title: 'pay.approveTitle', body: 'pay.approveBody' },
+  success: { title: 'pay.successTitle', body: 'pay.successBody' },
+  failed: { title: 'pay.failedTitle', body: 'pay.failedBody' },
+  timeout: { title: 'pay.timeoutTitle', body: 'pay.timeoutBody' },
 };
 
 /** Blocks the screen while a MoMo payment is in flight; a failed or timed-out payment offers Try again. */
 export function PaymentSheet({ phase, amount, destination, message, simulator, onRetry, onClose }: Props) {
   const colors = useColors();
   const busy = phase === 'sending' || phase === 'pending';
-  const copy = phase ? COPY[phase] : null;
+  const t = useT();
+  const keys = phase ? COPY[phase] : null;
+  const copy = keys ? { title: t(keys.title), body: t(keys.body) } : null;
   const bad = phase === 'failed' || phase === 'timeout';
 
   return (
@@ -46,22 +50,23 @@ export function PaymentSheet({ phase, amount, destination, message, simulator, o
             </View>
             <Text style={[styles.title, { color: colors.foreground }]}>{copy.title}</Text>
             <Text style={[styles.amount, { color: colors.foreground }]}>{formatCedis(amount)}</Text>
-            <Text style={[styles.sub, { color: colors.mutedForeground }]}>to {destination}</Text>
+            <Approx amount={amount} />
+            <Text style={[styles.sub, { color: colors.mutedForeground }]}>{t('pay.to', { stop: destination })}</Text>
             <Text style={[styles.body, { color: bad ? colors.destructive : colors.mutedForeground }]}>{phase === 'failed' && message ? message : copy.body}</Text>
 
             {simulator && busy ? (
               <View style={[styles.sim, { borderColor: colors.accent, borderRadius: colors.radiusPill }]}>
-                <Text style={[styles.simText, { color: colors.accent }]}>Simulator mode · no money moves</Text>
+                <Text style={[styles.simText, { color: colors.accent }]}>{t('pay.sim')}</Text>
               </View>
             ) : null}
 
             {bad ? (
               <View style={styles.actions}>
                 <Pressable onPress={onRetry} accessibilityRole="button" style={[styles.primary, { backgroundColor: colors.primary, borderRadius: colors.radiusPill }]}>
-                  <Text style={[styles.primaryText, { color: colors.primaryForeground }]}>Try again</Text>
+                  <Text style={[styles.primaryText, { color: colors.primaryForeground }]}>{t('pay.retry')}</Text>
                 </Pressable>
                 <Pressable onPress={onClose} accessibilityRole="button" style={styles.cancel}>
-                  <Text style={[styles.cancelText, { color: colors.mutedForeground }]}>Cancel</Text>
+                  <Text style={[styles.cancelText, { color: colors.mutedForeground }]}>{t('pay.cancel')}</Text>
                 </Pressable>
               </View>
             ) : null}

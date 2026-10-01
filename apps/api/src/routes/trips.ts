@@ -1,6 +1,6 @@
 import { Router, type IRouter } from "express";
 import { and, desc, eq, sql } from "drizzle-orm";
-import { AlightBody, ExtendBody, GuestBody, StartTripBody, StopMarkBody, type HistoryTrip, type RouteStop, type ServerTrip } from "@trotrolink/shared";
+import { alightCheck, AlightBody, ExtendBody, GuestBody, StartTripBody, StopMarkBody, type HistoryTrip, type RouteStop, type ServerTrip } from "@trotrolink/shared";
 import { db } from "../db";
 import { activeTripsTable, ratingsTable, routesTable, transactionsTable, tripEventsTable, vehiclesTable } from "../db/schema";
 import { conductorFromRequest, conductorOf, ownsVehicle, requireConductor } from "../auth";
@@ -176,7 +176,7 @@ router.get("/trips/active", async (req, res): Promise<void> => {
       : eq(activeTripsTable.passengerId, passengerId!);
 
   const rows = await db
-    .select({ trip: activeTripsTable, tripRef: transactionsTable.tripRef, boardingStop: transactionsTable.boardingStop, paid: transactionsTable.amountPaid, code: vehiclesTable.shortCode, stops: routesTable.stopsJson })
+    .select({ trip: activeTripsTable, tripRef: transactionsTable.tripRef, boardingStop: transactionsTable.boardingStop, paid: transactionsTable.amountPaid, note: transactionsTable.customStopNote, code: vehiclesTable.shortCode, stops: routesTable.stopsJson })
     .from(activeTripsTable)
     .innerJoin(transactionsTable, eq(activeTripsTable.transactionId, transactionsTable.id))
     .innerJoin(vehiclesTable, eq(activeTripsTable.vehicleId, vehiclesTable.id))
@@ -184,7 +184,7 @@ router.get("/trips/active", async (req, res): Promise<void> => {
     .where(filter)
     .orderBy(desc(activeTripsTable.startedAt));
 
-  const trips: ServerTrip[] = rows.map(({ trip, tripRef, boardingStop, paid, code, stops }) => ({
+  const trips: ServerTrip[] = rows.map(({ trip, tripRef, boardingStop, paid, note, code, stops }) => ({
     tripId: tripRef ?? `TRX-${trip.transactionId}`,
     passengerId: trip.passengerId,
     vehicleCode: code,
@@ -196,6 +196,7 @@ router.get("/trips/active", async (req, res): Promise<void> => {
     startedAt: trip.startedAt.toISOString(),
     lastStopMarkedAt: trip.lastStopMarkedAt?.toISOString() ?? null,
     amountPaid: Number(paid),
+    customStopNote: note,
     overstay: trip.overstayStop && trip.overstayAt ? overstayInfo(trip, stops, boardingStop, Number(paid)) : null,
   }));
   res.json({ trips });
@@ -224,9 +225,23 @@ router.post("/trips/alight", async (req, res): Promise<void> => {
     res.status(404).json({ error: "Trip not found" });
     return;
   }
+  await recordAlightCheck(t, parsed.data.lat, parsed.data.lng);
   await endTrip(t.id, t.vehicleId, t.alightingStop);
   res.json({ ok: true });
 });
+
+/** Compares the phone's position with the declared stop and stores the result. A far result is evidence for disputes, never a block. */
+async function recordAlightCheck(t: typeof transactionsTable.$inferSelect, lat?: number, lng?: number) {
+  if (lat === undefined || lng === undefined) return;
+  const found = await db
+    .select({ stops: routesTable.stopsJson })
+    .from(vehiclesTable)
+    .innerJoin(routesTable, eq(vehiclesTable.routeId, routesTable.id))
+    .where(eq(vehiclesTable.id, t.vehicleId));
+  const stops = found[0]?.stops;
+  const check = stops ? alightCheck(stops[stopIndex(stops, t.alightingStop)], { lat, lng }) : null;
+  if (check) await db.update(transactionsTable).set({ alightDistanceM: check.distanceM, alightGps: check.status }).where(eq(transactionsTable.id, t.id));
+}
 
 /** Stamps `arrived_at` (once), removes the active row and logs `alighted`. Idempotent. */
 export async function endTrip(transactionId: number, vehicleId: number, stopName: string): Promise<void> {
@@ -280,6 +295,7 @@ router.post("/trips/getoff", async (req, res): Promise<void> => {
     res.status(404).json({ error: "Trip not found" });
     return;
   }
+  await recordAlightCheck(t, parsed.data.lat, parsed.data.lng);
   await endTrip(t.id, t.vehicleId, t.alightingStop);
   res.json({ ok: true });
 });

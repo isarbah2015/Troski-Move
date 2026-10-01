@@ -29,10 +29,13 @@ import {
 } from '@/lib/storage';
 import { showToast } from '@/lib/toast';
 import { GOLD } from '@/lib/colors';
+import { useT } from '@/lib/i18n';
+import { CEDI } from '@trotrolink/shared';
 
 const HISTORY_LIMIT = 10;
 
 export default function ProfileScreen() {
+  const t = useT();
   const colors = useColors();
   const insets = useSafeAreaInsets();
   const router = useRouter();
@@ -85,7 +88,7 @@ export default function ProfileScreen() {
 
   return (
     <ScrollView style={{ backgroundColor: colors.background }} contentContainerStyle={[styles.scroll, { paddingTop: insets.top + 16 }]} showsVerticalScrollIndicator={false}>
-      <Text style={[styles.title, { color: colors.foreground }]}>Profile</Text>
+      <Text style={[styles.title, { color: colors.foreground }]}>{t('profile.title')}</Text>
 
       {/* User card */}
       <View style={[styles.userCard, card]}>
@@ -105,9 +108,9 @@ export default function ProfileScreen() {
       {/* Stats */}
       <View style={styles.stats}>
         {[
-          { value: String(stats.trips), label: 'Trips' },
-          { value: formatCedis(stats.spent).replace('GHS ', ''), label: 'GHS spent' },
-          { value: stats.tier, label: 'Tier' },
+          { value: String(stats.trips), label: t('profile.trips') },
+          { value: formatCedis(stats.spent).replace(CEDI, ''), label: t('profile.spent') },
+          { value: stats.tier, label: t('profile.tier') },
         ].map((s) => (
           <View key={s.label} style={[styles.stat, card]}>
             <Text style={[styles.statValue, { color: colors.foreground }]} numberOfLines={1} adjustsFontSizeToFit>{s.value}</Text>
@@ -117,15 +120,15 @@ export default function ProfileScreen() {
       </View>
 
       {/* Role */}
-      <SectionHeader>Role</SectionHeader>
+      <SectionHeader>{t('profile.role')}</SectionHeader>
       <RoleSwitcher role={role} onChange={(r) => void switchRole(r)} />
 
       {/* History */}
-      <SectionHeader>Trip history</SectionHeader>
+      <SectionHeader>{t('profile.history')}</SectionHeader>
       {trips.length === 0 ? (
         <View style={[styles.emptyHistory, card]}>
           <Feather name="clock" size={22} color={colors.mutedForeground} />
-          <Text style={[styles.emptyText, { color: colors.mutedForeground }]}>No trips yet. Scan a QR to get started.</Text>
+          <Text style={[styles.emptyText, { color: colors.mutedForeground }]}>{t('profile.noTrips')}</Text>
         </View>
       ) : (
         trips.slice(0, HISTORY_LIMIT).map((t) => (
@@ -181,7 +184,7 @@ export default function ProfileScreen() {
       )}
 
       {/* Payment */}
-      <SectionHeader>Payment method</SectionHeader>
+      <SectionHeader>{t('profile.payment')}</SectionHeader>
       <View style={[styles.payCard, card]}>
         <View style={[styles.payIcon, { backgroundColor: colors.secondary }]}>
           <Feather name="smartphone" size={20} color={GOLD} />
@@ -193,7 +196,7 @@ export default function ProfileScreen() {
       </View>
 
       {/* Settings */}
-      <SectionHeader>Settings</SectionHeader>
+      <SectionHeader>{t('profile.settings')}</SectionHeader>
       <SettingsGroup
         onDeleteAccount={() =>
           confirmDeleteAccount('passenger', async () => {
@@ -206,7 +209,7 @@ export default function ProfileScreen() {
 
       <Pressable onPress={signOut} accessibilityRole="button" style={[styles.signOut, { borderColor: colors.destructive, borderRadius: colors.radiusPill }]}>
         <Feather name="log-out" size={18} color={colors.destructive} />
-        <Text style={[styles.signOutText, { color: colors.destructive }]}>Sign out</Text>
+        <Text style={[styles.signOutText, { color: colors.destructive }]}>{t('profile.signOut')}</Text>
       </Pressable>
 
       {__DEV__ ? (

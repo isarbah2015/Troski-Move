@@ -36,7 +36,8 @@ export type User = typeof usersTable.$inferSelect;
 
 /** One stage on a route. `fare` is the official GHS fare from the origin to this stop;
  *  `etaMinutes` is the travel time from the previous stop. */
-export type RouteStop = { name: string; fare: number; etaMinutes: number };
+export type { RouteStop } from "@trotrolink/shared";
+import type { RouteStop } from "@trotrolink/shared";
 
 export const routesTable = pgTable("routes", {
   id: serial("id").primaryKey(),
@@ -75,6 +76,11 @@ export const transactionsTable = pgTable(
     tripRef: text("trip_ref").unique(),
     boardingStop: text("boarding_stop"),
     arrivedAt: timestamp("arrived_at", { withTimezone: true }),
+    /** Where the passenger really got off, when it is between anchors. Feeds anchor suggestions for the union. */
+    customStopNote: text("custom_stop_note"),
+    /** GPS check at alighting: metres from the declared stop, and near/far. Null when the phone gave no position. */
+    alightDistanceM: integer("alight_distance_m"),
+    alightGps: text("alight_gps").$type<"near" | "far">(),
   },
   (t) => [index("transactions_vehicle_ts_idx").on(t.vehicleId, t.timestamp)],
 );
@@ -217,6 +223,7 @@ export const paymentsTable = pgTable(
     payerPhone: text("payer_phone"),
     /** Set when this payment extends an existing trip (the overstay difference) instead of starting one. */
     extendsTripRef: text("extends_trip_ref"),
+    customStopNote: text("custom_stop_note"),
     status: text("status").$type<(typeof paymentStatuses)[number]>().notNull().default("PENDING"),
     failureReason: text("failure_reason"),
     tripId: integer("trip_id").references(() => transactionsTable.id),

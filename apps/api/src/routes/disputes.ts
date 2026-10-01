@@ -38,7 +38,7 @@ router.post("/disputes", async (req, res): Promise<void> => {
   const [conductor] = await db.select({ id: usersTable.id, name: usersTable.name }).from(usersTable).where(eq(usersTable.conductorVehicleCode, v!.vehicle.shortCode));
 
   const evidence = {
-    trip: { tripId: t.tripRef, boardingStop: t.boardingStop, alightingStop: t.alightingStop, officialFare: Number(t.officialFare), amountPaid: Number(t.amountPaid), startedAt: t.timestamp, arrivedAt: t.arrivedAt },
+    trip: { tripId: t.tripRef, boardingStop: t.boardingStop, alightingStop: t.alightingStop, officialFare: Number(t.officialFare), amountPaid: Number(t.amountPaid), startedAt: t.timestamp, arrivedAt: t.arrivedAt, customStopNote: t.customStopNote, alightGps: t.alightGps ? { status: t.alightGps, distanceM: t.alightDistanceM } : null },
     vehicle: { shortCode: v!.vehicle.shortCode, driverName: v!.vehicle.driverName, conductorName: v!.vehicle.conductorName, route: v!.routeName },
     conductorOnDuty: conductor ?? null,
     // The vehicle's events around this trip: every stop the conductor marked, and the passenger's milestones.

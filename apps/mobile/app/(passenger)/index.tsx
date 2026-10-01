@@ -12,22 +12,24 @@ import { DemoBadge } from '@/components/DemoBadge';
 import { PaymentSheet, type PaymentPhase } from '@/components/PaymentSheet';
 import { StopSheet } from '@/components/StopSheet';
 import { useColors } from '@/hooks/useColors';
-import { VehicleNotFoundError } from '@/lib/api';
+import { DEMO_MODE, VehicleNotFoundError } from '@/lib/api';
 import { api } from '@/lib/api';
 import { payForTrip } from '@/lib/payment';
 import { appendTripRecord, saveActiveTrip } from '@/lib/storage';
 import { showToast } from '@/lib/toast';
 import { buildTrip, buildTripRecord, newTripId } from '@/lib/trip';
 import { CAMERA_DIM, SILVER, WHITE } from '@/lib/colors';
+import { useT } from '@/lib/i18n';
 
-type PaymentState = { phase: PaymentPhase; resolved: ResolvedVehicle; stop: Stop; simulator: boolean; message?: string; referenceId?: string; tripId?: string };
+type PaymentState = { phase: PaymentPhase; resolved: ResolvedVehicle; stop: Stop; simulator: boolean; message?: string; referenceId?: string; tripId?: string; customNote?: string };
 
 const FRAME = 260;
 // Demo codes for web / simulators that have no camera.
 const DEMO_CODES = ['CIR01', 'CIR02', 'MAD05', 'TEM03'];
-const SHOW_DEMO = Platform.OS === 'web' || __DEV__;
+const SHOW_DEMO = Platform.OS === 'web' || __DEV__ || DEMO_MODE;
 
 export default function ScanScreen() {
+  const t = useT();
   const colors = useColors('dark'); // the camera screen is dark in both themes
   const insets = useSafeAreaInsets();
   const router = useRouter();
@@ -73,8 +75,8 @@ export default function ScanScreen() {
    * MoMo flow: ask the API to charge the passenger, wait for their approval, and only then start the
    * trip. Each attempt uses a fresh trip reference, so a declined or abandoned attempt never blocks a retry.
    */
-  const finishPaid = async (res: ResolvedVehicle, stop: Stop, tripId: string) => {
-    const trip = buildTrip(res, stop, tripId);
+  const finishPaid = async (res: ResolvedVehicle, stop: Stop, tripId: string, customNote?: string) => {
+    const trip = buildTrip(res, stop, tripId, customNote);
     await saveActiveTrip(trip);
     await appendTripRecord(buildTripRecord(res, stop, trip));
     Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
@@ -86,7 +88,7 @@ export default function ScanScreen() {
     router.navigate('/trip');
   };
 
-  const pay = async (res: ResolvedVehicle, stop: Stop, previous?: { referenceId: string; tripId: string }) => {
+  const pay = async (res: ResolvedVehicle, stop: Stop, customNote?: string, previous?: { referenceId: string; tripId: string }) => {
     if (paying.current) return;
     paying.current = true;
     try {
@@ -96,13 +98,13 @@ export default function ScanScreen() {
         setResolved(null);
         await new Promise((r) => setTimeout(r, 450));
       }
-      setPayment({ phase: 'sending', resolved: res, stop, simulator: false });
+      setPayment({ phase: 'sending', resolved: res, stop, simulator: false, customNote });
 
       // A timed-out request may still have been approved: check it before charging again, so a retry never double-charges.
       if (previous) {
         try {
           if ((await api.paymentStatus(previous.referenceId)).status === 'SUCCESSFUL') {
-            await finishPaid(res, stop, previous.tripId);
+            await finishPaid(res, stop, previous.tripId, customNote);
             return;
           }
         } catch {
@@ -116,10 +118,11 @@ export default function ScanScreen() {
         stop,
         boardingStop: res.route.stops[0]!.name,
         tripId,
+        customStopNote: customNote,
         onPending: ({ referenceId, simulator, tripId: serverTripId }) => setPayment((p) => (p ? { ...p, phase: 'pending', simulator, referenceId, tripId: serverTripId } : p)),
       });
       if (outcome.kind === 'success') {
-        await finishPaid(res, stop, outcome.tripId);
+        await finishPaid(res, stop, outcome.tripId, customNote);
       } else {
         Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
         setPayment((p) => (p ? { ...p, phase: outcome.kind, message: outcome.kind === 'failed' ? outcome.reason : undefined } : p));
@@ -154,8 +157,8 @@ export default function ScanScreen() {
 
       <View style={[styles.top, { paddingTop: insets.top + 16 }]}>
         <DemoBadge force="dark" />
-        <Text style={[styles.title, { color: WHITE }]}>Scan to ride</Text>
-        <Text style={[styles.subtitle, { color: SILVER }]}>Point at the QR sticker inside the trotro</Text>
+        <Text style={[styles.title, { color: WHITE }]}>{t('scan.title')}</Text>
+        <Text style={[styles.subtitle, { color: SILVER }]}>{t('scan.subtitle')}</Text>
       </View>
 
       <View style={styles.center} pointerEvents="none">
@@ -172,14 +175,14 @@ export default function ScanScreen() {
           <View style={[styles.permission, { backgroundColor: colors.card, borderColor: colors.border, borderRadius: colors.radius }]}>
             <Feather name="camera-off" size={20} color={colors.mutedForeground} />
             <Text style={[styles.permissionText, { color: colors.mutedForeground }]}>
-              {permission.canAskAgain ? 'Allow camera access to scan the QR code.' : 'Camera is off. Enable it in Settings, or enter the short code.'}
+              {permission.canAskAgain ? t('scan.allowCamera') : 'Camera is off. Enable it in Settings, or enter the short code.'}
             </Text>
             <Pressable
               onPress={() => (permission.canAskAgain ? requestPermission() : Linking.openSettings())}
               accessibilityRole="button"
               hitSlop={8}
             >
-              <Text style={[styles.permissionLink, { color: colors.primary }]}>{permission.canAskAgain ? 'Allow' : 'Settings'}</Text>
+              <Text style={[styles.permissionLink, { color: colors.primary }]}>{permission.canAskAgain ? t('scan.allow') : 'Settings'}</Text>
             </Pressable>
           </View>
         ) : null}
@@ -208,12 +211,12 @@ export default function ScanScreen() {
           style={[styles.cta, { backgroundColor: colors.primary, borderRadius: colors.radiusPill }]}
         >
           <Feather name="hash" size={18} color={colors.primaryForeground} />
-          <Text style={[styles.ctaText, { color: colors.primaryForeground }]}>Enter short code</Text>
+          <Text style={[styles.ctaText, { color: colors.primaryForeground }]}>{t('scan.enterCode')}</Text>
         </Pressable>
       </View>
 
       <CodeEntrySheet initialCode={initialCode} visible={codeOpen} loading={loading} error={error} onSubmit={resolve} onClose={() => setCodeOpen(false)} />
-      <StopSheet resolved={resolved} onClose={() => setResolved(null)} onPay={(stop) => resolved && void pay(resolved, stop)} />
+      <StopSheet resolved={resolved} onClose={() => setResolved(null)} onPay={(stop, note) => resolved && void pay(resolved, stop, note)} />
       <PaymentSheet
         phase={payment?.phase ?? null}
         amount={payment?.stop.amountToPay ?? 0}
@@ -222,7 +225,7 @@ export default function ScanScreen() {
         simulator={payment?.simulator ?? false}
         onRetry={() =>
           payment &&
-          void pay(payment.resolved, payment.stop, payment.phase === 'timeout' && payment.referenceId && payment.tripId ? { referenceId: payment.referenceId, tripId: payment.tripId } : undefined)
+          void pay(payment.resolved, payment.stop, payment.customNote, payment.phase === 'timeout' && payment.referenceId && payment.tripId ? { referenceId: payment.referenceId, tripId: payment.tripId } : undefined)
         }
         onClose={() => setPayment(null)}
       />

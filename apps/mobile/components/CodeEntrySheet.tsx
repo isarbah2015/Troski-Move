@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { ActivityIndicator, KeyboardAvoidingView, Modal, Platform, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 import { useColors } from '@/hooks/useColors';
 import { SCRIM } from '@/lib/colors';
+import { useT } from '@/lib/i18n';
 
 type Props = {
   initialCode?: string;
@@ -14,6 +15,7 @@ type Props = {
 
 export function CodeEntrySheet({ initialCode = '', visible, loading, error, onSubmit, onClose }: Props) {
   const colors = useColors();
+  const t = useT();
   const [code, setCode] = useState(initialCode);
   useEffect(() => {
     if (visible) setCode(initialCode);
@@ -26,8 +28,8 @@ export function CodeEntrySheet({ initialCode = '', visible, loading, error, onSu
         <Pressable style={styles.scrim} onPress={onClose} accessibilityLabel="Close" />
         <View style={[styles.sheet, { backgroundColor: colors.card, borderColor: colors.border, borderTopLeftRadius: colors.radiusModal, borderTopRightRadius: colors.radiusModal }]}>
           <View style={[styles.grabber, { backgroundColor: colors.border }]} />
-          <Text style={[styles.title, { color: colors.foreground }]}>Enter short code</Text>
-          <Text style={[styles.hint, { color: colors.mutedForeground }]}>Find it printed under the QR sticker, e.g. CIR01.</Text>
+          <Text style={[styles.title, { color: colors.foreground }]}>{t('code.title')}</Text>
+          <Text style={[styles.hint, { color: colors.mutedForeground }]}>{t('code.hint')}</Text>
           <TextInput
             value={code}
             onChangeText={(t) => setCode(t.toUpperCase())}
@@ -50,7 +52,7 @@ export function CodeEntrySheet({ initialCode = '', visible, loading, error, onSu
             accessibilityState={{ disabled: !ready }}
             style={[styles.cta, { backgroundColor: colors.primary, opacity: ready ? 1 : 0.4, borderRadius: colors.radiusPill }]}
           >
-            {loading ? <ActivityIndicator color={colors.primaryForeground} /> : <Text style={[styles.ctaText, { color: colors.primaryForeground }]}>Find my trotro</Text>}
+            {loading ? <ActivityIndicator color={colors.primaryForeground} /> : <Text style={[styles.ctaText, { color: colors.primaryForeground }]}>{t('code.find')}</Text>}
           </Pressable>
         </View>
       </KeyboardAvoidingView>

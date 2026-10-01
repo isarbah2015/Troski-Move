@@ -55,6 +55,7 @@ async function settleSuccess(referenceId: string, raw: unknown): Promise<Payment
       officialFare: check.officialFare,
       amountPaid: Number(p.amount),
       tripRef: p.tripRef,
+      customStopNote: p.customStopNote,
     });
     const [updated] = await tx
       .update(paymentsTable)
@@ -173,6 +174,7 @@ router.post("/payments/initiate", async (req, res): Promise<void> => {
       alightingStop: stops[check.to]!.name,
       amount: b.amount.toFixed(2),
       currency: momoCurrency(),
+      customStopNote: b.customStopNote || null,
       payerPhone: b.payerPhone ?? null,
     });
     await requestToPay({

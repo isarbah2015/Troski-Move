@@ -21,7 +21,8 @@ async function main() {
         stopsJson: r.stops,
         distanceKm: r.distanceKm,
       })
-      .onConflictDoNothing({ target: routesTable.routeId });
+      // Existing databases get the latest stops (fares, times, coordinates); vehicles and QR ids are never touched.
+      .onConflictDoUpdate({ target: routesTable.routeId, set: { stopsJson: r.stops, routeName: r.routeName, distanceKm: r.distanceKm } });
 
     const [route] = await db.select().from(routesTable).where(eq(routesTable.routeId, r.routeId));
     if (!route) throw new Error(`Seed route ${r.routeId} missing`);

@@ -17,6 +17,4 @@ export const api = createApiClient(process.env.EXPO_PUBLIC_API_URL ?? 'http://de
   onUnauthorized: () => void clearSession(),
 });
 
-export function formatCedis(amount: number): string {
-  return `GHS ${amount.toFixed(2)}`;
-}
+export { formatCedis } from '@trotrolink/shared';

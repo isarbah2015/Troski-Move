@@ -5,10 +5,13 @@ import * as Haptics from 'expo-haptics';
 import { useRouter } from 'expo-router';
 import type { AppLanguage, ThemePreference } from '@trotrolink/shared';
 import { APPEARANCE_LABEL, AppearanceSheet } from '@/components/AppearanceSheet';
+import { CurrencySheet } from '@/components/CurrencySheet';
+import { setDisplayCurrency, useDisplayCurrency } from '@/lib/currencyPref';
 import { LanguageSheet } from '@/components/LanguageSheet';
 import { useColors } from '@/hooks/useColors';
 import { getLanguage, getNotifications, setLanguage, setNotifications } from '@/lib/storage';
 import { getThemePreference, setThemePreference } from '@/lib/theme';
+import { setAppLanguage, useT } from '@/lib/i18n';
 
 type IconName = React.ComponentProps<typeof Feather>['name'];
 
@@ -27,12 +30,15 @@ function Row({ icon, label, value, onPress, divider }: { icon: IconName; label: 
 /** Language, Notifications, Privacy and Help: shared by the passenger and conductor Profile tabs. */
 export function SettingsGroup({ onDeleteAccount }: { onDeleteAccount?: () => void }) {
   const colors = useColors();
+  const t = useT();
   const router = useRouter();
   const [language, setLanguageState] = useState<AppLanguage>('English');
   const [notifications, setNotificationsState] = useState(true);
   const [languageOpen, setLanguageOpen] = useState(false);
   const [theme, setTheme] = useState<ThemePreference>('system');
   const [themeOpen, setThemeOpen] = useState(false);
+  const currency = useDisplayCurrency();
+  const [currencyOpen, setCurrencyOpen] = useState(false);
 
   useEffect(() => {
     void Promise.all([getLanguage(), getNotifications(), getThemePreference()]).then(([l, n, t]) => {
@@ -44,11 +50,11 @@ export function SettingsGroup({ onDeleteAccount }: { onDeleteAccount?: () => voi
 
   return (
     <View style={[styles.group, { backgroundColor: colors.card, borderColor: colors.border, borderRadius: colors.radius }]}>
-      <Row icon="globe" label="Language" value={language} onPress={() => setLanguageOpen(true)} />
-      <Row icon={theme === 'light' ? 'sun' : 'moon'} label="Appearance" value={APPEARANCE_LABEL[theme]} onPress={() => setThemeOpen(true)} divider />
+      <Row icon="globe" label={t('set.language')} value={language} onPress={() => setLanguageOpen(true)} />
+      <Row icon={theme === 'light' ? 'sun' : 'moon'} label={t('set.appearance')} value={APPEARANCE_LABEL[theme]} onPress={() => setThemeOpen(true)} divider />
       <View style={[styles.row, styles.divider, { borderTopColor: colors.border }]}>
         <Feather name="bell" size={20} color={colors.mutedForeground} />
-        <Text style={[styles.label, { color: colors.foreground }]}>Notifications</Text>
+        <Text style={[styles.label, { color: colors.foreground }]}>{t('set.notifications')}</Text>
         <View style={styles.switchWrap}>
           <Switch
             value={notifications}
@@ -63,15 +69,26 @@ export function SettingsGroup({ onDeleteAccount }: { onDeleteAccount?: () => voi
           />
         </View>
       </View>
-      <Row icon="lock" label="Privacy" onPress={() => router.push('/privacy')} divider />
-      <Row icon="help-circle" label="Help" onPress={() => Linking.openURL('mailto:help@trotrolink.app')} divider />
+      <Row icon="dollar-sign" label="Currency" value={currency === 'GHS' ? '₵ Cedi' : currency} onPress={() => setCurrencyOpen(true)} divider />
+      <Row icon="lock" label={t('set.privacy')} onPress={() => router.push('/privacy')} divider />
+      <Row icon="compass" label="Visiting Ghana?" onPress={() => router.push('/visitor')} divider />
+      <Row icon="help-circle" label={t('set.help')} onPress={() => Linking.openURL('mailto:help@trotrolink.app')} divider />
       {onDeleteAccount ? (
         <Pressable onPress={onDeleteAccount} accessibilityRole="button" accessibilityLabel="Delete account" style={[styles.row, styles.divider, { borderTopColor: colors.border }]}>
           <Feather name="trash-2" size={20} color={colors.destructive} />
-          <Text style={[styles.label, { color: colors.destructive }]}>Delete account</Text>
+          <Text style={[styles.label, { color: colors.destructive }]}>{t('set.delete')}</Text>
         </Pressable>
       ) : null}
 
+      <CurrencySheet
+        visible={currencyOpen}
+        selected={currency}
+        onSelect={async (c) => {
+          await setDisplayCurrency(c);
+          setCurrencyOpen(false);
+        }}
+        onClose={() => setCurrencyOpen(false)}
+      />
       <AppearanceSheet
         visible={themeOpen}
         selected={theme}
@@ -87,6 +104,7 @@ export function SettingsGroup({ onDeleteAccount }: { onDeleteAccount?: () => voi
         selected={language}
         onSelect={async (l) => {
           setLanguageState(l);
+          setAppLanguage(l);
           await setLanguage(l);
           setLanguageOpen(false);
         }}

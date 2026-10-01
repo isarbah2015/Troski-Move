@@ -6,6 +6,10 @@ import * as Haptics from 'expo-haptics';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import type { ActiveTrip, TripRecord } from '@trotrolink/shared';
 import { RatingSheet, type RatingTarget } from '@/components/RatingSheet';
+import { alightCheck } from '@trotrolink/shared';
+import { getPosition } from '@/lib/location';
+import { useLiveEta } from '@/lib/liveEta';
+import { Approx } from '@/components/Approx';
 import { OverstaySheet } from '@/components/OverstaySheet';
 import { PaymentSheet, type PaymentPhase } from '@/components/PaymentSheet';
 import { ReportSheet } from '@/components/ReportSheet';
@@ -21,9 +25,11 @@ import { useFocusPolling } from '@/lib/polling';
 import { sendOrQueue } from '@/lib/sync';
 import { applyServerTrip, tripProgress } from '@/lib/trip';
 import { EMERALD, GOLD, WHITE } from '@/lib/colors';
+import { useT } from '@/lib/i18n';
 
 function LiveBadge() {
   const colors = useColors();
+  const t = useT();
   const pulse = useRef(new Animated.Value(1)).current;
 
   useEffect(() => {
@@ -44,7 +50,7 @@ function LiveBadge() {
   return (
     <View style={[styles.live, { borderColor: colors.primary, borderRadius: colors.radiusPill }]} accessibilityLabel="Live">
       <Animated.View style={[styles.liveDot, { backgroundColor: colors.primary, opacity: pulse }]} />
-      <Text style={[styles.liveText, { color: colors.primary }]}>LIVE</Text>
+      <Text style={[styles.liveText, { color: colors.primary }]}>{t('trip.live')}</Text>
     </View>
   );
 }
@@ -64,7 +70,9 @@ function ActiveTripView({ trip, onCleared, onConfirmAlighting }: { trip: ActiveT
   const colors = useColors();
   const insets = useSafeAreaInsets();
   const [reportOpen, setReportOpen] = useState(false);
+  const t = useT();
   const progress = tripProgress(trip);
+  const eta = useLiveEta(trip);
   // The passenger can only confirm alighting once the vehicle has reached their stop.
   const atDestination = trip.currentStop === trip.alightingStop;
 
@@ -77,7 +85,7 @@ function ActiveTripView({ trip, onCleared, onConfirmAlighting }: { trip: ActiveT
       showsVerticalScrollIndicator={false}
     >
       <View style={styles.headRow}>
-        <Text style={[styles.kicker, { color: colors.mutedForeground }]}>TRIP IN PROGRESS</Text>
+        <Text style={[styles.kicker, { color: colors.mutedForeground }]}>{t('trip.progress')}</Text>
         <LiveBadge />
       </View>
 
@@ -87,15 +95,21 @@ function ActiveTripView({ trip, onCleared, onConfirmAlighting }: { trip: ActiveT
         <Text style={[styles.paidText, { color: WHITE }]}>PAID · {trip.tripId}</Text>
       </View>
 
-      <Text style={[styles.to, { color: colors.foreground }]}>To {trip.alightingStop}</Text>
+      <Text style={[styles.to, { color: colors.foreground }]}>{t('trip.to', { stop: trip.alightingStop })}</Text>
+      {trip.customStopNote ? (
+        <View style={[styles.noteChip, { borderColor: colors.accent, borderRadius: colors.radiusPill }]}>
+          <Feather name="map-pin" size={12} color={colors.accent} />
+          <Text style={[styles.noteText, { color: colors.accent }]} numberOfLines={1}>{t('trip.gettingOff', { note: trip.customStopNote })}</Text>
+        </View>
+      ) : null}
       <Text style={[styles.route, { color: colors.mutedForeground }]}>
         {trip.vehicleShortCode} · {trip.routeName} · Driver {trip.driverName}
       </Text>
 
       <View style={styles.stats}>
-        <Stat icon="map-pin" label="Current stop" value={trip.currentStop} />
-        <Stat icon="flag" label="Stops away" value={String(trip.stopsRemaining)} />
-        <Stat icon="clock" label="ETA" value={`~${trip.etaMinutes} min`} />
+        <Stat icon="map-pin" label={t('trip.currentStop')} value={trip.currentStop} />
+        <Stat icon="flag" label={t('trip.stopsAway')} value={String(trip.stopsRemaining)} />
+        <Stat icon="clock" label={t('trip.eta')} value={`~${eta} min`} />
       </View>
 
       <View
@@ -105,7 +119,7 @@ function ActiveTripView({ trip, onCleared, onConfirmAlighting }: { trip: ActiveT
       >
         <View style={[styles.fill, { width: `${Math.round(progress * 100)}%`, backgroundColor: colors.primary, borderRadius: colors.radiusPill }]} />
       </View>
-      <Text style={[styles.pct, { color: colors.mutedForeground }]}>{Math.round(progress * 100)}% of your ride</Text>
+      <Text style={[styles.pct, { color: colors.mutedForeground }]}>{t('trip.rideDone', { pct: Math.round(progress * 100) })}</Text>
 
       <View style={[styles.card, { backgroundColor: colors.card, borderColor: colors.border, borderRadius: colors.radius }]}>
         {trip.stops.map((s, i) => {
@@ -124,7 +138,7 @@ function ActiveTripView({ trip, onCleared, onConfirmAlighting }: { trip: ActiveT
               </Text>
               {isDest ? (
                 <View style={[styles.destPill, { backgroundColor: colors.secondary, borderRadius: colors.radiusPill }]}>
-                  <Text style={[styles.destText, { color: GOLD }]}>Your stop</Text>
+                  <Text style={[styles.destText, { color: GOLD }]}>{t('trip.yourStop')}</Text>
                 </View>
               ) : null}
             </View>
@@ -135,7 +149,8 @@ function ActiveTripView({ trip, onCleared, onConfirmAlighting }: { trip: ActiveT
       <View style={styles.receipt}>
         <View style={styles.receiptItem}>
           <Feather name="credit-card" size={16} color={colors.mutedForeground} />
-          <Text style={[styles.receiptText, { color: colors.foreground }]}>Paid {formatCedis(trip.amountPaid)}</Text>
+          <Text style={[styles.receiptText, { color: colors.foreground }]}>{t('trip.paid', { amount: formatCedis(trip.amountPaid) })}</Text>
+          <Approx amount={trip.amountPaid} style={{ fontSize: 12 }} />
         </View>
         <View style={styles.receiptItem}>
           <Feather name="hash" size={16} color={colors.mutedForeground} />
@@ -151,7 +166,7 @@ function ActiveTripView({ trip, onCleared, onConfirmAlighting }: { trip: ActiveT
           style={[styles.confirmBtn, { backgroundColor: colors.primary, borderRadius: colors.radiusPill }]}
         >
           <Feather name="check-circle" size={20} color={colors.primaryForeground} />
-          <Text style={[styles.primaryText, { color: colors.primaryForeground }]}>Confirm alighting</Text>
+          <Text style={[styles.primaryText, { color: colors.primaryForeground }]}>{t('trip.confirm')}</Text>
         </Pressable>
       ) : null}
 
@@ -164,7 +179,7 @@ function ActiveTripView({ trip, onCleared, onConfirmAlighting }: { trip: ActiveT
         style={[styles.secondaryBtn, { borderColor: colors.border, borderRadius: colors.radiusPill }]}
       >
         <Feather name="alert-triangle" size={18} color={colors.foreground} />
-        <Text style={[styles.secondaryText, { color: colors.foreground }]}>Report issue</Text>
+        <Text style={[styles.secondaryText, { color: colors.foreground }]}>{t('trip.report')}</Text>
       </Pressable>
 
       {__DEV__ ? (
@@ -199,6 +214,7 @@ function ActiveTripView({ trip, onCleared, onConfirmAlighting }: { trip: ActiveT
 
 function EmptyState({ recent, onRate }: { recent: TripRecord | null; onRate: (t: TripRecord) => void }) {
   const colors = useColors();
+  const t = useT();
   const router = useRouter();
   const insets = useSafeAreaInsets();
 
@@ -207,8 +223,8 @@ function EmptyState({ recent, onRate }: { recent: TripRecord | null; onRate: (t:
       <View style={[styles.emptyBadge, { backgroundColor: colors.card, borderColor: colors.border, borderRadius: colors.radiusModal }]}>
         <Feather name="navigation" size={30} color={colors.primary} />
       </View>
-      <Text style={[styles.emptyTitle, { color: colors.foreground }]}>No active trip</Text>
-      <Text style={[styles.emptyBody, { color: colors.mutedForeground }]}>Scan a conductor&apos;s QR to start your journey</Text>
+      <Text style={[styles.emptyTitle, { color: colors.foreground }]}>{t('trip.empty.title')}</Text>
+      <Text style={[styles.emptyBody, { color: colors.mutedForeground }]}>{t('trip.empty.body')}</Text>
       <Pressable
         onPress={() => {
           Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
@@ -218,14 +234,14 @@ function EmptyState({ recent, onRate }: { recent: TripRecord | null; onRate: (t:
         style={[styles.primaryBtn, { backgroundColor: colors.primary, borderRadius: colors.radiusPill }]}
       >
         <Feather name="maximize" size={18} color={colors.primaryForeground} />
-        <Text style={[styles.primaryText, { color: colors.primaryForeground }]}>Go to scan</Text>
+        <Text style={[styles.primaryText, { color: colors.primaryForeground }]}>{t('trip.empty.go')}</Text>
       </Pressable>
 
       {recent ? (
         <View style={[styles.prompt, { backgroundColor: colors.card, borderColor: colors.border, borderRadius: colors.radius }]}>
           <Feather name="star" size={20} color={colors.accent} />
           <View style={styles.promptText}>
-            <Text style={[styles.promptTitle, { color: colors.foreground }]}>How was your trip to {recent.alightingStop}?</Text>
+            <Text style={[styles.promptTitle, { color: colors.foreground }]}>{t('trip.rate.title', { stop: recent.alightingStop })}</Text>
             <Text style={[styles.promptBody, { color: colors.mutedForeground }]}>Your rating helps the Driver of the Day.</Text>
           </View>
           <Pressable
@@ -237,7 +253,7 @@ function EmptyState({ recent, onRate }: { recent: TripRecord | null; onRate: (t:
             accessibilityLabel={`Rate your trip to ${recent.alightingStop}`}
             style={[styles.promptBtn, { borderColor: colors.accent, borderRadius: colors.radiusPill }]}
           >
-            <Text style={[styles.promptBtnText, { color: colors.accent }]}>Rate trip</Text>
+            <Text style={[styles.promptBtnText, { color: colors.accent }]}>{t('trip.rate.cta')}</Text>
           </Pressable>
         </View>
       ) : null}
@@ -317,9 +333,14 @@ export default function TripScreen() {
     if (!t) return;
     const arrivedAt = new Date().toISOString();
     Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+    // Optional GPS check: where the phone is vs the declared stop. A data point for disputes, never a gate.
+    const pos = await getPosition({ timeoutMs: 4000 });
+    const dest = t.stops.find((s) => s.name === t.alightingStop);
+    const check = alightCheck(dest && { name: dest.name, fare: 0, etaMinutes: 0, lat: dest.lat, lng: dest.lng }, pos);
+    if (check?.status === 'far') showToast(`We noted you are about ${check.distanceM} m from ${t.alightingStop}.`);
     // The trip already sits in history from payment; stamp it as arrived and open the rating sheet.
     await Promise.all([saveActiveTrip({ ...t, arrivedAt }), markTripArrived(t.tripId, arrivedAt)]);
-    if (notifyServer) void sendOrQueue({ type: 'alight', body: { tripId: t.tripId } });
+    if (notifyServer) void sendOrQueue({ type: 'alight', body: { tripId: t.tripId, ...(pos ? { lat: pos.lat, lng: pos.lng } : {}) } });
     setOverstay(null);
     setTrip({ ...t, arrivedAt });
     setTarget({ tripId: t.tripId, vehicleId: t.vehicleId, destination: t.alightingStop, driverName: t.driverName, conductorName: t.conductorName ?? 'Conductor', justArrived: true });
@@ -414,6 +435,8 @@ const styles = StyleSheet.create({
   live: { flexDirection: 'row', alignItems: 'center', gap: 6, borderWidth: 1, paddingHorizontal: 10, paddingVertical: 4 },
   liveDot: { width: 8, height: 8, borderRadius: 4 },
   liveText: { fontFamily: 'Inter_700Bold', fontSize: 11, letterSpacing: 1 },
+  noteChip: { alignSelf: 'flex-start', flexDirection: 'row', alignItems: 'center', gap: 6, borderWidth: 1, paddingHorizontal: 10, paddingVertical: 4, marginTop: 6 },
+  noteText: { fontFamily: 'Inter_600SemiBold', fontSize: 12, maxWidth: 260 },
   paid: { alignSelf: 'flex-start', flexDirection: 'row', alignItems: 'center', gap: 8, borderWidth: 1, paddingHorizontal: 12, paddingVertical: 6, marginBottom: 10 },
   paidText: { fontFamily: 'Inter_700Bold', fontSize: 12, letterSpacing: 0.5 },
   to: { fontFamily: 'Inter_700Bold', fontSize: 32 },

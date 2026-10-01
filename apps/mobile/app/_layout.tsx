@@ -6,6 +6,8 @@ import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { ErrorBoundary } from '@/components/ErrorBoundary';
 import { useColors } from '@/hooks/useColors';
 import { restoreTheme } from '@/lib/theme';
+import { restoreLanguage } from '@/lib/i18n';
+import { restoreCurrency } from '@/lib/currencyPref';
 import { SyncBanner } from '@/components/SyncBanner';
 import { ToastHost } from '@/components/ToastHost';
 import { useSyncLoop } from '@/lib/sync';
@@ -46,6 +48,7 @@ function RootLayoutNav() {
       <Stack.Screen name="(passenger)" options={{ headerShown: false }} />
       <Stack.Screen name="(conductor)" options={{ headerShown: false }} />
       <Stack.Screen name="privacy" options={{ title: 'Privacy' }} />
+      <Stack.Screen name="visitor" options={{ title: 'Visiting Ghana?' }} />
     </Stack>
   );
 }
@@ -60,6 +63,8 @@ export default function RootLayout() {
 
   useEffect(() => {
     void restoreTheme();
+    void restoreLanguage();
+    void restoreCurrency();
   }, []);
 
   useEffect(() => {

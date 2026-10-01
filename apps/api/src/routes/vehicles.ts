@@ -48,6 +48,7 @@ router.get("/vehicles/resolve", async (req, res): Promise<void> => {
         etaMinutes: s.etaMinutes,
         officialFare: s.fare,
         amountToPay: roundUpFare(s.fare),
+        ...(s.lat !== undefined && s.lng !== undefined ? { lat: s.lat, lng: s.lng } : {}),
       })),
     },
   });

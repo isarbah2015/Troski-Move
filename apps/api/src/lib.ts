@@ -66,7 +66,7 @@ export function checkTrip(
 /** Writes the transaction, the active trip and the `boarded` event. Call inside a db transaction. */
 export async function insertTrip(
   tx: Tx,
-  p: { vehicleId: number; passengerId: number; stops: RouteStop[]; from: number; to: number; officialFare: number; amountPaid: number; tripRef: string },
+  p: { vehicleId: number; passengerId: number; stops: RouteStop[]; from: number; to: number; officialFare: number; amountPaid: number; tripRef: string; customStopNote?: string | null },
 ) {
   const [t] = await tx
     .insert(transactionsTable)
@@ -78,6 +78,7 @@ export async function insertTrip(
       officialFare: p.officialFare.toFixed(2),
       amountPaid: p.amountPaid.toFixed(2),
       tripRef: p.tripRef,
+      customStopNote: p.customStopNote ?? null,
     })
     .returning();
   await tx.insert(activeTripsTable).values({

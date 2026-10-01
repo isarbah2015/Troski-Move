@@ -2,13 +2,13 @@ import React from 'react';
 import { Modal, Pressable, StyleSheet, Text, View } from 'react-native';
 import { Feather } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
-import { APP_LANGUAGES, type AppLanguage } from '@trotrolink/shared';
+import { CURRENCY_LABELS, DISPLAY_CURRENCIES, RATES_NOTE, type DisplayCurrency } from '@trotrolink/shared';
 import { useColors } from '@/hooks/useColors';
 import { SCRIM } from '@/lib/colors';
 
-type Props = { visible: boolean; selected: AppLanguage; onSelect: (l: AppLanguage) => void; onClose: () => void };
+type Props = { visible: boolean; selected: DisplayCurrency; onSelect: (c: DisplayCurrency) => void; onClose: () => void };
 
-export function LanguageSheet({ visible, selected, onSelect, onClose }: Props) {
+export function CurrencySheet({ visible, selected, onSelect, onClose }: Props) {
   const colors = useColors();
   return (
     <Modal visible={visible} transparent animationType="slide" onRequestClose={onClose}>
@@ -16,26 +16,26 @@ export function LanguageSheet({ visible, selected, onSelect, onClose }: Props) {
         <Pressable style={[StyleSheet.absoluteFill, { backgroundColor: SCRIM }]} onPress={onClose} accessibilityLabel="Close" />
         <View style={[styles.sheet, { backgroundColor: colors.card, borderColor: colors.border, borderTopLeftRadius: colors.radiusModal, borderTopRightRadius: colors.radiusModal }]}>
           <View style={[styles.grabber, { backgroundColor: colors.border }]} />
-          <Text style={[styles.title, { color: colors.foreground }]}>Language</Text>
-          {APP_LANGUAGES.map((l) => {
-            const active = l === selected;
+          <Text style={[styles.title, { color: colors.foreground }]}>Show prices in</Text>
+          {DISPLAY_CURRENCIES.map((c) => {
+            const active = c === selected;
             return (
               <Pressable
-                key={l}
+                key={c}
                 onPress={() => {
                   Haptics.selectionAsync();
-                  onSelect(l);
+                  onSelect(c);
                 }}
                 accessibilityRole="radio"
                 accessibilityState={{ selected: active }}
                 style={[styles.row, { borderColor: active ? colors.primary : colors.border, borderRadius: colors.radius }]}
               >
-                <Text style={[styles.label, { color: colors.foreground }]}>{l}</Text>
+                <Text style={[styles.label, { color: colors.foreground }]}>{CURRENCY_LABELS[c]}</Text>
                 {active ? <Feather name="check" size={20} color={colors.primary} /> : null}
               </Pressable>
             );
           })}
-          <Text style={[styles.note, { color: colors.mutedForeground }]}>Twi and Ewe cover the passenger screens (the conductor screens stay in English). The wording is a first version and may change.</Text>
+          <Text style={[styles.note, { color: colors.mutedForeground }]}>{RATES_NOTE} Fares are always set and charged in Ghana cedis (₵).</Text>
         </View>
       </View>
     </Modal>

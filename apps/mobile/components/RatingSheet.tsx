@@ -4,6 +4,7 @@ import { Feather } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
 import { useColors } from '@/hooks/useColors';
 import { EMERALD, SCRIM, SILVER } from '@/lib/colors';
+import { useT } from '@/lib/i18n';
 
 export type RatingTarget = {
   tripId: string;
@@ -53,6 +54,7 @@ function StarRow({ label, name, value, onChange }: { label: string; name: string
 /** Bottom sheet: rate the driver and the conductor (1–5 stars each, both required) with an optional comment. */
 export function RatingSheet({ target, onSubmit, onSkip }: Props) {
   const colors = useColors();
+  const t = useT();
   const [driver, setDriver] = useState(0);
   const [conductor, setConductor] = useState(0);
   const [comment, setComment] = useState('');
@@ -79,15 +81,15 @@ export function RatingSheet({ target, onSubmit, onSkip }: Props) {
                 <View style={[styles.badge, { backgroundColor: colors.secondary }]}>
                   <Feather name={target.justArrived ? 'check-circle' : 'star'} size={26} color={EMERALD} />
                 </View>
-                <Text style={[styles.title, { color: colors.foreground }]}>{target.justArrived ? "You've arrived!" : 'Rate your trip'}</Text>
+                <Text style={[styles.title, { color: colors.foreground }]}>{target.justArrived ? t('rate.arrived') : t('rate.rateTrip')}</Text>
                 <Text style={[styles.dest, { color: colors.primary }]}>{target.destination}</Text>
-                <Text style={[styles.sub, { color: colors.mutedForeground }]}>{target.justArrived ? 'How was your trip today?' : 'How was this trip?'}</Text>
+                <Text style={[styles.sub, { color: colors.mutedForeground }]}>{t('rate.how')}</Text>
               </View>
 
-              <StarRow label="Rate driver" name={target.driverName} value={driver} onChange={setDriver} />
-              <StarRow label="Rate conductor" name={target.conductorName} value={conductor} onChange={setConductor} />
+              <StarRow label={t('rate.driver')} name={target.driverName} value={driver} onChange={setDriver} />
+              <StarRow label={t('rate.conductor')} name={target.conductorName} value={conductor} onChange={setConductor} />
 
-              <Text style={[styles.section, { color: colors.mutedForeground, marginTop: 4 }]}>ADD A COMMENT (OPTIONAL)</Text>
+              <Text style={[styles.section, { color: colors.mutedForeground, marginTop: 4 }]}>{t('rate.comment').toUpperCase()}</Text>
               <TextInput
                 value={comment}
                 onChangeText={setComment}
@@ -110,11 +112,11 @@ export function RatingSheet({ target, onSubmit, onSkip }: Props) {
                 accessibilityState={{ disabled: !ready }}
                 style={[styles.submit, { backgroundColor: ready ? colors.primary : colors.muted, borderRadius: colors.radiusPill }]}
               >
-                <Text style={[styles.submitText, { color: ready ? colors.primaryForeground : colors.mutedForeground }]}>Submit</Text>
+                <Text style={[styles.submitText, { color: ready ? colors.primaryForeground : colors.mutedForeground }]}>{t('rate.submit')}</Text>
               </Pressable>
 
               <Pressable onPress={() => void onSkip(target)} accessibilityRole="button" style={styles.skip}>
-                <Text style={[styles.skipText, { color: colors.mutedForeground }]}>Skip for now</Text>
+                <Text style={[styles.skipText, { color: colors.mutedForeground }]}>{t('rate.skip')}</Text>
               </Pressable>
             </ScrollView>
           </View>

@@ -5,7 +5,7 @@ import * as Haptics from 'expo-haptics';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { CONDUCTOR_BONUS, type ServerTrip } from '@trotrolink/shared';
+import { CEDI, CONDUCTOR_BONUS, type ServerTrip } from '@trotrolink/shared';
 import { DemoBadge } from '@/components/DemoBadge';
 import { PassengerSheet } from '@/components/PassengerSheet';
 import { PulseDot } from '@/components/PulseDot';
@@ -151,7 +151,7 @@ export default function TodayScreen() {
               </View>
               <Text style={[styles.meta, { color: colors.mutedForeground }]}>{Math.round(bonus.progress * 100)}%</Text>
             </View>
-            <Text style={[styles.bonusAmount, { color: colors.foreground }]}>GHS {bonus.earned} / GHS {bonus.target}</Text>
+            <Text style={[styles.bonusAmount, { color: colors.foreground }]}>{CEDI}{bonus.earned} / {CEDI}{bonus.target}</Text>
             <Text style={[styles.hint, { color: colors.mutedForeground }]}>Unlocks at {CONDUCTOR_BONUS.scans}+ scans with an average rating of {CONDUCTOR_BONUS.minAvgRating.toFixed(1)} or better.</Text>
           </View>
 

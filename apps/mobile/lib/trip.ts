@@ -11,7 +11,7 @@ export function newTripId(now = new Date()): string {
  * Builds the trip that starts after payment. Boarding is the route origin and the vehicle starts
  * there; from now on the conductor's stop marks (via the API) move it forward.
  */
-export function buildTrip(resolved: ResolvedVehicle, alighting: Stop, tripId: string, now = new Date()): ActiveTrip {
+export function buildTrip(resolved: ResolvedVehicle, alighting: Stop, tripId: string, customStopNote?: string, now = new Date()): ActiveTrip {
   const names = resolved.route.stops.map((s) => s.name);
   const alightIdx = Math.max(names.indexOf(alighting.name), 1);
   const currentIdx = 0;
@@ -35,9 +35,12 @@ export function buildTrip(resolved: ResolvedVehicle, alighting: Stop, tripId: st
       name,
       status: i < currentIdx ? 'passed' : i === currentIdx ? 'current' : 'upcoming',
       etaMinutes: resolved.route.stops[i]!.etaMinutes,
+      lat: resolved.route.stops[i]!.lat,
+      lng: resolved.route.stops[i]!.lng,
     })),
     vehicleId: resolved.vehicle.id,
     conductorName: resolved.vehicle.conductorName,
+    ...(customStopNote ? { customStopNote } : {}),
   };
 }
 
@@ -51,6 +54,7 @@ export function tripProgress(trip: ActiveTrip): number {
 
 export function buildTripRecord(resolved: ResolvedVehicle, alighting: Stop, trip: ActiveTrip): TripRecord {
   return {
+    ...(trip.customStopNote ? { customStopNote: trip.customStopNote } : {}),
     tripId: trip.tripId,
     vehicleShortCode: trip.vehicleShortCode,
     routeName: trip.routeName,
@@ -77,8 +81,10 @@ export function applyServerTrip(trip: ActiveTrip, server: ServerTrip): ActiveTri
     alightingStop: server.alightingStop,
     amountPaid: server.amountPaid,
     currentStop: server.currentStop,
+    lastStopMarkedAt: server.lastStopMarkedAt,
     stopsRemaining: server.stopsRemaining,
     etaMinutes: server.etaMinutes,
+    ...(server.customStopNote ? { customStopNote: server.customStopNote } : {}),
     stops: trip.stops.map((s, i) => ({ ...s, status: i < currentIdx ? 'passed' : i === currentIdx ? 'current' : 'upcoming' })),
   };
 }
