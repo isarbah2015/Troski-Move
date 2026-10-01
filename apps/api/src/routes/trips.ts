@@ -104,6 +104,19 @@ async function applyStopMark(found: FoundVehicle, at: number, conductorId: numbe
       const target = Math.min(at, alight);
       // The vehicle is past this passenger's stop and they are still on the trip: start (or advance) the overstay.
       if (at > alight && alight >= 0) {
+        // The vehicle is past their stop. That alone is not proof they are still on it (they may have got off without
+        // pressing anything), so an overstay needs their own phone to be travelling with the vehicle at or beyond `at`.
+        if (!trip.overstayStop) {
+          const [seen] = await tx
+            .select({ id: tripEventsTable.id })
+            .from(tripEventsTable)
+            .where(and(eq(tripEventsTable.tripId, trip.transactionId), eq(tripEventsTable.eventType, "gps_report"), inArray(tripEventsTable.stopName, stops.slice(at).map((x) => x.name)), gt(tripEventsTable.createdAt, new Date(Date.now() - 5 * 60_000))))
+            .limit(1);
+          if (!seen) {
+            await tx.update(activeTripsTable).set({ currentStop: stops[alight]!.name, etaMinutes: 0, lastStopMarkedAt: now }).where(eq(activeTripsTable.id, trip.id));
+            continue;
+          }
+        }
         const furthest = trip.overstayStop ? Math.max(at, stopIndex(stops, trip.overstayStop)) : at;
         await tx
           .update(activeTripsTable)
@@ -221,6 +234,23 @@ router.post("/trips/position", async (req, res): Promise<void> => {
 
   let arrived = false;
   let currentStop = row.trip.currentStop;
+  // Their phone is still travelling with the vehicle beyond their stop: if the vehicle itself is known to be there too,
+  // that is an overstay (they can extend, or get off). A passenger who left the vehicle never gets here.
+  if (alight >= 0 && hit.index > alight && !row.trip.overstayStop) {
+    const [vehicleAt] = await db
+      .select({ stop: tripEventsTable.stopName })
+      .from(tripEventsTable)
+      .where(and(eq(tripEventsTable.vehicleId, found.vehicle.id), eq(tripEventsTable.eventType, "stop_reached"), gt(tripEventsTable.createdAt, new Date(Date.now() - 6 * 3_600_000))))
+      .orderBy(desc(tripEventsTable.createdAt))
+      .limit(1);
+    if (vehicleAt?.stop && stopIndex(stops, vehicleAt.stop) >= hit.index) {
+      const now = new Date();
+      await db.update(activeTripsTable).set({ overstayStop: stops[hit.index]!.name, overstayAt: now, lastStopMarkedAt: now, currentStop: stops[alight]!.name, etaMinutes: 0 }).where(eq(activeTripsTable.id, row.trip.id));
+      void sendPush(await pushTokenOf(passengerId), `You have passed ${stops[alight]!.name}`, "Open TrotroLink to extend your trip or get off.");
+      res.json({ ok: true, currentStop: stops[alight]!.name, arrived: false });
+      return;
+    }
+  }
   if (alight >= 0 && !row.trip.overstayStop) {
     const target = Math.min(hit.index, alight);
     if (target > current) {
