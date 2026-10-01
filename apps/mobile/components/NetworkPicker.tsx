@@ -7,6 +7,7 @@ import { useColors } from '@/hooks/useColors';
 /** Chooses which mobile-money wallet pays. Three equal chips so they never scroll or clip, even on small phones. */
 export function NetworkPicker({ value, onChange }: { value: MomoNetwork; onChange: (n: MomoNetwork) => void }) {
   const colors = useColors();
+  const tint = colors.scheme === 'light' ? 'rgba(7,128,90,0.10)' : 'rgba(43,217,159,0.14)';
   return (
     <View style={styles.row} accessibilityRole="radiogroup">
       {MOMO_NETWORKS.map((n) => {
@@ -23,7 +24,7 @@ export function NetworkPicker({ value, onChange }: { value: MomoNetwork; onChang
             }}
             style={[
               styles.chip,
-              { borderRadius: colors.radiusPill, borderColor: on ? colors.primary : colors.border, backgroundColor: on ? colors.secondary : colors.card },
+              { borderRadius: colors.radiusPill, borderColor: on ? colors.primary : colors.border, backgroundColor: on ? tint : colors.card },
             ]}
           >
             <View style={[styles.dot, { backgroundColor: MOMO_NETWORK_COLOR[n] }]} />

@@ -16,6 +16,7 @@ export default function FaresScreen() {
   const colors = useColors();
   const insets = useSafeAreaInsets();
   const t = useT();
+  const tint = colors.scheme === 'light' ? 'rgba(7,128,90,0.10)' : 'rgba(43,217,159,0.14)';
   const [data, setData] = useState<FaresResponse | null>(null);
   const [error, setError] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
@@ -110,7 +111,7 @@ export default function FaresScreen() {
                     setFrom(null);
                     setTo(null);
                   }}
-                  style={[styles.chip, { borderRadius: colors.radiusPill, borderColor: on ? colors.primary : colors.border, backgroundColor: on ? colors.secondary : colors.card }]}
+                  style={[styles.chip, { borderRadius: colors.radiusPill, borderColor: on ? colors.primary : colors.border, backgroundColor: on ? tint : colors.card }]}
                 >
                   <Text style={[styles.chipText, { color: on ? colors.primary : colors.foreground }]}>{r.origin} → {r.destination}</Text>
                 </Pressable>
@@ -132,7 +133,7 @@ export default function FaresScreen() {
                       onPress={() => pick(s.name)}
                       accessibilityRole="button"
                       accessibilityLabel={`${s.name}, ${formatCedis(s.fare)} from ${route.origin}`}
-                      style={[styles.row, i > 0 && { borderTopWidth: StyleSheet.hairlineWidth * 2, borderTopColor: colors.border }, (isFrom || isTo) && { backgroundColor: colors.secondary }]}
+                      style={[styles.row, i > 0 && { borderTopWidth: StyleSheet.hairlineWidth * 2, borderTopColor: colors.border }, (isFrom || isTo) && { backgroundColor: tint }]}
                     >
                       <View style={styles.rail}>
                         <View style={[styles.line, { backgroundColor: colors.border, top: i === 0 ? '50%' : 0, bottom: i === route.stops.length - 1 ? '50%' : 0 }]} />
