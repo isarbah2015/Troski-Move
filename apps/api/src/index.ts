@@ -3,6 +3,7 @@ import express from "express";
 import pinoHttp from "pino-http";
 import { logger } from "./logger";
 import routes from "./routes";
+import { processOverstays } from "./routes/payments";
 
 const app = express();
 
@@ -16,6 +17,9 @@ app.use((err: unknown, _req: express.Request, res: express.Response, _next: expr
   logger.error({ err }, "Unhandled error");
   res.status(500).json({ error: "Internal error" });
 });
+
+// Charges passengers who ignored the overstay prompt for 60 seconds.
+setInterval(() => void processOverstays().catch((err) => logger.error({ err }, "Overstay job failed")), 10_000).unref();
 
 const port = Number(process.env.PORT ?? 4000);
 

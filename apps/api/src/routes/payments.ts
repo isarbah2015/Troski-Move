@@ -1,10 +1,10 @@
 import { timingSafeEqual } from "node:crypto";
 import { Router, type IRouter } from "express";
-import { and, eq, gt } from "drizzle-orm";
+import { and, eq, gt, isNotNull, isNull, lt } from "drizzle-orm";
 import { InitiatePaymentBody, type InitiatePaymentResponse, type PaymentStatusResponse } from "@trotrolink/shared";
 import { db } from "../db";
-import { paymentsTable, transactionsTable, type Payment } from "../db/schema";
-import { amountDue, checkTrip, guestUserId, insertTrip, userExists, vehicleWithRoute } from "../lib";
+import { activeTripsTable, paymentsTable, transactionsTable, tripEventsTable, type Payment } from "../db/schema";
+import { amountDue, checkTrip, guestUserId, insertTrip, round2, stopIndex, userExists, vehicleWithRoute } from "../lib";
 import { logger } from "../logger";
 import { getPaymentStatus, isSimulator, momoCurrency, newReferenceId, payerPhoneRequired, requestToPay } from "../services/momo";
 
@@ -25,6 +25,24 @@ async function settleSuccess(referenceId: string, raw: unknown): Promise<Payment
     const found = await vehicleWithRoute(p.vehicleCode);
     if (!found) throw new Error("Vehicle no longer exists");
     const stops = found.route.stopsJson;
+
+    // An extension adds to an existing trip: move its declared stop and add the money. No new trip.
+    if (p.extendsTripRef) {
+      const [t] = await tx.select().from(transactionsTable).where(eq(transactionsTable.tripRef, p.extendsTripRef));
+      if (!t) throw new Error("Trip to extend not found");
+      const from = stopIndex(stops, t.boardingStop ?? stops[0]!.name);
+      const to = stopIndex(stops, p.alightingStop);
+      const fare = round2(stops[to]!.fare - stops[from]!.fare);
+      await tx.update(transactionsTable).set({ alightingStop: p.alightingStop, officialFare: fare.toFixed(2), amountPaid: (Number(t.amountPaid) + Number(p.amount)).toFixed(2) }).where(eq(transactionsTable.id, t.id));
+      await tx
+        .update(activeTripsTable)
+        .set({ alightingStop: p.alightingStop, currentStop: p.alightingStop, etaMinutes: 0, overstayStop: null, overstayAt: null })
+        .where(eq(activeTripsTable.transactionId, t.id));
+      await tx.insert(tripEventsTable).values({ vehicleId: found.vehicle.id, tripId: t.id, eventType: "stop_reached", stopName: p.alightingStop });
+      const [done] = await tx.update(paymentsTable).set({ status: "SUCCESSFUL", tripId: t.id, momoResponse: raw ?? null, completedAt: new Date() }).where(eq(paymentsTable.id, p.id)).returning();
+      return done!;
+    }
+
     const check = checkTrip(stops, p.boardingStop, p.alightingStop, Number(p.amount));
     if (!check.ok) throw new Error(check.error);
 
@@ -229,5 +247,74 @@ router.post("/payments/webhook", async (req, res): Promise<void> => {
   }
   res.json({ ok: true });
 });
+
+const AUTO_EXTEND_AFTER_MS = 60_000;
+
+/**
+ * Charges a passenger the difference between what they paid and the fare to `toStop` (their trip ran past their
+ * declared stop). Returns the payment, or null when nothing is owed. Never charges twice for the same extension.
+ */
+export async function initiateExtension(tripRef: string, toStop: string): Promise<Payment | null> {
+  const [t] = await db.select().from(transactionsTable).where(eq(transactionsTable.tripRef, tripRef));
+  if (!t) return null;
+  const [veh] = await db.select().from(paymentsTable).where(eq(paymentsTable.tripRef, tripRef));
+  if (!veh) return null;
+  const found = await vehicleWithRoute(veh.vehicleCode);
+  if (!found) return null;
+  const stops = found.route.stopsJson;
+  const from = stopIndex(stops, t.boardingStop ?? stops[0]!.name);
+  const to = stopIndex(stops, toStop);
+  if (to < 0 || to <= stopIndex(stops, t.alightingStop)) return null;
+  const extra = amountDue(round2(stops[to]!.fare - stops[from]!.fare)) - Number(t.amountPaid);
+  if (extra <= 0) return null;
+
+  // One live extension per trip and stop: a retry or the auto timer reuses it.
+  const [pending] = await db
+    .select()
+    .from(paymentsTable)
+    .where(and(eq(paymentsTable.extendsTripRef, tripRef), eq(paymentsTable.alightingStop, stops[to]!.name), eq(paymentsTable.status, "PENDING")));
+  if (pending) return pending;
+
+  const referenceId = newReferenceId();
+  const [row] = await db
+    .insert(paymentsTable)
+    .values({
+      referenceId,
+      tripRef: `${tripRef}-X${referenceId.slice(0, 4)}`,
+      extendsTripRef: tripRef,
+      passengerId: t.passengerId,
+      vehicleCode: veh.vehicleCode,
+      boardingStop: t.alightingStop,
+      alightingStop: stops[to]!.name,
+      amount: extra.toFixed(2),
+      currency: momoCurrency(),
+      payerPhone: veh.payerPhone,
+    })
+    .returning();
+  try {
+    await requestToPay({ referenceId, amount: extra, payerPhone: veh.payerPhone, note: `TrotroLink extension to ${stops[to]!.name}`, externalId: row!.tripRef });
+  } catch (err) {
+    logger.error({ err, referenceId }, "MoMo requestToPay failed for an extension");
+    await settleFailure(referenceId, "Could not reach MTN MoMo.", { error: err instanceof Error ? err.message : String(err) });
+    return null;
+  }
+  return row!;
+}
+
+/** Trips whose passenger ignored the overstay prompt for 60 s are charged automatically to the stop the vehicle reached. */
+export async function processOverstays(): Promise<void> {
+  const due = await db
+    .select()
+    .from(activeTripsTable)
+    .innerJoin(transactionsTable, eq(activeTripsTable.transactionId, transactionsTable.id))
+    .where(and(isNotNull(activeTripsTable.overstayStop), isNull(activeTripsTable.autoExtendedAt), lt(activeTripsTable.overstayAt, new Date(Date.now() - AUTO_EXTEND_AFTER_MS))));
+  for (const { active_trips: a, transactions: t } of due) {
+    await db.update(activeTripsTable).set({ autoExtendedAt: new Date() }).where(eq(activeTripsTable.id, a.id));
+    if (t.tripRef && a.overstayStop) await initiateExtension(t.tripRef, a.overstayStop);
+  }
+  // Settle charges nobody is polling (the passenger's app is closed): ask MTN, and apply the answer.
+  const pending = await db.select().from(paymentsTable).where(and(eq(paymentsTable.status, "PENDING"), isNotNull(paymentsTable.extendsTripRef)));
+  for (const p of pending) await refresh(p).catch((err) => logger.error({ err, referenceId: p.referenceId }, "Could not settle a pending extension"));
+}
 
 export default router;

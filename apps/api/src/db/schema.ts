@@ -95,6 +95,10 @@ export const activeTripsTable = pgTable(
     startedAt: timestamp("started_at", { withTimezone: true }).notNull().defaultNow(),
     lastStopMarkedAt: timestamp("last_stop_marked_at", { withTimezone: true }),
     conductorId: integer("conductor_id").references(() => usersTable.id),
+    /** Overstay: the vehicle has been marked past the passenger's declared stop. `overstayStop` is the furthest stop reached. */
+    overstayStop: text("overstay_stop"),
+    overstayAt: timestamp("overstay_at", { withTimezone: true }),
+    autoExtendedAt: timestamp("auto_extended_at", { withTimezone: true }),
   },
   (t) => [index("active_trips_vehicle_idx").on(t.vehicleId)],
 );
@@ -153,14 +157,21 @@ export const conductorBonusTable = pgTable(
 
 export type ConductorBonus = typeof conductorBonusTable.$inferSelect;
 
-export const disputeTypes = ["overcharge", "wrong_stop", "payment_failed", "other"] as const;
+export const disputeTypes = ["overcharge", "route_deviation", "safety_concern", "forced_early_alighting", "unpaid_passenger", "wrong_stop", "payment_failed", "other"] as const;
 export const disputeStatuses = ["open", "investigating", "resolved", "rejected"] as const;
 
 export const disputesTable = pgTable("disputes", {
   id: serial("id").primaryKey(),
-  transactionId: integer("transaction_id").notNull().references(() => transactionsTable.id),
+  /** Null for an unpaid passenger the conductor reports (there is no trip to point at). */
+  transactionId: integer("transaction_id").references(() => transactionsTable.id),
   disputeType: text("dispute_type").$type<(typeof disputeTypes)[number]>().notNull(),
   status: text("status").$type<(typeof disputeStatuses)[number]>().notNull().default("open"),
+  vehicleId: integer("vehicle_id").references(() => vehiclesTable.id),
+  reporterId: integer("reporter_id").references(() => usersTable.id),
+  description: text("description"),
+  /** Snapshot taken when the report was filed: the trip, vehicle, conductor and every trip event. */
+  evidence: jsonb("evidence"),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
 });
 
 export type Dispute = typeof disputesTable.$inferSelect;
@@ -204,6 +215,8 @@ export const paymentsTable = pgTable(
     amount: numeric("amount", { precision: 8, scale: 2 }).notNull(),
     currency: text("currency").notNull(),
     payerPhone: text("payer_phone"),
+    /** Set when this payment extends an existing trip (the overstay difference) instead of starting one. */
+    extendsTripRef: text("extends_trip_ref"),
     status: text("status").$type<(typeof paymentStatuses)[number]>().notNull().default("PENDING"),
     failureReason: text("failure_reason"),
     tripId: integer("trip_id").references(() => transactionsTable.id),

@@ -171,7 +171,7 @@ export const StopMarkResponse = z.object({ ok: z.literal(true), passengersNotifi
 export type StopMarkResponse = z.infer<typeof StopMarkResponse>;
 
 /** `POST /api/trips/alight`: the passenger confirms they got off (rating is optional). */
-export const AlightBody = z.object({ tripId: z.string().min(1) });
+export const AlightBody = z.object({ tripId: z.string().min(1), deviceId: z.string().min(8).max(64).optional() });
 export type AlightBody = z.infer<typeof AlightBody>;
 
 export const ServerTrip = z.object({
@@ -185,6 +185,9 @@ export const ServerTrip = z.object({
   etaMinutes: z.number(),
   startedAt: z.string(),
   lastStopMarkedAt: z.string().nullable(),
+  amountPaid: z.number(),
+  /** Set while the vehicle is past the passenger's stop: the stop reached, what extending costs, and when it is charged automatically. */
+  overstay: z.object({ stop: z.string(), extraFare: z.number(), deadline: z.string() }).nullable().optional(),
 });
 export type ServerTrip = z.infer<typeof ServerTrip>;
 
@@ -286,3 +289,28 @@ export const ConductorLoginResponse = z.object({
   conductorName: z.string(),
 });
 export type ConductorLoginResponse = z.infer<typeof ConductorLoginResponse>;
+
+// ---- Overstay, disputes ------------------------------------------------------------------------------
+
+/** `POST /api/trips/extend`: the passenger pays the difference to the stop the vehicle has reached. */
+export const ExtendBody = z.object({ tripId: z.string().min(1) });
+export type ExtendBody = z.infer<typeof ExtendBody>;
+
+export const DISPUTE_REASONS = ['overcharge', 'route_deviation', 'safety_concern', 'forced_early_alighting'] as const;
+export type DisputeReason = (typeof DISPUTE_REASONS)[number];
+
+/** `POST /api/disputes`: a passenger reports a trip. The server attaches the evidence. */
+export const DisputeBody = z.object({
+  tripId: z.string().min(1),
+  deviceId: z.string().min(8).max(64),
+  reason: z.enum(DISPUTE_REASONS),
+  description: z.string().max(500).optional(),
+});
+export type DisputeBody = z.infer<typeof DisputeBody>;
+
+/** `POST /api/disputes/unpaid`: a conductor reports a passenger on board who did not pay. */
+export const UnpaidDisputeBody = z.object({ description: z.string().max(500).optional() });
+export type UnpaidDisputeBody = z.infer<typeof UnpaidDisputeBody>;
+
+export const DisputeResponse = z.object({ ok: z.literal(true), disputeId: z.number().int() });
+export type DisputeResponse = z.infer<typeof DisputeResponse>;

@@ -1,10 +1,12 @@
 import { Router, type IRouter } from "express";
 import { and, desc, eq, sql } from "drizzle-orm";
-import { AlightBody, GuestBody, StartTripBody, StopMarkBody, type HistoryTrip, type ServerTrip } from "@trotrolink/shared";
+import { AlightBody, ExtendBody, GuestBody, StartTripBody, StopMarkBody, type HistoryTrip, type RouteStop, type ServerTrip } from "@trotrolink/shared";
 import { db } from "../db";
 import { activeTripsTable, ratingsTable, routesTable, transactionsTable, tripEventsTable, vehiclesTable } from "../db/schema";
 import { conductorFromRequest, conductorOf, ownsVehicle, requireConductor } from "../auth";
-import { checkTrip, etaBetween, guestUserId, insertTrip, newTripRef, stopIndex, userExists, vehicleWithRoute } from "../lib";
+import { isSimulator } from "../services/momo";
+import { initiateExtension } from "./payments";
+import { amountDue, checkTrip, etaBetween, round2, guestUserId, insertTrip, newTripRef, stopIndex, userExists, vehicleWithRoute } from "../lib";
 
 const router: IRouter = Router();
 
@@ -115,6 +117,16 @@ router.post("/trips/stop", requireConductor, async (req, res): Promise<void> => 
       const alight = stopIndex(stops, trip.alightingStop);
       const current = stopIndex(stops, trip.currentStop);
       const target = Math.min(at, alight);
+      // The vehicle is past this passenger's stop and they are still on the trip: start (or advance) the overstay.
+      if (at > alight && alight >= 0) {
+        const furthest = trip.overstayStop ? Math.max(at, stopIndex(stops, trip.overstayStop)) : at;
+        await tx
+          .update(activeTripsTable)
+          .set({ overstayStop: stops[furthest]!.name, overstayAt: trip.overstayAt ?? now, lastStopMarkedAt: now, conductorId, currentStop: stops[alight]!.name, etaMinutes: 0 })
+          .where(eq(activeTripsTable.id, trip.id));
+        notified += 1;
+        continue;
+      }
       if (at < board || target <= current) {
         await tx.update(activeTripsTable).set({ lastStopMarkedAt: now, conductorId }).where(eq(activeTripsTable.id, trip.id));
         continue;
@@ -164,7 +176,7 @@ router.get("/trips/active", async (req, res): Promise<void> => {
       : eq(activeTripsTable.passengerId, passengerId!);
 
   const rows = await db
-    .select({ trip: activeTripsTable, tripRef: transactionsTable.tripRef, boardingStop: transactionsTable.boardingStop, code: vehiclesTable.shortCode, stops: routesTable.stopsJson })
+    .select({ trip: activeTripsTable, tripRef: transactionsTable.tripRef, boardingStop: transactionsTable.boardingStop, paid: transactionsTable.amountPaid, code: vehiclesTable.shortCode, stops: routesTable.stopsJson })
     .from(activeTripsTable)
     .innerJoin(transactionsTable, eq(activeTripsTable.transactionId, transactionsTable.id))
     .innerJoin(vehiclesTable, eq(activeTripsTable.vehicleId, vehiclesTable.id))
@@ -172,7 +184,7 @@ router.get("/trips/active", async (req, res): Promise<void> => {
     .where(filter)
     .orderBy(desc(activeTripsTable.startedAt));
 
-  const trips: ServerTrip[] = rows.map(({ trip, tripRef, boardingStop, code, stops }) => ({
+  const trips: ServerTrip[] = rows.map(({ trip, tripRef, boardingStop, paid, code, stops }) => ({
     tripId: tripRef ?? `TRX-${trip.transactionId}`,
     passengerId: trip.passengerId,
     vehicleCode: code,
@@ -183,9 +195,22 @@ router.get("/trips/active", async (req, res): Promise<void> => {
     etaMinutes: trip.etaMinutes,
     startedAt: trip.startedAt.toISOString(),
     lastStopMarkedAt: trip.lastStopMarkedAt?.toISOString() ?? null,
+    amountPaid: Number(paid),
+    overstay: trip.overstayStop && trip.overstayAt ? overstayInfo(trip, stops, boardingStop, Number(paid)) : null,
   }));
   res.json({ trips });
 });
+
+/** What extending costs (the fare to the furthest stop reached, rounded up, minus what was paid) and when it is charged automatically. */
+function overstayInfo(trip: typeof activeTripsTable.$inferSelect, stops: RouteStop[], boardingStop: string | null, paid: number) {
+  const from = stopIndex(stops, boardingStop ?? stops[0]!.name);
+  const to = stopIndex(stops, trip.overstayStop!);
+  return {
+    stop: trip.overstayStop!,
+    extraFare: Math.max(0, amountDue(round2(stops[to]!.fare - stops[from]!.fare)) - paid),
+    deadline: new Date(trip.overstayAt!.getTime() + 60_000).toISOString(),
+  };
+}
 
 /** Passenger confirms they got off. Ends the active trip; rating is separate and optional. */
 router.post("/trips/alight", async (req, res): Promise<void> => {
@@ -216,6 +241,74 @@ export async function endTrip(transactionId: number, vehicleId: number, stopName
     }
   });
 }
+
+/** The passenger chooses to pay the difference to the stop the vehicle has reached. They approve it like any MoMo payment. */
+router.post("/trips/extend", async (req, res): Promise<void> => {
+  const parsed = ExtendBody.safeParse(req.body);
+  if (!parsed.success) {
+    res.status(400).json({ error: "Invalid body" });
+    return;
+  }
+  const [row] = await db
+    .select({ trip: activeTripsTable, ref: transactionsTable.tripRef })
+    .from(activeTripsTable)
+    .innerJoin(transactionsTable, eq(activeTripsTable.transactionId, transactionsTable.id))
+    .where(eq(transactionsTable.tripRef, parsed.data.tripId));
+  if (!row?.trip.overstayStop) {
+    res.status(409).json({ error: "This trip has not passed its stop" });
+    return;
+  }
+  const payment = await initiateExtension(row.ref!, row.trip.overstayStop);
+  if (!payment) {
+    res.status(502).json({ error: "Could not start the payment. Try again." });
+    return;
+  }
+  // The passenger answered, so the 60-second auto-charge must not fire a second request.
+  await db.update(activeTripsTable).set({ autoExtendedAt: new Date() }).where(eq(activeTripsTable.id, row.trip.id));
+  res.json({ referenceId: payment.referenceId, tripId: payment.tripRef, status: payment.status, simulator: isSimulator() });
+});
+
+/** "Get off now": the passenger ends the trip at their declared stop, even though the vehicle went on. */
+router.post("/trips/getoff", async (req, res): Promise<void> => {
+  const parsed = AlightBody.safeParse(req.body);
+  if (!parsed.success) {
+    res.status(400).json({ error: "Invalid body" });
+    return;
+  }
+  const [t] = await db.select().from(transactionsTable).where(eq(transactionsTable.tripRef, parsed.data.tripId));
+  if (!t) {
+    res.status(404).json({ error: "Trip not found" });
+    return;
+  }
+  await endTrip(t.id, t.vehicleId, t.alightingStop);
+  res.json({ ok: true });
+});
+
+/**
+ * The conductor confirms an overstaying passenger is getting off here: the trip closes, and the difference to this
+ * stop is charged to the passenger (so a passenger who ignores the prompt still pays for the ride they took).
+ */
+router.post("/trips/confirm-alight", requireConductor, async (req, res): Promise<void> => {
+  const parsed = ExtendBody.safeParse(req.body);
+  if (!parsed.success) {
+    res.status(400).json({ error: "Invalid body" });
+    return;
+  }
+  const [row] = await db
+    .select({ trip: activeTripsTable, t: transactionsTable, code: vehiclesTable.shortCode })
+    .from(activeTripsTable)
+    .innerJoin(transactionsTable, eq(activeTripsTable.transactionId, transactionsTable.id))
+    .innerJoin(vehiclesTable, eq(activeTripsTable.vehicleId, vehiclesTable.id))
+    .where(eq(transactionsTable.tripRef, parsed.data.tripId));
+  if (!row) {
+    res.status(404).json({ error: "Trip not found" });
+    return;
+  }
+  if (!ownsVehicle(res, row.code)) return;
+  if (row.trip.overstayStop && !row.trip.autoExtendedAt) await initiateExtension(parsed.data.tripId, row.trip.overstayStop);
+  await endTrip(row.t.id, row.t.vehicleId, row.trip.overstayStop ?? row.t.alightingStop);
+  res.json({ ok: true });
+});
 
 /** A passenger's last 50 trips, each with the rating they gave. */
 router.get("/trips/history", async (req, res): Promise<void> => {
