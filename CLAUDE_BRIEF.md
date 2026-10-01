@@ -102,46 +102,55 @@ Real trotros don't stop at fixed stations: passengers hail and alight anywhere. 
 
 **Status:** the anchor model is documented here; the Scan flow does not yet offer the custom-alighting option (only the seeded anchors), and ETA interpolation by distance is not built. Both are still to do.
 
-## Anti-fraud design (proposed, awaiting sign-off)
+## Anti-fraud design (locked, built)
 
 **Principle:** the server decides the price and the trip's state; neither the passenger's app nor the conductor's can change them.
 
-| Threat | Already in place | Proposed next |
-|---|---|---|
-| Passenger rides without paying or underpays | A trip only exists after a **successful MoMo payment**; the server sets the price (`amount` must equal the rounded-up official fare) | Conductor's Today shows **paid passengers on board, with each one's stop**, so a headcount mismatch is visible. A live "PAID" badge on the passenger's Trip tab (animated, shows vehicle + time) so a screenshot is not proof. Optional: conductor scans the passenger's **trip QR** (already in trip detail) to verify |
-| Conductor overcharges or pockets cash | Fare is fixed server-side and shown to the passenger before paying; payment goes to the platform wallet, never to the conductor | **Report issue → Overcharge** writes a `disputes` row (today it only toasts). Conductor wage comes from the day's split, not from cash |
-| **Passenger lies about the drop-off** (pays for Odorkor, rides to Kasoa) | The conductor's stop marks tell the server where the vehicle is; each trip stores the declared stop | **Overstay detection:** when the vehicle is marked at a stop past a passenger's declared stop and their trip is still active, flag it. The passenger gets a **"Extend your trip — pay GHS X more"** MoMo prompt; the conductor's Today lists "alighting here" and "past their stop" passengers. Optional later: GPS check at *Confirm alighting* |
-| Passenger pays for far but gets off early | Fare is for the declared stop; no refund | None (not a theft risk) |
-| Fake stop marks / stolen identities | Stop marks are logged | **Conductor auth** (MUST FIX before launch), then a vehicle can only be marked by its own conductor |
+- **Payment-first.** A trip exists only after a successful MoMo payment; `amount` must equal the rounded-up official fare. The passenger's Trip tab shows a live **PAID · TRX-…** badge; the conductor's Today tab lists **paid passengers on board** (stop, amount, reference). Tapping one shows the trip QR (the same as on the passenger's phone) to verify by eye. **Add unpaid passenger** files a dispute.
+- **Conductor auth.** First launch: vehicle code + 4-digit PIN (scrypt-hashed). Session token (12 h, stored as a SHA-256). Five wrong PINs lock the account for 15 minutes. Stop marks, splits, a vehicle's passenger list, confirm-alight and unpaid reports need that vehicle's own conductor (401/403 otherwise). Set `CONDUCTOR_SETUP_CODE` in production (setup is refused without it).
+- **Overstay (a passenger lies about their drop-off).** When the conductor marks a stop past a passenger's declared stop and their trip is still open, the server records the overstay. The passenger gets "You've passed X. Extend to Y for GHS Z more?" with **[Pay]** / **[Get off now]** and a 60-second countdown. If they do nothing the server charges the extension automatically (a MoMo request to their wallet; the trip extends when it succeeds). The conductor's Today shows "N passengers past stop"; **Confirm they're getting off here** closes the trip and charges the difference.
+- **Disputes.** Report issue (Overcharge, Route deviation, Safety concern, Forced early alighting) + optional note → `POST /api/disputes`; the server attaches the trip, vehicle, conductor on duty and the stop/trip events as evidence. History shows a **Reported** tag. `GET /api/disputes` (union; needs `UNION_API_KEY` in production).
+- **GPS check at alighting: not built.** It needs stop coordinates, which the seed routes do not have yet. Design when built: optional, never blocking, a data point for disputes; the conductor can override.
+- **Real-world limit:** MoMo collections need the wallet owner to approve each request, so an "automatic" overstay charge is still a request the passenger approves on their phone. Truly silent charging would need a pre-authorised mandate (a later product decision).
 
 ## PROJECT STATUS
 
 ### Completed
-- Monorepo + design tokens; Drizzle schema + seed; passenger and conductor apps; shared components
-- Rating sheet, backend sync (trips, stops, ratings, splits, offline queue), cross-device sync verified
-- Floating card tab bar (inset sliding pill; adapts to the 5-tab conductor bar)
-- **MTN MoMo sandbox payments** (see below), with a simulator fallback
+- Monorepo + design tokens; Drizzle schema + seed; passenger (Scan, Trip, Profile) and conductor (Today, My QR, Leaderboard, Earnings, Profile) apps; rating sheet; offline queue; floating tab bar
+- MTN MoMo sandbox payments with simulator fallback; backend sync verified across two simulators
+- **Anti-fraud phases 1–4** (above)
+- **Offline demo mode** and a release **APK** (below)
 
-### In Progress
-- Nothing (awaiting sign-off on MoMo, then the anti-fraud design above)
+### Demo mode (no server, no database)
+With `EXPO_PUBLIC_API_URL` unset, the app serves the whole API from inside the phone (`apps/mobile/lib/demoServer.ts`): same rules as the real API (server-set price, payment-first trips, overstay + 60 s auto-charge, conductor PIN sessions, disputes, leaderboard). Data lives in AsyncStorage on the device; Sign out resets it. A "DEMO MODE" badge is shown on Scan and Today, and payments say "Simulator mode · no money moves" (they auto-approve after 3 s). One phone plays both roles: switch in **Profile → Role**. Two phones do NOT share data in demo mode (there is no server); use the real API for that. To use the real API instead, set `EXPO_PUBLIC_API_URL` at build/start time.
+
+### Building the Android APK (demo)
+```bash
+cd apps/mobile
+export JAVA_HOME=/opt/homebrew/opt/openjdk@17/libexec/openjdk.jdk/Contents/Home ANDROID_HOME=$HOME/Library/Android/sdk
+pnpm exec expo prebuild --platform android --no-install --clean   # EXPO_PUBLIC_API_URL must be unset for demo mode
+echo "sdk.dir=$ANDROID_HOME" > android/local.properties
+cd android && ./gradlew assembleRelease
+# → android/app/build/outputs/apk/release/app-release.apk
+```
+`plugins/withGradleMemory.js` raises Gradle's metaspace and builds **arm64-v8a only** (modern 64-bit phones; add `armeabi-v7a` in the plugin for older 32-bit phones, needs ~2 GB more disk). The APK is signed with the debug key (fine for sideloading a demo; **use a real keystore for the Play Store**). The package is `app.trotrolink.mobile`.
 
 ### Next
-- Anti-fraud work (overstay detection and extend-trip payment, disputes, conductor auth) — see the proposed design above
 - Push notifications (FCM), union web dashboard, USSD fallback, GTFS import, real accounts
-
-### MoMo payments
-- `POST /api/payments/initiate` (validates stops; **the server sets the price: `amount` must equal the rounded-up official fare**; refuses a second live charge for the same passenger, vehicle and stop; idempotent on `tripId`), `GET /api/payments/status/:referenceId` (asks MTN, and on the first SUCCESSFUL answer creates `transactions` + `active_trips` + the `boarded` event exactly once; polling again is harmless), `POST /api/payments/webhook`.
-- **The trip exists only after a successful payment.** `POST /api/trips/start` (the unpaid shortcut) is now dev-only and returns 404 in production.
-- **Webhook security:** MTN does not sign callbacks, so (1) the callback URL carries a secret `?token=` (`MTN_MOMO_WEBHOOK_SECRET`), checked in constant time, and (2) the body is only a nudge: the outcome is re-fetched from MTN by reference id, so a forged callback cannot mark anything paid. (Deviation from "verify signature".)
-- **Simulator mode** (no `MTN_MOMO_API_KEY`): logged as `MOMO_SIMULATOR_MODE`; a payment auto-approves 3 s after creation (`MOMO_SIMULATOR_APPROVE_MS` changes the delay for testing); the app shows a "Simulator mode · no money moves" tag. Pending requests older than 10 minutes are closed as expired.
-- **Sandbox vs live:** sandbox charges MTN's test payer (`MTN_MOMO_SANDBOX_PAYER`, currency **EUR**: MTN's sandbox accepts nothing else); live (`MTN_MOMO_TARGET_ENV` other than `sandbox`) uses GHS and needs the passenger's own MoMo number (the app sends the signed-in user's number; guests have none until accounts exist).
-- Mobile: Pay → "Sending request…" → "Check your phone for the MoMo prompt and enter your PIN" (polls every 3 s) → success toast and the Trip tab; a 60 s timeout or a decline shows "Try again". Try again re-checks the previous attempt first so a late approval is used, not charged twice. Each attempt uses a fresh trip reference.
-- **Verified:** simulator mode in the app (pending, timed-out and success screens; `payments`, `transactions`, `active_trips` populated; one trip per payment). The real MTN client was exercised against a local fake MTN server (token, request-to-pay, polling, decline reason, webhook token check) but **not against MTN's real sandbox: there are no credentials yet**. Needs: `MTN_MOMO_SUBSCRIPTION_KEY`, `MTN_MOMO_API_USER`, `MTN_MOMO_API_KEY`, and a public callback URL.
+- Stop coordinates + optional GPS check; per-wallet MoMo number capture; real keystore + store builds
 
 ### Critical pre-launch fixes (MUST FIX)
-- **Conductor auth:** anyone can post a stop mark (TODO in `routes/trips.ts`)
-- Real accounts (replace guest identity); strip all `__DEV__` links
-- Live MoMo needs the passenger's wallet number captured and verified
+- Set `CONDUCTOR_SETUP_CODE`, `UNION_API_KEY`, `MTN_MOMO_WEBHOOK_SECRET`; a union-run PIN reset
+- Real accounts (replace guest identity); verify the passenger's wallet number
+- Test live MoMo in **GHS** (the sandbox only accepts EUR)
+- Strip all `__DEV__` links (verify they do not render in a release build)
+- Watch for a duplicate payment after a hot reload during real-device testing (the server refuses a second live charge for the same ride)
+
+### Known limitations (v1)
+- Demo mode is single-device; earnings, scan counts and "total fares" on Today/Earnings are mock numbers
+- Passenger history is local; language stored but UI English; light mode deferred; printed date updates on share-sheet open; QR regenerate is local; status bar to verify on a real device
+- Camera scan untested in simulators (use the code chips)
+- "Get off now" / GPS: see the anti-fraud notes above
 
 ### Locked formulas
 - `stopsAway = index(alightingStop) - index(currentStop)`
