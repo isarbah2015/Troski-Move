@@ -1,7 +1,8 @@
 import { eq } from "drizzle-orm";
 import type { RouteStop } from "@trotrolink/shared";
 import { db } from "./db";
-import { withFares } from "./services/fares";
+import { payAmount, tripFare } from "@trotrolink/shared";
+import { getRoundingStep, pairFaresFor, withFares } from "./services/fares";
 import { activeTripsTable, routesTable, transactionsTable, tripEventsTable, usersTable, vehiclesTable } from "./db/schema";
 
 /** Finds (or creates) the anonymous user for a device. Real accounts arrive with phone OTP. */
@@ -54,7 +55,7 @@ export async function vehicleWithRoute(shortCode: string) {
     .where(eq(vehiclesTable.shortCode, shortCode.toUpperCase()))
     .limit(1);
   // Prices always come from the fare table in force, never from the seeded fares alone.
-  return row ? { vehicle: row.vehicle, route: applyDirection(await withFares(row.route), row.vehicle.direction) } : null;
+  return row ? { vehicle: row.vehicle, route: applyDirection(await withFares(row.route), row.vehicle.direction), pairs: await pairFaresFor(row.route.routeId) } : null;
 }
 
 /** A vehicle the union has suspended (and the suspension has not run out) cannot take payments. */
@@ -93,11 +94,13 @@ export function checkTrip(
   boardingStop: string | undefined,
   alightingStop: string,
   amountPaid: number,
+  pairs?: Record<string, number>,
 ): { ok: true; from: number; to: number; officialFare: number } | { ok: false; error: string; officialFare?: number } {
   const from = boardingStop ? stopIndex(stops, boardingStop) : 0;
   const to = stopIndex(stops, alightingStop);
   if (from < 0 || to < 0 || to <= from) return { ok: false, error: "Unknown or out-of-order stops for this route" };
-  const officialFare = round2(stops[to]!.fare - stops[from]!.fare);
+  // A specific stop-to-stop fare set by the union wins over the usual difference of the two stops' fares.
+  const officialFare = tripFare(stops, pairs, stops[from]!.name, stops[to]!.name) ?? round2(stops[to]!.fare - stops[from]!.fare);
   if (amountPaid + 0.001 < officialFare) return { ok: false, error: "Amount paid is below the official fare", officialFare };
   return { ok: true, from, to, officialFare };
 }
@@ -135,6 +138,6 @@ export async function insertTrip(
 }
 
 /** Passengers pay whole cedis: the official fare rounded up. The server decides the price; clients cannot. */
-export function amountDue(officialFare: number): number {
-  return Math.ceil(officialFare - 1e-9);
+export function amountDue(officialFare: number, step = getRoundingStep()): number {
+  return payAmount(officialFare, step);
 }

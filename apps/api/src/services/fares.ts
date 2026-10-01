@@ -7,6 +7,9 @@ type FareTable = typeof fareTablesTable.$inferSelect;
 
 /** Fares change rarely and are read on every scan, so the active table is cached briefly. */
 let cache: { at: number; table: FareTable | null } | null = null;
+/** The rounding step of the table in force; refreshed whenever the table is read, so read prices after `activeFareTable()`. */
+let activeStep = 1;
+export const getRoundingStep = () => activeStep;
 const TTL_MS = 15_000;
 
 export function invalidateFareCache(): void {
@@ -16,8 +19,9 @@ export function invalidateFareCache(): void {
 /** The fare table in force now: the newest one whose effective time has passed, or null (seeded fares apply). */
 export async function activeFareTable(): Promise<FareTable | null> {
   if (cache && Date.now() - cache.at < TTL_MS) return cache.table;
-  const [table] = await db.select().from(fareTablesTable).where(lte(fareTablesTable.effectiveFrom, new Date())).orderBy(desc(fareTablesTable.effectiveFrom)).limit(1);
+  const [table] = await db.select().from(fareTablesTable).where(lte(fareTablesTable.effectiveFrom, new Date())).orderBy(desc(fareTablesTable.effectiveFrom), desc(fareTablesTable.id)).limit(1);
   cache = { at: Date.now(), table: table ?? null };
+  activeStep = table ? Number(table.roundingStep) || 1 : 1;
   return cache.table;
 }
 
@@ -61,4 +65,20 @@ export async function currentFares(): Promise<Record<string, Record<string, numb
   const table = await activeFareTable();
   const routes = await db.select().from(routesTable);
   return Object.fromEntries(routes.map((r) => [r.routeId, Object.fromEntries(overlayFares(r.routeId, r.stopsJson, table).map((s) => [s.name, s.fare]))]));
+}
+
+/** The stop-to-stop fares in force for a route (`From|To` keys). */
+export async function pairFaresFor(routeId: string): Promise<Record<string, number>> {
+  return (await activeFareTable())?.pairs?.[routeId] ?? {};
+}
+
+/** Current stop-to-stop fares for every route. */
+export async function currentPairs(): Promise<Record<string, Record<string, number>>> {
+  return (await activeFareTable())?.pairs ?? {};
+}
+
+/** The same percentage change applied to the stop-to-stop fares in force. */
+export async function buildPercentPairs(percent: number): Promise<Record<string, Record<string, number>>> {
+  const pairs = await currentPairs();
+  return Object.fromEntries(Object.entries(pairs).map(([r, m]) => [r, Object.fromEntries(Object.entries(m).map(([k, v]) => [k, roundFare(v * (1 + percent / 100))]))]));
 }

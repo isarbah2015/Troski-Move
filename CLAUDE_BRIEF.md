@@ -219,3 +219,9 @@ Today/Earnings numbers, scan counts and average rating in the conductor app are 
 - Conductor (Today tab): **Turn round** (`POST /conductor/direction`) and **Change route** (`GET /conductor/route`, `POST /conductor/route`). Both are refused with 409 while paid passengers are on board, so no trip changes under a passenger.
 - Every change is logged in `route_changes` and listed on the union dashboard (Registration tab); more than two route switches in a day is flagged "Unusual".
 - The offline demo mirrors all of this (`lib/demoServer.ts`).
+
+## Short hops and boarding mid-route
+- **Boarding anywhere:** passengers choose "Getting on at" in the stop sheet (default: where the trotro is now, from the conductor's last stop mark; `GET /vehicles/resolve` returns `currentStop`). Only later stops are offered, priced from the boarding stop. The trip starts at that stop (`buildTrip`), and the ETA route line and stop list begin there. The API already accepted any `boardingStop`.
+- **Stop-to-stop fares:** a fare table can carry `pairs` (`{ routeId: { "From|To": fare } }`). A pair wins over the usual difference of two stop fares (`tripFare` in `packages/shared/src/fare.ts`, used by `checkTrip` and the app). Paste lines as `route,From>To,fare` in Fare tables, next to the usual `route,stop,fare`. A percentage change scales pairs too.
+- **Rounding step:** each fare table sets what passengers' prices round up to (`roundingStep`: 1, 0.5, 0.1 or 0.05). Whole cedis (1) is the original rule and the default; 0.1 charges exact fares on short hops (a 50 pesewa hop costs ₵0.50, not ₵1). `amountDue` reads the step of the table in force; the app uses `roundingStep` from resolve. The newest published table wins when two share an effective time.
+- Overstay extensions still use the usual stop-fare difference, not pairs.

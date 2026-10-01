@@ -6,3 +6,4 @@ export * from './qr';
 export * from './seed';
 export * from './geo';
 export * from './currency';
+export * from './fare';

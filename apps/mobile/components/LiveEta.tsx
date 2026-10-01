@@ -23,6 +23,8 @@ type Props = {
   /** Stop names in route order, boarding to alighting and beyond. */
   stops: string[];
   alightingStop: string;
+  /** Where the passenger got on; the route line starts here (they may board mid-route). */
+  boardingStop?: string;
 };
 
 /** Counts smoothly from the old number to the new one instead of jumping. */
@@ -41,7 +43,7 @@ function useCountTo(target: number) {
  * The live ETA: a progress ring that fills as the trotro advances, the minutes counting down in the middle, the clock
  * time it should arrive, a pulsing LIVE badge with "updated" age, and a route line with the bus riding along it.
  */
-export function LiveEta({ eta, progress, destination, currentStop, stopsRemaining, stops, alightingStop }: Props) {
+export function LiveEta({ eta, progress, destination, currentStop, stopsRemaining, stops, alightingStop, boardingStop }: Props) {
   const colors = useColors();
   const t = useT();
   const ring = useRef(new Animated.Value(progress)).current;
@@ -67,8 +69,9 @@ export function LiveEta({ eta, progress, destination, currentStop, stopsRemainin
 
   const names = stops;
   const alightIdx = Math.max(1, names.indexOf(alightingStop));
-  const curIdx = Math.max(0, names.indexOf(currentStop));
-  const track = names.slice(0, alightIdx + 1);
+  const startIdx = Math.max(0, boardingStop ? names.indexOf(boardingStop) : 0);
+  const curIdx = Math.max(0, names.indexOf(currentStop) - startIdx);
+  const track = names.slice(startIdx, alightIdx + 1);
 
   useEffect(() => {
     Animated.timing(ring, { toValue: progress, duration: 900, easing: Easing.out(Easing.cubic), useNativeDriver: false }).start();
@@ -151,7 +154,7 @@ export function LiveEta({ eta, progress, destination, currentStop, stopsRemainin
           ) : null}
           <View style={[styles.chip, { backgroundColor: colors.scheme === 'light' ? 'rgba(7,128,90,0.10)' : 'rgba(43,217,159,0.13)', borderRadius: colors.radiusPill }]}>
             <Feather name="flag" size={12} color={colors.primary} />
-            <Text style={[styles.chipText, { color: colors.primary }]}>{t('eta.stops', { n: stopsRemaining })}</Text>
+            <Text style={[styles.chipText, { color: colors.primary }]}>{stopsRemaining === 1 ? t('eta.stop1') : t('eta.stops', { n: stopsRemaining })}</Text>
           </View>
         </View>
       </View>

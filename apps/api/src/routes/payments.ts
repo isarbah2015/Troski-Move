@@ -43,7 +43,7 @@ async function settleSuccess(referenceId: string, raw: unknown): Promise<Payment
       return done!;
     }
 
-    const check = checkTrip(stops, p.boardingStop, p.alightingStop, Number(p.amount));
+    const check = checkTrip(stops, p.boardingStop, p.alightingStop, Number(p.amount), found.pairs);
     if (!check.ok) throw new Error(check.error);
 
     const t = await insertTrip(tx, {
@@ -125,7 +125,7 @@ export async function initiatePayment(b: InitiatePaymentBody): Promise<InitiateR
   if (isSuspended(found.vehicle)) {
     return { status: 403, body: { error: "This vehicle is suspended by GPRTU. Please take another trotro." } };
   }
-  const check = checkTrip(found.route.stopsJson, b.boardingStop, b.alightingStop, b.amount);
+  const check = checkTrip(found.route.stopsJson, b.boardingStop, b.alightingStop, b.amount, found.pairs);
   if (!check.ok) {
     return { status: 400, body: { error: check.error, ...(check.officialFare !== undefined ? { officialFare: check.officialFare } : {}) } };
   }

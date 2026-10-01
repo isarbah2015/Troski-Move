@@ -1,9 +1,9 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { KeyboardAvoidingView, Modal, Platform, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { Feather } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
 import { useColors } from '@/hooks/useColors';
-import type { ResolvedVehicle, Stop } from '@trotrolink/shared';
+import { payAmount, tripFare, type ResolvedVehicle, type Stop } from '@trotrolink/shared';
 import { formatCedis } from '@/lib/api';
 import { GOLD, SCRIM } from '@/lib/colors';
 import { Approx } from '@/components/Approx';
@@ -14,7 +14,7 @@ type Props = {
   resolved: ResolvedVehicle | null;
   onClose: () => void;
   /** `customNote` is set when the passenger's stop is between anchors: `stop` is then the nearest anchor behind it. */
-  onPay: (stop: Stop, customNote?: string) => void;
+  onPay: (stop: Stop, customNote?: string, boardingStop?: string) => void;
 };
 
 /** Pick the alighting stop, see the official fare and the rounded-up amount to pay. */
@@ -25,9 +25,25 @@ export function StopSheet({ resolved, onClose, onPay }: Props) {
   const [custom, setCustom] = useState(false);
   const [note, setNote] = useState('');
 
-  // Origin is where the passenger boards, so it is not a valid alighting stop.
-  const stops = resolved ? resolved.route.stops.slice(1) : [];
-  const stop = stops.find((s) => s.name === selected) ?? null;
+  const [boarding, setBoarding] = useState<string | null>(null);
+  useEffect(() => {
+    setBoarding(null);
+    setSelected(null);
+  }, [resolved?.vehicle.shortCode]);
+
+  // Passengers can get on anywhere along the route, not only at the first stop. Default to where the trotro is now.
+  const all = resolved?.route.stops ?? [];
+  const names = all.map((x) => x.name);
+  const hereName = resolved?.currentStop && names.includes(resolved.currentStop) ? resolved.currentStop : names[0] ?? '';
+  const boardName = boarding && names.includes(boarding) ? boarding : hereName;
+  const boardIdx = Math.max(0, names.indexOf(boardName));
+  const step = resolved?.roundingStep ?? 1;
+  // Each later stop priced from where the passenger gets on: a specific stop-to-stop fare wins, else the difference.
+  const stops: Stop[] = all.slice(boardIdx + 1).map((x) => {
+    const official = tripFare(all.map((y) => ({ name: y.name, fare: y.officialFare })), resolved?.pairFares, boardName, x.name) ?? x.officialFare;
+    return { ...x, officialFare: official, amountToPay: payAmount(official, step) };
+  });
+  const stop = stops.find((x) => x.name === selected) ?? null;
   const customNote = custom ? note.trim() : '';
   // A custom drop-off needs a note describing where exactly; the fare is for the anchor before it.
   const suspended = !!resolved?.vehicle.suspended;
@@ -35,6 +51,7 @@ export function StopSheet({ resolved, onClose, onPay }: Props) {
 
   const close = () => {
     setSelected(null);
+    setBoarding(null);
     setCustom(false);
     setNote('');
     onClose();
@@ -76,7 +93,32 @@ export function StopSheet({ resolved, onClose, onPay }: Props) {
                 </View>
               ) : null}
               <Text style={[styles.route, { color: colors.foreground }]}>{resolved.route.name}</Text>
-              <Text style={[styles.label, { color: colors.mutedForeground }]}>{(custom ? t('stop.nearest') : t('stop.where')).toUpperCase()}</Text>
+              {/* Where the passenger gets on: the trotro's current stop by default, any other stop on the route if they board there */}
+              <Text style={[styles.label, { color: colors.mutedForeground }]}>{t('stop.on').toUpperCase()}</Text>
+              <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.boardRow} style={styles.boardScroll}>
+                {all.slice(0, -1).map((x) => {
+                  const on = x.name === boardName;
+                  const here = x.name === hereName;
+                  return (
+                    <Pressable
+                      key={x.name}
+                      onPress={() => {
+                        Haptics.selectionAsync();
+                        setBoarding(x.name);
+                        setSelected(null);
+                      }}
+                      accessibilityRole="radio"
+                      accessibilityState={{ selected: on }}
+                      accessibilityLabel={`Get on at ${x.name}${here ? ', where the trotro is now' : ''}`}
+                      style={[styles.boardChip, { borderColor: on ? colors.primary : colors.border, backgroundColor: on ? (colors.scheme === 'light' ? 'rgba(7,128,90,0.10)' : 'rgba(43,217,159,0.14)') : 'transparent', borderRadius: colors.radiusPill }]}
+                    >
+                      {here ? <View style={[styles.hereDot, { backgroundColor: colors.primary }]} /> : null}
+                      <Text style={[styles.boardText, { color: on ? colors.primary : colors.foreground }]}>{x.name}</Text>
+                    </Pressable>
+                  );
+                })}
+              </ScrollView>
+              <Text style={[styles.label, { color: colors.mutedForeground, marginTop: 14 }]}>{(custom ? t('stop.nearest') : t('stop.where')).toUpperCase()}</Text>
 
               <ScrollView style={styles.list} showsVerticalScrollIndicator={false}>
                 {stops.map((s) => {
@@ -130,7 +172,7 @@ export function StopSheet({ resolved, onClose, onPay }: Props) {
               {stop ? (
                 <View style={styles.fareBox}>
                   <Text style={[styles.fareLine, { color: colors.mutedForeground }]}>
-                    {t('stop.official')} {formatCedis(stop.officialFare)} · {t('stop.roundedUp')}
+                    {t('stop.official')} {formatCedis(stop.officialFare)}{stop.amountToPay > stop.officialFare + 0.001 ? ` · ${t('stop.roundedUp')}` : ''}
                   </Text>
                   <Text style={[styles.fareAmount, { color: colors.foreground }]}>{formatCedis(stop.amountToPay)}</Text>
                   <Approx amount={stop.amountToPay} />
@@ -139,7 +181,7 @@ export function StopSheet({ resolved, onClose, onPay }: Props) {
 
               <PrimaryButton
                 disabled={!ready}
-                onPress={() => stop && onPay(stop, customNote || undefined)}
+                onPress={() => stop && onPay(stop, customNote || undefined, boardName)}
                 label={stop ? t('stop.pay', { amount: formatCedis(stop.amountToPay) }) : t('stop.choose')}
                 style={styles.cta}
               />
@@ -152,6 +194,11 @@ export function StopSheet({ resolved, onClose, onPay }: Props) {
 }
 
 const styles = StyleSheet.create({
+  boardScroll: { flexGrow: 0, marginHorizontal: -4 },
+  boardRow: { gap: 8, paddingHorizontal: 4, paddingBottom: 2 },
+  boardChip: { flexDirection: 'row', alignItems: 'center', gap: 6, borderWidth: StyleSheet.hairlineWidth * 2, paddingHorizontal: 14, paddingVertical: 9 },
+  boardText: { fontFamily: 'PlusJakartaSans_700Bold', fontSize: 13 },
+  hereDot: { width: 7, height: 7, borderRadius: 4 },
   verified: { alignSelf: 'flex-start', flexDirection: 'row', alignItems: 'center', gap: 6, paddingHorizontal: 12, paddingVertical: 6, marginTop: 10 },
   verifiedText: { fontFamily: 'PlusJakartaSans_700Bold', fontSize: 12, letterSpacing: 0.3 },
   banner: { flexDirection: 'row', gap: 12, alignItems: 'flex-start', borderWidth: StyleSheet.hairlineWidth * 2, padding: 14, marginTop: 12 },

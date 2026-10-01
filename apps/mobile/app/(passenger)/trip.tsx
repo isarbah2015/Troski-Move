@@ -111,13 +111,14 @@ function ActiveTripView({ trip, onCleared, onConfirmAlighting }: { trip: ActiveT
         stopsRemaining={trip.stopsRemaining}
         stops={trip.stops.map((st) => st.name)}
         alightingStop={trip.alightingStop}
+        boardingStop={trip.boardingStop}
       />
 
       <SupportStatus trip={trip} onOpen={(reason) => { setReportReason(reason); setReportOpen(true); }} />
 
       <View style={[styles.card, { backgroundColor: colors.card, borderColor: colors.border, borderRadius: colors.radius, ...colors.elevation }]}>
-        {trip.stops.map((s, i) => {
-          const last = i === trip.stops.length - 1;
+        {trip.stops.slice(Math.max(0, trip.stops.findIndex((x) => x.name === trip.boardingStop))).map((s, i, shown) => {
+          const last = i === shown.length - 1;
           const isDest = s.name === trip.alightingStop;
           return (
             <View key={s.name} style={styles.stopRow} accessibilityLabel={`${s.name}, ${s.status}${isDest ? ', your stop' : ''}`}>

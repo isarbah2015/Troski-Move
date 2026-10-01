@@ -6,7 +6,8 @@ import { db } from "../db";
 import { disputesTable, fareTablesTable, routeChangesTable, routesTable, unregisteredReportsTable, usersTable, vehiclesTable, warningsTable } from "../db/schema";
 import { logger } from "../logger";
 import { computeCompliance, RULES } from "../services/compliance";
-import { buildPercentTable, currentFares, invalidateFareCache } from "../services/fares";
+import { buildPercentPairs, buildPercentTable, currentFares, currentPairs, getRoundingStep, invalidateFareCache } from "../services/fares";
+import { pairKey, payAmount, ROUNDING_STEPS } from "@trotrolink/shared";
 import { sendPush } from "../services/push";
 import { sendSms } from "../services/sms";
 import { terminalFeeGhs } from "../lib";
@@ -163,23 +164,39 @@ router.post("/union/unregistered-reports/:id/status", async (req, res): Promise<
 
 // ---- Fare tables: schedule, preview, publish ---------------------------------------------------------
 
-/** Parses "route,stop,fare" lines (a header row is skipped) over the current fares, and checks every fare. */
-async function tableFromBody(body: { percent?: number; csv?: string }): Promise<{ ok: true; fares: Record<string, Record<string, number>> } | { ok: false; error: string }> {
+type FareMaps = { fares: Record<string, Record<string, number>>; pairs: Record<string, Record<string, number>> };
+
+/**
+ * Builds the fares for a new table from a percentage change or pasted lines, and checks every number. Lines are
+ * `route,stop,fare` (the fare from the origin to that stop) or `route,From>To,fare` (a specific stop-to-stop price for a
+ * short hop, which wins over the usual difference of the two stop fares).
+ */
+async function tableFromBody(body: { percent?: number; csv?: string }): Promise<({ ok: true } & FareMaps) | { ok: false; error: string }> {
   const routes = await db.select().from(routesTable);
   let fares: Record<string, Record<string, number>>;
+  let pairs: Record<string, Record<string, number>> = JSON.parse(JSON.stringify(await currentPairs()));
   if (typeof body.percent === "number") {
     fares = await buildPercentTable(body.percent);
+    pairs = await buildPercentPairs(body.percent);
   } else if (typeof body.csv === "string" && body.csv.trim()) {
     fares = await currentFares();
     for (const [i, line] of body.csv.trim().split(/\r?\n/).entries()) {
       const [routeId, stop, fare] = line.split(",").map((x) => x.trim());
       if (i === 0 && Number.isNaN(Number(fare))) continue; // header
       const r = routes.find((x) => x.routeId === routeId);
-      if (!r || !stop || !r.stopsJson.some((s) => s.name.toLowerCase() === stop.toLowerCase())) return { ok: false, error: `Line ${i + 1}: unknown route or stop` };
       const n = Number(fare);
+      if (!r || !stop) return { ok: false, error: `Line ${i + 1}: unknown route or stop` };
       if (!Number.isFinite(n) || n < 0 || n > 500) return { ok: false, error: `Line ${i + 1}: fare must be between 0 and 500` };
-      const name = r.stopsJson.find((s) => s.name.toLowerCase() === stop.toLowerCase())!.name;
-      fares[routeId!]![name] = Math.round(n * 100) / 100;
+      const find = (name: string | undefined) => r.stopsJson.find((s) => s.name.toLowerCase() === (name ?? "").trim().toLowerCase())?.name;
+      if (stop.includes(">")) {
+        const [fromName, toName] = stop.split(">").map(find);
+        if (!fromName || !toName || fromName === toName) return { ok: false, error: `Line ${i + 1}: unknown stops in "${stop}"` };
+        (pairs[routeId!] ??= {})[pairKey(fromName, toName)] = Math.round(n * 100) / 100;
+      } else {
+        const name = find(stop);
+        if (!name) return { ok: false, error: `Line ${i + 1}: unknown route or stop` };
+        fares[routeId!]![name] = Math.round(n * 100) / 100;
+      }
     }
   } else {
     return { ok: false, error: "Give a percentage change or paste a fare list" };
@@ -193,23 +210,35 @@ async function tableFromBody(body: { percent?: number; csv?: string }): Promise<
       last = f;
     }
   }
-  return { ok: true, fares };
+  return { ok: true, fares, pairs };
 }
 
-const FareBody = z.object({ percent: z.number().min(-50).max(100).optional(), csv: z.string().max(20_000).optional() });
+const FareBody = z.object({
+  percent: z.number().min(-50).max(100).optional(),
+  csv: z.string().max(20_000).optional(),
+  /** What passengers' prices round up to. Defaults to the step in force. */
+  step: z.number().refine((n) => (ROUNDING_STEPS as readonly number[]).includes(n), "Choose 1, 0.5, 0.1 or 0.05").optional(),
+});
 
 router.get("/union/fares", async (_req, res): Promise<void> => {
   const routes = await db.select().from(routesTable).orderBy(routesTable.routeId);
   const current = await currentFares();
+  const pairs = await currentPairs();
   const tables = await db.select().from(fareTablesTable).orderBy(desc(fareTablesTable.effectiveFrom)).limit(30);
   const now = Date.now();
   res.json({
-    current: routes.map((r) => ({ routeId: r.routeId, routeName: r.routeName, stops: r.stopsJson.map((s, i) => ({ name: s.name, fare: i === 0 ? 0 : current[r.routeId]?.[s.name] ?? s.fare, seeded: s.fare })) })),
-    tables: tables.map((t) => ({ id: t.id, label: t.label, effectiveFrom: t.effectiveFrom, percentChange: t.percentChange ? Number(t.percentChange) : null, createdAt: t.createdAt, notifiedAt: t.notifiedAt, notifiedCount: t.notifiedCount, state: t.effectiveFrom.getTime() > now ? "scheduled" : "in_force" })),
+    roundingStep: getRoundingStep(),
+    current: routes.map((r) => ({
+      routeId: r.routeId,
+      routeName: r.routeName,
+      stops: r.stopsJson.map((s, i) => ({ name: s.name, fare: i === 0 ? 0 : current[r.routeId]?.[s.name] ?? s.fare, seeded: s.fare })),
+      pairs: Object.entries(pairs[r.routeId] ?? {}).map(([k, fare]) => ({ from: k.split("|")[0], to: k.split("|")[1], fare })),
+    })),
+    tables: tables.map((t) => ({ id: t.id, label: t.label, effectiveFrom: t.effectiveFrom, percentChange: t.percentChange ? Number(t.percentChange) : null, roundingStep: Number(t.roundingStep), createdAt: t.createdAt, notifiedAt: t.notifiedAt, notifiedCount: t.notifiedCount, state: t.effectiveFrom.getTime() > now ? "scheduled" : "in_force" })),
   });
 });
 
-/** Shows what a change would do to every stop, without saving anything. */
+/** Shows what a change would do to every stop and short hop, without saving anything. */
 router.post("/union/fares/preview", async (req, res): Promise<void> => {
   const parsed = FareBody.safeParse(req.body);
   if (!parsed.success) {
@@ -221,10 +250,14 @@ router.post("/union/fares/preview", async (req, res): Promise<void> => {
     res.status(400).json({ error: t.error });
     return;
   }
+  const step = parsed.data.step ?? getRoundingStep();
   const routes = await db.select().from(routesTable).orderBy(routesTable.routeId);
   const current = await currentFares();
+  const nowPairs = await currentPairs();
   res.json({
-    changes: routes.flatMap((r) => r.stopsJson.slice(1).map((s) => ({ routeId: r.routeId, stop: s.name, from: current[r.routeId]![s.name]!, to: t.fares[r.routeId]![s.name]!, pay: Math.ceil(t.fares[r.routeId]![s.name]! - 1e-9) }))),
+    step,
+    changes: routes.flatMap((r) => r.stopsJson.slice(1).map((s) => ({ routeId: r.routeId, stop: s.name, from: current[r.routeId]![s.name]!, to: t.fares[r.routeId]![s.name]!, pay: payAmount(t.fares[r.routeId]![s.name]!, step) }))),
+    shortHops: Object.entries(t.pairs).flatMap(([routeId, m]) => Object.entries(m).map(([k, fare]) => ({ routeId, from: k.split("|")[0], to: k.split("|")[1], was: nowPairs[routeId]?.[k] ?? null, fare, pay: payAmount(fare, step) }))),
   });
 });
 
@@ -245,7 +278,8 @@ router.post("/union/fares", async (req, res): Promise<void> => {
     return;
   }
   const effectiveFrom = new Date(b.effectiveFrom);
-  const [row] = await db.insert(fareTablesTable).values({ label: b.label, effectiveFrom, percentChange: b.percent !== undefined ? b.percent.toFixed(2) : null, fares: t.fares }).returning();
+  const step = b.step ?? getRoundingStep();
+  const [row] = await db.insert(fareTablesTable).values({ label: b.label, effectiveFrom, percentChange: b.percent !== undefined ? b.percent.toFixed(2) : null, fares: t.fares, pairs: t.pairs, roundingStep: step.toFixed(2) }).returning();
   invalidateFareCache();
 
   let notified = 0;

@@ -11,10 +11,11 @@ export function newTripId(now = new Date()): string {
  * Builds the trip that starts after payment. Boarding is the route origin and the vehicle starts
  * there; from now on the conductor's stop marks (via the API) move it forward.
  */
-export function buildTrip(resolved: ResolvedVehicle, alighting: Stop, tripId: string, customStopNote?: string, now = new Date()): ActiveTrip {
+export function buildTrip(resolved: ResolvedVehicle, alighting: Stop, tripId: string, customStopNote?: string, now = new Date(), boardingStop?: string): ActiveTrip {
   const names = resolved.route.stops.map((s) => s.name);
-  const alightIdx = Math.max(names.indexOf(alighting.name), 1);
-  const currentIdx = 0;
+  // Passengers may get on mid-route: the trip starts at that stop, and the stops before it are behind them.
+  const currentIdx = Math.max(0, boardingStop ? names.indexOf(boardingStop) : 0);
+  const alightIdx = Math.max(names.indexOf(alighting.name), currentIdx + 1);
   const eta = resolved.route.stops
     .slice(currentIdx + 1, alightIdx + 1)
     .reduce((sum, s) => sum + s.etaMinutes, 0);
@@ -24,7 +25,7 @@ export function buildTrip(resolved: ResolvedVehicle, alighting: Stop, tripId: st
     vehicleShortCode: resolved.vehicle.shortCode,
     driverName: resolved.vehicle.driverName,
     routeName: resolved.route.name,
-    boardingStop: names[0]!,
+    boardingStop: names[currentIdx]!,
     alightingStop: alighting.name,
     currentStop: names[currentIdx]!,
     stopsRemaining: alightIdx - currentIdx,

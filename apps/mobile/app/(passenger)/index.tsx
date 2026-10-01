@@ -22,7 +22,7 @@ import { buildTrip, buildTripRecord, newTripId } from '@/lib/trip';
 import { PrimaryButton } from '@/components/PrimaryButton';
 import { useT } from '@/lib/i18n';
 
-type PaymentState = { phase: PaymentPhase; resolved: ResolvedVehicle; stop: Stop; simulator: boolean; message?: string; referenceId?: string; tripId?: string; customNote?: string };
+type PaymentState = { phase: PaymentPhase; resolved: ResolvedVehicle; stop: Stop; simulator: boolean; message?: string; referenceId?: string; tripId?: string; customNote?: string; boarding?: string };
 
 // Demo codes for web / simulators that have no camera.
 const DEMO_CODES = ['CIR01', 'CIR02', 'MAD05', 'TEM03'];
@@ -93,8 +93,8 @@ export default function ScanScreen() {
    * MoMo flow: ask the API to charge the passenger, wait for their approval, and only then start the
    * trip. Each attempt uses a fresh trip reference, so a declined or abandoned attempt never blocks a retry.
    */
-  const finishPaid = async (res: ResolvedVehicle, stop: Stop, tripId: string, customNote?: string) => {
-    const trip = buildTrip(res, stop, tripId, customNote);
+  const finishPaid = async (res: ResolvedVehicle, stop: Stop, tripId: string, customNote?: string, boarding?: string) => {
+    const trip = buildTrip(res, stop, tripId, customNote, new Date(), boarding);
     await saveActiveTrip(trip);
     await appendTripRecord(buildTripRecord(res, stop, trip));
     Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
@@ -106,7 +106,7 @@ export default function ScanScreen() {
     router.navigate('/trip');
   };
 
-  const pay = async (res: ResolvedVehicle, stop: Stop, customNote?: string, previous?: { referenceId: string; tripId: string }) => {
+  const pay = async (res: ResolvedVehicle, stop: Stop, customNote?: string, previous?: { referenceId: string; tripId: string }, boarding?: string) => {
     if (paying.current) return;
     paying.current = true;
     try {
@@ -116,13 +116,13 @@ export default function ScanScreen() {
         setResolved(null);
         await new Promise((r) => setTimeout(r, 450));
       }
-      setPayment({ phase: 'sending', resolved: res, stop, simulator: false, customNote });
+      setPayment({ phase: 'sending', resolved: res, stop, simulator: false, customNote, boarding });
 
       // A timed-out request may still have been approved: check it before charging again, so a retry never double-charges.
       if (previous) {
         try {
           if ((await api.paymentStatus(previous.referenceId)).status === 'SUCCESSFUL') {
-            await finishPaid(res, stop, previous.tripId, customNote);
+            await finishPaid(res, stop, previous.tripId, customNote, boarding);
             return;
           }
         } catch {
@@ -134,13 +134,13 @@ export default function ScanScreen() {
       const outcome = await payForTrip({
         resolved: res,
         stop,
-        boardingStop: res.route.stops[0]!.name,
+        boardingStop: boarding ?? res.route.stops[0]!.name,
         tripId,
         customStopNote: customNote,
         onPending: ({ referenceId, simulator, tripId: serverTripId }) => setPayment((p) => (p ? { ...p, phase: 'pending', simulator, referenceId, tripId: serverTripId } : p)),
       });
       if (outcome.kind === 'success') {
-        await finishPaid(res, stop, outcome.tripId, customNote);
+        await finishPaid(res, stop, outcome.tripId, customNote, boarding);
       } else {
         Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
         setPayment((p) => (p ? { ...p, phase: outcome.kind, message: outcome.kind === 'failed' ? outcome.reason : undefined } : p));
@@ -262,7 +262,7 @@ export default function ScanScreen() {
 
       <CodeEntrySheet initialCode={initialCode} visible={codeOpen} loading={loading} error={error} canReport={notFound} onReport={(c) => { setReportCode(c); setCodeOpen(false); setTimeout(() => setReportOpen(true), 350); }} onSubmit={resolve} onClose={() => setCodeOpen(false)} />
       <UnregisteredSheet visible={reportOpen} initialCode={reportCode} onClose={() => setReportOpen(false)} />
-      <StopSheet resolved={resolved} onClose={() => setResolved(null)} onPay={(stop, note) => resolved && void pay(resolved, stop, note)} />
+      <StopSheet resolved={resolved} onClose={() => setResolved(null)} onPay={(stop, note, boardingStop) => resolved && void pay(resolved, stop, note, undefined, boardingStop)} />
       <PaymentSheet
         phase={payment?.phase ?? null}
         amount={payment?.stop.amountToPay ?? 0}
@@ -271,7 +271,7 @@ export default function ScanScreen() {
         simulator={payment?.simulator ?? false}
         onRetry={() =>
           payment &&
-          void pay(payment.resolved, payment.stop, payment.customNote, payment.phase === 'timeout' && payment.referenceId && payment.tripId ? { referenceId: payment.referenceId, tripId: payment.tripId } : undefined)
+          void pay(payment.resolved, payment.stop, payment.customNote, payment.phase === 'timeout' && payment.referenceId && payment.tripId ? { referenceId: payment.referenceId, tripId: payment.tripId } : undefined, payment.boarding)
         }
         onClose={() => setPayment(null)}
       />

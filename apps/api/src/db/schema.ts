@@ -292,6 +292,10 @@ export const fareTablesTable = pgTable("fare_tables", {
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   notifiedAt: timestamp("notified_at", { withTimezone: true }),
   notifiedCount: integer("notified_count").notNull().default(0),
+  /** Passengers' prices round up to this step (GHS): 1 = whole cedis (the original rule), 0.1 suits short hops. */
+  roundingStep: numeric("rounding_step", { precision: 4, scale: 2 }).notNull().default("1.00"),
+  /** Specific stop-to-stop fares: `{ [routeId]: { "From|To": fare } }`. They win over the usual difference of two stop fares. */
+  pairs: jsonb("pairs").$type<Record<string, Record<string, number>>>(),
 });
 
 /** A passenger's report of a vehicle that is not GPRTU-registered (no code, or a code that is not on the register). */

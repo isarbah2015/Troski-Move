@@ -44,6 +44,8 @@ const en: Dict = {
   'sos.hurt': 'If anyone is hurt, call now', 'sos.callGprtu': 'Call GPRTU support', 'sos.live': 'GPRTU sees this the moment you send it, with your location, and replies here in real time.', 'sos.send': 'Send alert to GPRTU now',
   'support.title': 'GPRTU support', 'support.received': 'Alert received. GPRTU is looking at it now.', 'support.replied': 'GPRTU replied', 'support.accident': 'Accident reported', 'support.careless': 'Careless driving reported', 'support.resolved': 'Resolved',
   'safety.title': 'Safety', 'safety.accident': 'Report an accident', 'safety.careless': 'Driver driving carelessly', 'eta.arrive': 'Arriving at {stop}', 'eta.stops': '{n} stops away', 'eta.live': 'LIVE', 'eta.updated': 'Updated {when}', 'eta.now': 'just now', 'eta.at': 'About {time}', 'eta.min': 'min', 'eta.arrived': 'Arrived',
+  'stop.on': 'Getting on at',
+  'eta.stop1': '1 stop away',
 };
 
 const tw: Dict = {
@@ -145,6 +147,8 @@ const de: Dict = {
   'sos.hurt': 'Wenn jemand verletzt ist, ruf jetzt an', 'sos.callGprtu': 'GPRTU-Support anrufen', 'sos.live': 'GPRTU sieht deine Meldung sofort, mit deinem Standort, und antwortet hier in Echtzeit.', 'sos.send': 'Alarm jetzt an GPRTU senden',
   'support.title': 'GPRTU-Support', 'support.received': 'Alarm eingegangen. GPRTU kümmert sich darum.', 'support.replied': 'GPRTU hat geantwortet', 'support.accident': 'Unfall gemeldet', 'support.careless': 'Leichtsinniges Fahren gemeldet', 'support.resolved': 'Erledigt',
   'safety.title': 'Sicherheit', 'safety.accident': 'Unfall melden', 'safety.careless': 'Fahrer fährt leichtsinnig', 'eta.arrive': 'Ankunft in {stop}', 'eta.stops': '{n} Haltestellen entfernt', 'eta.live': 'LIVE', 'eta.updated': 'Aktualisiert {when}', 'eta.now': 'gerade eben', 'eta.at': 'Etwa {time}', 'eta.min': 'Min.', 'eta.arrived': 'Angekommen',
+  'stop.on': 'Einstieg bei',
+  'eta.stop1': '1 Haltestelle entfernt',
 };
 
 const ru: Dict = {
@@ -182,6 +186,8 @@ const ru: Dict = {
   'sos.hurt': 'Если кто-то ранен, звоните сейчас', 'sos.callGprtu': 'Позвонить в поддержку GPRTU', 'sos.live': 'GPRTU видит сообщение сразу, с вашим местоположением, и отвечает здесь в реальном времени.', 'sos.send': 'Отправить тревогу в GPRTU',
   'support.title': 'Поддержка GPRTU', 'support.received': 'Тревога получена. GPRTU уже занимается этим.', 'support.replied': 'GPRTU ответил', 'support.accident': 'Сообщено об аварии', 'support.careless': 'Сообщено об опасной езде', 'support.resolved': 'Решено',
   'safety.title': 'Безопасность', 'safety.accident': 'Сообщить об аварии', 'safety.careless': 'Водитель едет небрежно', 'eta.arrive': 'Прибытие: {stop}', 'eta.stops': 'Остановок: {n}', 'eta.live': 'LIVE', 'eta.updated': 'Обновлено {when}', 'eta.now': 'только что', 'eta.at': 'Около {time}', 'eta.min': 'мин', 'eta.arrived': 'Прибыли',
+  'stop.on': 'Посадка на остановке',
+  'eta.stop1': 'Осталась 1 остановка',
 };
 
 const nl: Dict = {
@@ -219,6 +225,8 @@ const nl: Dict = {
   'sos.hurt': 'Is er iemand gewond? Bel nu', 'sos.callGprtu': 'Bel GPRTU-support', 'sos.live': 'GPRTU ziet dit direct, met je locatie, en antwoordt hier in realtime.', 'sos.send': 'Stuur nu alarm naar GPRTU',
   'support.title': 'GPRTU-support', 'support.received': 'Alarm ontvangen. GPRTU kijkt er nu naar.', 'support.replied': 'GPRTU heeft gereageerd', 'support.accident': 'Ongeval gemeld', 'support.careless': 'Onvoorzichtig rijden gemeld', 'support.resolved': 'Opgelost',
   'safety.title': 'Veiligheid', 'safety.accident': 'Meld een ongeval', 'safety.careless': 'Chauffeur rijdt onvoorzichtig', 'eta.arrive': 'Aankomst bij {stop}', 'eta.stops': '{n} haltes te gaan', 'eta.live': 'LIVE', 'eta.updated': 'Bijgewerkt {when}', 'eta.now': 'zojuist', 'eta.at': 'Ongeveer {time}', 'eta.min': 'min', 'eta.arrived': 'Aangekomen',
+  'stop.on': 'Instappen bij',
+  'eta.stop1': '1 halte te gaan',
 };
 
 const zh: Dict = {
@@ -256,6 +264,8 @@ const zh: Dict = {
   'sos.hurt': '如有人受伤，请立即拨打', 'sos.callGprtu': '致电 GPRTU 支持', 'sos.live': 'GPRTU 会立刻看到你的报告和位置，并在此实时回复。', 'sos.send': '立即向 GPRTU 发送警报',
   'support.title': 'GPRTU 支持', 'support.received': '已收到警报，GPRTU 正在处理。', 'support.replied': 'GPRTU 已回复', 'support.accident': '已报告事故', 'support.careless': '已报告危险驾驶', 'support.resolved': '已解决',
   'safety.title': '安全', 'safety.accident': '报告事故', 'safety.careless': '司机驾驶不当', 'eta.arrive': '到达 {stop}', 'eta.stops': '还有 {n} 站', 'eta.live': '实时', 'eta.updated': '{when}更新', 'eta.now': '刚刚', 'eta.at': '约 {time}', 'eta.min': '分钟', 'eta.arrived': '已到达',
+  'stop.on': '上车站点',
+  'eta.stop1': '还有 1 站',
 };
 
 const DICTS: Record<AppLanguage, Dict> = { English: en, Twi: tw, Ewe: ee, German: de, Russian: ru, Dutch: nl, Chinese: zh };

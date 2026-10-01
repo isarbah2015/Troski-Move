@@ -42,7 +42,7 @@ router.post("/trips/start", async (req, res): Promise<void> => {
     return;
   }
   const stops = found.route.stopsJson;
-  const check = checkTrip(stops, body.boardingStop, body.alightingStop, body.amountPaid);
+  const check = checkTrip(stops, body.boardingStop, body.alightingStop, body.amountPaid, found.pairs);
   if (!check.ok) {
     res.status(400).json({ error: check.error, ...(check.officialFare !== undefined ? { officialFare: check.officialFare } : {}) });
     return;

@@ -35,6 +35,12 @@ export const ResolvedVehicle = z.object({
     destination: z.string(),
     stops: z.array(Stop),
   }),
+  /** Where the vehicle is now (the conductor's last stop mark), so a passenger boarding mid-route starts from there. */
+  currentStop: z.string().optional(),
+  /** What passengers' prices round up to (GHS). 1 = whole cedis. */
+  roundingStep: z.number().optional(),
+  /** Specific stop-to-stop fares set by the union, keyed `From|To`. They win over the usual difference. */
+  pairFares: z.record(z.number()).optional(),
   /** Set when GPRTU changed the fares recently, so passengers see why the price differs from last time. */
   fareNotice: z.object({ label: z.string(), effectiveFrom: z.string() }).nullable().optional(),
 });

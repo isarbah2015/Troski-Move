@@ -24,7 +24,7 @@ type Db = {
   sessions: Record<string, { vehicleCode: string; expiresAt: number }>;
   ratings: Array<{ tripId: string; vehicleCode: string; driver: number; conductor: number; comment?: string; at: number }>;
   /** Direction and route chosen by the conductor, per vehicle (the demo's version of the vehicles table). */
-  vehicleCfg?: Record<string, { routeId?: string; direction?: 'outbound' | 'inbound' }>;
+  vehicleCfg?: Record<string, { routeId?: string; direction?: 'outbound' | 'inbound'; changedAt?: number }>;
   splits: Array<Record<string, unknown>>; disputes: Array<Record<string, unknown>>; events: Array<Record<string, unknown>>;
 };
 
@@ -198,6 +198,14 @@ async function route(method: string, path: string, query: URLSearchParams, body:
     return {
       vehicle: { id: v!.id, shortCode: v!.shortCode, driverName: v!.driverName, conductorName: v!.conductorName, verified: true, suspended: false },
       fareNotice: null,
+      // Where the trotro is now (the conductor's latest stop mark since the last route or direction change).
+      currentStop: (() => {
+        const code = v!.shortCode; const changed = d.vehicleCfg?.[code]?.changedAt ?? 0;
+        const last = [...d.events].reverse().find((e) => e.vehicle === code && e.type === 'stop_reached' && Number(e.at) > changed && v!.route.stops.some((x) => x.name === e.stop));
+        return last ? String(last.stop) : v!.route.stops[0]!.name;
+      })(),
+      roundingStep: 1,
+      pairFares: {},
       route: { routeId: v!.route.routeId, name: v!.route.routeName, origin: v!.route.origin, destination: v!.route.destination, stops: v!.route.stops.map((s) => ({ name: s.name, etaMinutes: s.etaMinutes, officialFare: s.fare, amountToPay: due(s.fare), lat: s.lat, lng: s.lng })) },
     };
   }
@@ -388,10 +396,10 @@ async function route(method: string, path: string, query: URLSearchParams, body:
     };
     if (!post) return snap();
     if (onBoard > 0) fail(409, `${onBoard} paid passenger${onBoard === 1 ? ' is' : 's are'} still on board. Change direction or route once everyone has got off.`, { onBoard });
-    if (path === '/conductor/direction') cfg[own]!.direction = (cfg[own]!.direction ?? 'outbound') === 'outbound' ? 'inbound' : 'outbound';
+    if (path === '/conductor/direction') { cfg[own]!.direction = (cfg[own]!.direction ?? 'outbound') === 'outbound' ? 'inbound' : 'outbound'; cfg[own]!.changedAt = Date.now(); }
     else {
       const target = SEED_ROUTES.find((r) => r.routeId === body.routeId); if (!target) fail(404, 'Unknown route');
-      cfg[own] = { routeId: target!.routeId === base.route.routeId ? undefined : target!.routeId, direction: 'outbound' };
+      cfg[own] = { routeId: target!.routeId === base.route.routeId ? undefined : target!.routeId, direction: 'outbound', changedAt: Date.now() };
     }
     await save(); return snap();
   }
