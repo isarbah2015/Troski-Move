@@ -225,3 +225,11 @@ Today/Earnings numbers, scan counts and average rating in the conductor app are 
 - **Stop-to-stop fares:** a fare table can carry `pairs` (`{ routeId: { "From|To": fare } }`). A pair wins over the usual difference of two stop fares (`tripFare` in `packages/shared/src/fare.ts`, used by `checkTrip` and the app). Paste lines as `route,From>To,fare` in Fare tables, next to the usual `route,stop,fare`. A percentage change scales pairs too.
 - **Rounding step:** each fare table sets what passengers' prices round up to (`roundingStep`: 1, 0.5, 0.1 or 0.05). Whole cedis (1) is the original rule and the default; 0.1 charges exact fares on short hops (a 50 pesewa hop costs ₵0.50, not ₵1). `amountDue` reads the step of the table in force; the app uses `roundingStep` from resolve. The newest published table wins when two share an effective time.
 - Overstay extensions still use the usual stop-fare difference, not pairs.
+
+## Conductor Big Board (Today tab)
+- Today is a glanceable board: status banner (ALL PAID / N NOT ON THE LIST), head-count stepper, "Getting off here", "Next stop", "Later stops", "Past their stop", Verify QR and Add unpaid buttons. Logic is in `lib/board.ts`.
+- Stops are marked by GPS within 100 m (`lib/autoStops.ts`, needs a real phone); the "We are at <stop>" button is the one-tap fallback. "Not at X? Set the stop" corrects it.
+- Verify QR (`components/VerifySheet.tsx`): scan the passenger's trip QR or type the last characters of the trip code; result is PAID or NOT FOUND with a Report unpaid button.
+- Optional voice readout (`lib/speak.ts`, expo-speech on device, speechSynthesis on web).
+- Passengers are anonymous guests, so rows show "Passenger · <last 4 of trip id>".
+- Toasts slide up above the tab bar. Screenshot scripts grow the phone to fit each screen (`fit.js` in the scratchpad).
