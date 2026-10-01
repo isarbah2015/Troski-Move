@@ -1,5 +1,6 @@
 import { sql } from "drizzle-orm";
 import {
+  boolean,
   check,
   date,
   index,
@@ -60,6 +61,15 @@ export const vehiclesTable = pgTable("vehicles", {
   routeId: integer("route_id").notNull().references(() => routesTable.id),
   driverName: text("driver_name").notNull(),
   conductorName: text("conductor_name").notNull(),
+  /** GPRTU registration: only registered, active vehicles can take payments. Everything seeded is registered. */
+  registeredAt: timestamp("registered_at", { withTimezone: true }).notNull().defaultNow(),
+  status: text("status").$type<"active" | "suspended">().notNull().default("active"),
+  suspendedUntil: timestamp("suspended_until", { withTimezone: true }),
+  suspensionReason: text("suspension_reason"),
+  /** Where the union's warning SMS goes. */
+  driverPhone: text("driver_phone"),
+  /** The owner agreed that the union may share their verified income statement (e.g. with a lender). */
+  creditConsent: boolean("credit_consent").notNull().default(false),
 });
 
 export type Vehicle = typeof vehiclesTable.$inferSelect;
@@ -83,6 +93,8 @@ export const transactionsTable = pgTable(
     /** GPS check at alighting: metres from the declared stop, and near/far. Null when the phone gave no position. */
     alightDistanceM: integer("alight_distance_m"),
     alightGps: text("alight_gps").$type<"near" | "far">(),
+    /** The terminal fee booked for this trip (GHS), at the rate in force when it was made. Not charged to the passenger. */
+    terminalFee: numeric("terminal_fee", { precision: 6, scale: 2 }).notNull().default("0.10"),
   },
   (t) => [index("transactions_vehicle_ts_idx").on(t.vehicleId, t.timestamp)],
 );
@@ -177,6 +189,8 @@ export const disputesTable = pgTable("disputes", {
   vehicleId: integer("vehicle_id").references(() => vehiclesTable.id),
   reporterId: integer("reporter_id").references(() => usersTable.id),
   description: text("description"),
+  /** For an overcharge report: what the passenger says they were asked to pay (GHS). Feeds the fare-compliance flags. */
+  amountAsked: numeric("amount_asked", { precision: 8, scale: 2 }),
   /** Snapshot taken when the report was filed: the trip, vehicle, conductor and every trip event. */
   evidence: jsonb("evidence"),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
@@ -244,5 +258,41 @@ export const conductorSessionsTable = pgTable("conductor_sessions", {
   conductorId: integer("conductor_id").notNull().references(() => usersTable.id),
   tokenHash: text("token_hash").notNull().unique(),
   expiresAt: timestamp("expires_at", { withTimezone: true }).notNull(),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+});
+
+/** An official union warning sent to a vehicle's driver. Repeat warnings lead to a suspension recommendation. */
+export const warningsTable = pgTable("warnings", {
+  id: serial("id").primaryKey(),
+  vehicleId: integer("vehicle_id").notNull().references(() => vehiclesTable.id),
+  message: text("message").notNull(),
+  /** `sent`, `simulated` (no SMS provider configured) or `no_phone` (nothing to send to). */
+  smsStatus: text("sms_status").notNull(),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+});
+
+/** A scheduled fare table. The latest one whose `effectiveFrom` has passed overrides the seeded route fares. */
+export const fareTablesTable = pgTable("fare_tables", {
+  id: serial("id").primaryKey(),
+  label: text("label").notNull(),
+  effectiveFrom: timestamp("effective_from", { withTimezone: true }).notNull(),
+  /** If the table came from a percentage change, the percentage (for the record). */
+  percentChange: numeric("percent_change", { precision: 6, scale: 2 }),
+  /** `{ [routeId]: { [stopName]: fareFromOrigin } }` */
+  fares: jsonb("fares").$type<Record<string, Record<string, number>>>().notNull(),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  notifiedAt: timestamp("notified_at", { withTimezone: true }),
+  notifiedCount: integer("notified_count").notNull().default(0),
+});
+
+/** A passenger's report of a vehicle that is not GPRTU-registered (no code, or a code that is not on the register). */
+export const unregisteredReportsTable = pgTable("unregistered_reports", {
+  id: serial("id").primaryKey(),
+  reporterId: integer("reporter_id").references(() => usersTable.id),
+  codeSeen: text("code_seen"),
+  note: text("note"),
+  lat: numeric("lat", { precision: 9, scale: 6 }),
+  lng: numeric("lng", { precision: 9, scale: 6 }),
+  status: text("status").$type<(typeof disputeStatuses)[number]>().notNull().default("open"),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
 });

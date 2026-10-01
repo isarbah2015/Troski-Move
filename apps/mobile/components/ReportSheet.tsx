@@ -17,7 +17,7 @@ export const REPORT_REASONS: ReadonlyArray<{ key: DisputeReason; label: string; 
 
 export type ReportReason = DisputeReason;
 
-type Props = { visible: boolean; onSubmit: (reason: DisputeReason, description?: string) => void | Promise<void>; onClose: () => void };
+type Props = { visible: boolean; onSubmit: (reason: DisputeReason, description?: string, amountAsked?: number) => void | Promise<void>; onClose: () => void };
 
 /** Step 1: pick what went wrong. Step 2: add an optional note and send. */
 export function ReportSheet({ visible, onSubmit, onClose }: Props) {
@@ -25,12 +25,14 @@ export function ReportSheet({ visible, onSubmit, onClose }: Props) {
   const t = useT();
   const [reason, setReason] = useState<DisputeReason | null>(null);
   const [note, setNote] = useState('');
+  const [asked, setAsked] = useState('');
   const [busy, setBusy] = useState(false);
 
   useEffect(() => {
     if (!visible) {
       setReason(null);
       setNote('');
+      setAsked('');
       setBusy(false);
     }
   }, [visible]);
@@ -78,6 +80,17 @@ export function ReportSheet({ visible, onSubmit, onClose }: Props) {
                   <Text style={[styles.change, { color: colors.primary }]}>Change</Text>
                 </Pressable>
               </View>
+              {chosen.key === 'overcharge' ? (
+                <TextInput
+                  value={asked}
+                  onChangeText={(v) => setAsked(v.replace(/[^\d.]/g, '').slice(0, 6))}
+                  placeholder={t('report.asked')}
+                  placeholderTextColor={colors.mutedForeground}
+                  keyboardType="decimal-pad"
+                  accessibilityLabel={t('report.asked')}
+                  style={[styles.input, styles.amount, { color: colors.foreground, backgroundColor: colors.background, borderColor: colors.border, borderRadius: colors.radius }]}
+                />
+              ) : null}
               <TextInput
                 value={note}
                 onChangeText={setNote}
@@ -94,7 +107,8 @@ export function ReportSheet({ visible, onSubmit, onClose }: Props) {
                 onPress={async () => {
                   setBusy(true);
                   Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-                  await onSubmit(chosen.key, note.trim() || undefined);
+                  const amount = chosen.key === 'overcharge' && Number(asked) > 0 ? Number(asked) : undefined;
+                  await onSubmit(chosen.key, note.trim() || undefined, amount);
                 }}
                 label={t('report.send')}
                 style={styles.send}
@@ -123,6 +137,7 @@ const styles = StyleSheet.create({
   chosenText: { flex: 1, fontFamily: 'PlusJakartaSans_600SemiBold', fontSize: 16 },
   change: { fontFamily: 'PlusJakartaSans_700Bold', fontSize: 14 },
   input: { borderWidth: StyleSheet.hairlineWidth * 2, minHeight: 90, padding: 14, marginTop: 12, fontFamily: 'PlusJakartaSans_400Regular', fontSize: 15, textAlignVertical: 'top' },
+  amount: { minHeight: 0, paddingVertical: 14 },
   fine: { fontFamily: 'PlusJakartaSans_400Regular', fontSize: 12, lineHeight: 17, marginTop: 10 },
   send: { marginTop: 18 },
   sendText: { fontFamily: 'PlusJakartaSans_700Bold', fontSize: 17 },

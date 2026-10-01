@@ -203,3 +203,13 @@ Trip tab shows **Confirm alighting** once the vehicle's current stop (set by the
 
 ### Known limits
 Today/Earnings numbers, scan counts and average rating in the conductor app are still mock. Demo mode is single-phone. Tema and Madina routes/fares are placeholders. Live MoMo and closed-app push are GPRTU's to configure.
+
+
+## GPRTU features (union operations)
+- **GPRTU Verified**: `GET /vehicles/resolve` returns `vehicle.verified` and `vehicle.suspended`. Scan shows a "GPRTU Verified" badge; a suspended vehicle shows a block and cannot be paid (`/payments/initiate` and USSD refuse it). Unknown codes offer **Report unregistered** (`POST /reports/unregistered`, also reachable from Scan), listed under Registration on the dashboard.
+- **Compliance** (`/union/compliance`, `services/compliance.ts` holds the rules): flags vehicles whose reported asked-fare is over the official fare by more than 5% (from overcharge reports that carry `amountAsked`), driver rating below 3.0 (3+ ratings), overcharge reports, and repeat offenders (2 warnings in 90 days = suspension recommended). Actions: **Issue warning** (SMS via `services/sms.ts`, simulator without Hubtel credentials), **Suspend** (days + reason), **Reinstate**.
+- **Fare tables** (`/union/fares`, `services/fares.ts`): seeded fares are the base. A table has a name, an effective time and either a % change or a pasted `route,stop,fare` list. From its effective time every quoted and accepted price comes from it (`vehicleWithRoute` overlays it), so the old fare stops working at once. Publishing can SMS every driver and push every conductor. Passengers see "New GPRTU fares from …" for 14 days.
+- **Terminals** (`/union/terminals`): each trip books `TERMINAL_FEE_GHS` (default 0.10) to its route's origin terminal at the rate in force; not charged to passengers.
+- **Statements** (`/union/statements`): monthly trips/fares/rating per vehicle, only with the owner's recorded consent (`vehicles.credit_consent`), only from fares collected through TrotroLink. Eligibility thresholds (6 months, 15 active days) are placeholders for the lender to set. CSV download and print from the dashboard.
+- Migration: `pnpm --filter api db:push` adds the new columns and tables (`warnings`, `fare_tables`, `unregistered_reports`, vehicle status/phone/consent, `transactions.terminal_fee`, `disputes.amount_asked`). Re-run `db:seed` to put placeholder driver phone numbers on seeded vehicles.
+- Not built: bank partnerships and referral fees, real driver phone numbers (placeholders only), FCM credentials.

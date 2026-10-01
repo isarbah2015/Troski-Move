@@ -41,7 +41,7 @@ router.post("/disputes", async (req, res): Promise<void> => {
   };
   const [row] = await db
     .insert(disputesTable)
-    .values({ transactionId: t.id, vehicleId: t.vehicleId, reporterId, disputeType: b.reason, description: b.description ?? null, evidence })
+    .values({ transactionId: t.id, vehicleId: t.vehicleId, reporterId, disputeType: b.reason, description: b.description ?? null, amountAsked: b.amountAsked !== undefined ? b.amountAsked.toFixed(2) : null, evidence })
     .returning({ id: disputesTable.id });
   res.json({ ok: true, disputeId: row!.id });
 });

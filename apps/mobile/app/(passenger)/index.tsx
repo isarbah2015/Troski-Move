@@ -8,6 +8,7 @@ import { useFocusEffect, useLocalSearchParams, useRouter } from 'expo-router';
 import type { ResolvedVehicle, Stop } from '@trotrolink/shared';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { CodeEntrySheet } from '@/components/CodeEntrySheet';
+import { UnregisteredSheet } from '@/components/UnregisteredSheet';
 import { DemoBadge } from '@/components/DemoBadge';
 import { PaymentSheet, type PaymentPhase } from '@/components/PaymentSheet';
 import { StopSheet } from '@/components/StopSheet';
@@ -58,6 +59,9 @@ export default function ScanScreen() {
   const [codeOpen, setCodeOpen] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [notFound, setNotFound] = useState(false);
+  const [reportOpen, setReportOpen] = useState(false);
+  const [reportCode, setReportCode] = useState('');
   const busy = useRef(false);
   const paying = useRef(false);
   const [payment, setPayment] = useState<PaymentState | null>(null);
@@ -67,6 +71,7 @@ export default function ScanScreen() {
     busy.current = true;
     setLoading(true);
     setError(null);
+    setNotFound(false);
     try {
       const result = await api.resolveVehicle(code);
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
@@ -74,6 +79,7 @@ export default function ScanScreen() {
       setResolved(result);
     } catch (e) {
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+      setNotFound(e instanceof VehicleNotFoundError);
       setError(e instanceof VehicleNotFoundError ? "We couldn't find that trotro. Check the code and try again." : 'Something went wrong. Check your connection and try again.');
     } finally {
       setLoading(false);
@@ -234,6 +240,10 @@ export default function ScanScreen() {
             </ScrollView>
           </>
         ) : null}
+        <Pressable onPress={() => { setReportCode(''); setReportOpen(true); }} accessibilityRole="button" hitSlop={8} style={styles.reportRow}>
+          <Feather name="alert-triangle" size={14} color={colors.accent} />
+          <Text style={[styles.reportText, { color: colors.accent }]}>{t('unreg.link')}</Text>
+        </Pressable>
         <PrimaryButton
           label={t('scan.enterCode')}
           icon="hash"
@@ -244,7 +254,8 @@ export default function ScanScreen() {
         />
       </View>
 
-      <CodeEntrySheet initialCode={initialCode} visible={codeOpen} loading={loading} error={error} onSubmit={resolve} onClose={() => setCodeOpen(false)} />
+      <CodeEntrySheet initialCode={initialCode} visible={codeOpen} loading={loading} error={error} canReport={notFound} onReport={(c) => { setReportCode(c); setCodeOpen(false); setTimeout(() => setReportOpen(true), 350); }} onSubmit={resolve} onClose={() => setCodeOpen(false)} />
+      <UnregisteredSheet visible={reportOpen} initialCode={reportCode} onClose={() => setReportOpen(false)} />
       <StopSheet resolved={resolved} onClose={() => setResolved(null)} onPay={(stop, note) => resolved && void pay(resolved, stop, note)} />
       <PaymentSheet
         phase={payment?.phase ?? null}
@@ -283,6 +294,8 @@ const styles = StyleSheet.create({
   permissionText: { fontFamily: 'PlusJakartaSans_500Medium', fontSize: 14, lineHeight: 21, textAlign: 'center' },
   permissionLink: { fontFamily: 'PlusJakartaSans_700Bold', fontSize: 15 },
   bottom: { paddingHorizontal: 24 },
+  reportRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, marginBottom: 14 },
+  reportText: { fontFamily: 'PlusJakartaSans_600SemiBold', fontSize: 13 },
   chipsLabel: { fontFamily: 'PlusJakartaSans_700Bold', fontSize: 11, letterSpacing: 1.6, marginBottom: 10 },
   chipsRow: { flexGrow: 0, marginBottom: 16, overflow: 'visible' },
   chips: { gap: 8, paddingVertical: 4 },

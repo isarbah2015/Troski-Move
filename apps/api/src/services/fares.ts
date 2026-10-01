@@ -1,0 +1,64 @@
+import { desc, lte } from "drizzle-orm";
+import type { RouteStop } from "@trotrolink/shared";
+import { db } from "../db";
+import { fareTablesTable, routesTable } from "../db/schema";
+
+type FareTable = typeof fareTablesTable.$inferSelect;
+
+/** Fares change rarely and are read on every scan, so the active table is cached briefly. */
+let cache: { at: number; table: FareTable | null } | null = null;
+const TTL_MS = 15_000;
+
+export function invalidateFareCache(): void {
+  cache = null;
+}
+
+/** The fare table in force now: the newest one whose effective time has passed, or null (seeded fares apply). */
+export async function activeFareTable(): Promise<FareTable | null> {
+  if (cache && Date.now() - cache.at < TTL_MS) return cache.table;
+  const [table] = await db.select().from(fareTablesTable).where(lte(fareTablesTable.effectiveFrom, new Date())).orderBy(desc(fareTablesTable.effectiveFrom)).limit(1);
+  cache = { at: Date.now(), table: table ?? null };
+  return cache.table;
+}
+
+/** The route's stops with the active table's fares laid over the seeded ones. Stops the table does not mention keep their fare. */
+export function overlayFares(routeId: string, stops: RouteStop[], table: FareTable | null): RouteStop[] {
+  const fares = table?.fares[routeId];
+  if (!fares) return stops;
+  return stops.map((s, i) => (i === 0 ? s : { ...s, fare: fares[s.name] ?? s.fare }));
+}
+
+/** Applies the active fare table to a route row. Use this wherever a price is read. */
+export async function withFares<T extends { routeId: string; stopsJson: RouteStop[] }>(route: T): Promise<T> {
+  const table = await activeFareTable();
+  return table ? { ...route, stopsJson: overlayFares(route.routeId, route.stopsJson, table) } : route;
+}
+
+/** A recent fare change, so passengers are told why the price differs from last time. */
+export async function fareNotice(): Promise<{ label: string; effectiveFrom: string } | null> {
+  const table = await activeFareTable();
+  if (!table || Date.now() - table.effectiveFrom.getTime() > 14 * 86_400_000) return null;
+  return { label: table.label, effectiveFrom: table.effectiveFrom.toISOString() };
+}
+
+/** Rounds to the nearest 10 pesewas, the way minibus fares are quoted. */
+export const roundFare = (n: number) => Math.round(n * 10) / 10;
+
+/** Builds a table from every route's current fares changed by `percent` (e.g. 8 for +8%). The origin stays 0. */
+export async function buildPercentTable(percent: number): Promise<Record<string, Record<string, number>>> {
+  const table = await activeFareTable();
+  const routes = await db.select().from(routesTable);
+  const out: Record<string, Record<string, number>> = {};
+  for (const r of routes) {
+    const stops = overlayFares(r.routeId, r.stopsJson, table);
+    out[r.routeId] = Object.fromEntries(stops.map((s, i) => [s.name, i === 0 ? 0 : roundFare(s.fare * (1 + percent / 100))]));
+  }
+  return out;
+}
+
+/** The current fares of every route, in the same shape as a table's `fares`. */
+export async function currentFares(): Promise<Record<string, Record<string, number>>> {
+  const table = await activeFareTable();
+  const routes = await db.select().from(routesTable);
+  return Object.fromEntries(routes.map((r) => [r.routeId, Object.fromEntries(overlayFares(r.routeId, r.stopsJson, table).map((s) => [s.name, s.fare]))]));
+}

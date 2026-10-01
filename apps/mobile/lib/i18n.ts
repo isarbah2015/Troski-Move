@@ -39,6 +39,8 @@ const en: Dict = {
   'set.help': 'Help', 'set.delete': 'Delete account', 'set.languageNote': 'Twi and Ewe wording is a first version and may change.',
   'notif.next.title': 'Your stop is next', 'notif.next.body': 'Get ready to get off at {stop}.', 'notif.arrived.title': 'You have arrived', 'notif.arrived.body': 'This is your stop, {stop}.', 'notif.over.title': 'You have passed {stop}', 'notif.over.body': 'Open TrotroLink to extend your trip or get off.',
   'report.title': 'Report an issue', 'report.what': 'What went wrong on this trip?', 'report.send': 'Send report',
+  'verified.badge': 'GPRTU Verified', 'suspended.title': 'Vehicle suspended by GPRTU', 'suspended.body': 'This trotro cannot take payments right now. Please take another one.', 'fare.notice': 'New GPRTU fares from {date}',
+  'unreg.link': 'No GPRTU sticker? Report this vehicle', 'unreg.title': 'Report an unregistered vehicle', 'unreg.body': 'Only GPRTU-registered trotros can take payments in TrotroLink. Tell the union about this one and we will check it.', 'unreg.code': 'Vehicle code, if any', 'unreg.note': 'Where did you see it? (route, stop, colour)', 'unreg.send': 'Send to GPRTU', 'unreg.thanks': 'Thanks. GPRTU will check this vehicle.', 'code.report': 'Report this vehicle to GPRTU', 'report.asked': 'What were you asked to pay? (₵, optional)',
 };
 
 const tw: Dict = {
@@ -135,6 +137,8 @@ const de: Dict = {
   'set.help': 'Hilfe', 'set.delete': 'Konto löschen', 'set.languageNote': 'Die Übersetzungen können sich noch ändern.',
   'notif.next.title': 'Deine Haltestelle ist die nächste', 'notif.next.body': 'Mach dich bereit zum Aussteigen an {stop}.', 'notif.arrived.title': 'Du bist angekommen', 'notif.arrived.body': 'Das ist deine Haltestelle, {stop}.', 'notif.over.title': 'Du hast {stop} verpasst', 'notif.over.body': 'Öffne TrotroLink, um deine Fahrt zu verlängern oder auszusteigen.',
   'report.title': 'Problem melden', 'report.what': 'Was ist auf dieser Fahrt schiefgelaufen?', 'report.send': 'Meldung senden',
+  'verified.badge': 'GPRTU-verifiziert', 'suspended.title': 'Fahrzeug von GPRTU gesperrt', 'suspended.body': 'Dieses Trotro kann derzeit keine Zahlungen annehmen. Bitte nimm ein anderes.', 'fare.notice': 'Neue GPRTU-Fahrpreise ab {date}',
+  'unreg.link': 'Kein GPRTU-Aufkleber? Fahrzeug melden', 'unreg.title': 'Nicht registriertes Fahrzeug melden', 'unreg.body': 'Nur bei GPRTU registrierte Trotros können in TrotroLink Zahlungen annehmen. Melde dieses der Gewerkschaft, wir prüfen es.', 'unreg.code': 'Fahrzeugcode, falls vorhanden', 'unreg.note': 'Wo hast du es gesehen? (Strecke, Haltestelle, Farbe)', 'unreg.send': 'An GPRTU senden', 'unreg.thanks': 'Danke. GPRTU prüft dieses Fahrzeug.', 'code.report': 'Dieses Fahrzeug bei GPRTU melden', 'report.asked': 'Wie viel solltest du zahlen? (₵, optional)',
 };
 
 const ru: Dict = {
@@ -167,6 +171,8 @@ const ru: Dict = {
   'set.help': 'Помощь', 'set.delete': 'Удалить аккаунт', 'set.languageNote': 'Переводы могут измениться.',
   'notif.next.title': 'Ваша остановка следующая', 'notif.next.body': 'Приготовьтесь выходить на остановке {stop}.', 'notif.arrived.title': 'Вы приехали', 'notif.arrived.body': 'Это ваша остановка, {stop}.', 'notif.over.title': 'Вы проехали {stop}', 'notif.over.body': 'Откройте TrotroLink, чтобы продлить поездку или выйти.',
   'report.title': 'Сообщить о проблеме', 'report.what': 'Что пошло не так во время этой поездки?', 'report.send': 'Отправить сообщение',
+  'verified.badge': 'Проверено GPRTU', 'suspended.title': 'Машина приостановлена GPRTU', 'suspended.body': 'Этот тротро сейчас не принимает платежи. Пожалуйста, выберите другой.', 'fare.notice': 'Новые тарифы GPRTU с {date}',
+  'unreg.link': 'Нет наклейки GPRTU? Сообщить о машине', 'unreg.title': 'Сообщить о незарегистрированной машине', 'unreg.body': 'Платежи в TrotroLink принимают только тротро, зарегистрированные в GPRTU. Сообщите об этом союзу, и мы проверим.', 'unreg.code': 'Код машины, если есть', 'unreg.note': 'Где вы её видели? (маршрут, остановка, цвет)', 'unreg.send': 'Отправить в GPRTU', 'unreg.thanks': 'Спасибо. GPRTU проверит эту машину.', 'code.report': 'Сообщить об этой машине в GPRTU', 'report.asked': 'Сколько с вас просили? (₵, необязательно)',
 };
 
 const nl: Dict = {
@@ -199,6 +205,8 @@ const nl: Dict = {
   'set.help': 'Help', 'set.delete': 'Account verwijderen', 'set.languageNote': 'De vertalingen kunnen nog veranderen.',
   'notif.next.title': 'Jouw halte is de volgende', 'notif.next.body': 'Maak je klaar om uit te stappen bij {stop}.', 'notif.arrived.title': 'Je bent aangekomen', 'notif.arrived.body': 'Dit is jouw halte, {stop}.', 'notif.over.title': 'Je bent {stop} gepasseerd', 'notif.over.body': 'Open TrotroLink om je rit te verlengen of uit te stappen.',
   'report.title': 'Probleem melden', 'report.what': 'Wat ging er mis tijdens deze rit?', 'report.send': 'Melding versturen',
+  'verified.badge': 'GPRTU-geverifieerd', 'suspended.title': 'Voertuig geschorst door GPRTU', 'suspended.body': 'Deze trotro kan nu geen betalingen aannemen. Neem een andere.', 'fare.notice': 'Nieuwe GPRTU-tarieven vanaf {date}',
+  'unreg.link': 'Geen GPRTU-sticker? Meld dit voertuig', 'unreg.title': 'Meld een niet-geregistreerd voertuig', 'unreg.body': 'Alleen bij GPRTU geregistreerde trotro’s kunnen betalingen aannemen in TrotroLink. Meld deze bij de bond, dan controleren we hem.', 'unreg.code': 'Voertuigcode, indien aanwezig', 'unreg.note': 'Waar zag je hem? (route, halte, kleur)', 'unreg.send': 'Naar GPRTU sturen', 'unreg.thanks': 'Bedankt. GPRTU controleert dit voertuig.', 'code.report': 'Meld dit voertuig bij GPRTU', 'report.asked': 'Hoeveel moest je betalen? (₵, optioneel)',
 };
 
 const zh: Dict = {
@@ -231,6 +239,8 @@ const zh: Dict = {
   'set.help': '帮助', 'set.delete': '删除账户', 'set.languageNote': '翻译可能会有调整。',
   'notif.next.title': '下一站就是你的站点', 'notif.next.body': '请准备在 {stop} 下车。', 'notif.arrived.title': '你已到达', 'notif.arrived.body': '这是你的站点：{stop}。', 'notif.over.title': '你已经过了 {stop}', 'notif.over.body': '打开 TrotroLink 延长行程或下车。',
   'report.title': '报告问题', 'report.what': '这次行程出了什么问题？', 'report.send': '发送报告',
+  'verified.badge': 'GPRTU 认证', 'suspended.title': '车辆已被 GPRTU 暂停', 'suspended.body': '这辆 trotro 目前无法收款，请乘坐其他车辆。', 'fare.notice': 'GPRTU 新票价自 {date} 起生效',
+  'unreg.link': '没有 GPRTU 贴纸？举报此车辆', 'unreg.title': '举报未注册车辆', 'unreg.body': '只有在 GPRTU 注册的 trotro 才能在 TrotroLink 收款。请向工会举报，我们会核查。', 'unreg.code': '车辆代码（如有）', 'unreg.note': '在哪里看到的？（路线、站点、颜色）', 'unreg.send': '发送给 GPRTU', 'unreg.thanks': '谢谢，GPRTU 会核查该车辆。', 'code.report': '向 GPRTU 举报此车辆', 'report.asked': '对方要你付多少？（₵，可选）',
 };
 
 const DICTS: Record<AppLanguage, Dict> = { English: en, Twi: tw, Ewe: ee, German: de, Russian: ru, Dutch: nl, Chinese: zh };

@@ -6,8 +6,10 @@ import healthRouter from "./health";
 import leaderboardRouter from "./leaderboard";
 import paymentsRouter from "./payments";
 import ratingsRouter from "./ratings";
+import reportsRouter from "./reports";
 import splitsRouter from "./splits";
 import unionRouter from "./union";
+import unionOpsRouter from "./unionOps";
 import ussdRouter from "./ussd";
 import tripsRouter from "./trips";
 import vehiclesRouter from "./vehicles";
@@ -26,5 +28,7 @@ router.use(tripsRouter);
 router.use(splitsRouter);
 router.use(ussdRouter);
 router.use(unionRouter);
+router.use(unionOpsRouter);
+router.use(reportsRouter);
 
 export default router;

@@ -10,11 +10,14 @@ type Props = {
   visible: boolean;
   loading: boolean;
   error: string | null;
+  /** The code is not on the register: offer to report the vehicle to GPRTU. */
+  canReport?: boolean;
+  onReport?: (code: string) => void;
   onSubmit: (code: string) => void;
   onClose: () => void;
 };
 
-export function CodeEntrySheet({ initialCode = '', visible, loading, error, onSubmit, onClose }: Props) {
+export function CodeEntrySheet({ initialCode = '', visible, loading, error, canReport, onReport, onSubmit, onClose }: Props) {
   const colors = useColors();
   const t = useT();
   const [code, setCode] = useState(initialCode);
@@ -46,6 +49,11 @@ export function CodeEntrySheet({ initialCode = '', visible, loading, error, onSu
             style={[styles.input, { color: colors.foreground, backgroundColor: colors.background, borderColor: error ? colors.destructive : colors.border, borderRadius: colors.radius }]}
           />
           {error ? <Text style={[styles.error, { color: colors.destructive }]} accessibilityRole="alert">{error}</Text> : null}
+          {error && canReport && onReport ? (
+            <Pressable onPress={() => onReport(code)} accessibilityRole="button" hitSlop={8} style={styles.reportLink}>
+              <Text style={[styles.reportText, { color: colors.primary }]}>{t('code.report')}</Text>
+            </Pressable>
+          ) : null}
           <PrimaryButton onPress={() => onSubmit(code)} disabled={!ready} loading={loading} label={t('code.find')} style={styles.cta} />
         </View>
       </KeyboardAvoidingView>
@@ -54,6 +62,8 @@ export function CodeEntrySheet({ initialCode = '', visible, loading, error, onSu
 }
 
 const styles = StyleSheet.create({
+  reportLink: { alignSelf: 'flex-start', marginTop: 10 },
+  reportText: { fontFamily: 'PlusJakartaSans_700Bold', fontSize: 14 },
   root: { flex: 1, justifyContent: 'flex-end' },
   scrim: { ...StyleSheet.absoluteFillObject, backgroundColor: SCRIM },
   sheet: { padding: 24, paddingBottom: 36, borderWidth: StyleSheet.hairlineWidth * 2, borderBottomWidth: 0 },

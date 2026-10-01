@@ -1,4 +1,4 @@
-import { amountDue, newTripRef, vehicleWithRoute } from "../lib";
+import { amountDue, isSuspended, newTripRef, vehicleWithRoute } from "../lib";
 import { initiatePayment } from "../routes/payments";
 
 /**
@@ -18,6 +18,7 @@ export async function handleUssd(text: string, phoneNumber: string): Promise<Uss
 
   const found = await vehicleWithRoute(parts[0]!.trim());
   if (!found) return end(`Vehicle ${parts[0]!.trim().toUpperCase()} not found. Check the code on the sticker and dial again.`);
+  if (isSuspended(found.vehicle)) return end(`Vehicle ${found.vehicle.shortCode} is suspended by GPRTU. Please take another trotro.`);
   const stops = found.route.stopsJson.slice(1); // the origin is where you board
   const code = found.vehicle.shortCode;
 

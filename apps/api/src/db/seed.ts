@@ -1,5 +1,5 @@
 import { randomUUID } from "node:crypto";
-import { eq } from "drizzle-orm";
+import { eq, isNull } from "drizzle-orm";
 import { db, pool } from "./index";
 import { SEED_ROUTES } from "@trotrolink/shared";
 import { routesTable, vehiclesTable } from "./schema";
@@ -32,6 +32,10 @@ async function main() {
       .values(r.vehicles.map((v) => ({ ...v, routeId: route.id, qrCodeId: `trl_${randomUUID()}` })))
       .onConflictDoNothing({ target: vehiclesTable.shortCode });
   }
+
+  // Placeholder driver numbers so the warning-SMS flow can be shown. Replace with real numbers from the vehicle register.
+  const all = await db.select({ id: vehiclesTable.id }).from(vehiclesTable).where(isNull(vehiclesTable.driverPhone));
+  for (const v of all) await db.update(vehiclesTable).set({ driverPhone: `+23320000${String(v.id).padStart(4, "0")}` }).where(eq(vehiclesTable.id, v.id));
 
   console.log("Seeded routes", SEED_ROUTES.map((r) => r.routeId).join(", "));
 }

@@ -2,6 +2,7 @@ import { Router, type IRouter } from "express";
 import { DisputeStatusBody } from "@trotrolink/shared";
 import { and, count, desc, eq, gt, isNotNull, sql } from "drizzle-orm";
 import { requireUnion } from "../auth";
+import { computeCompliance } from "../services/compliance";
 import { db } from "../db";
 import { conductorSessionsTable, disputesTable, ratingsTable, transactionsTable, usersTable, vehiclesTable } from "../db/schema";
 
@@ -17,6 +18,8 @@ router.get("/union/overview", async (_req, res): Promise<void> => {
   const [open] = await db.select({ n: count() }).from(disputesTable).where(eq(disputesTable.status, "open"));
   const [overcharge] = await db.select({ n: count() }).from(disputesTable).where(and(eq(disputesTable.disputeType, "overcharge"), eq(disputesTable.status, "open")));
   const [rating] = await db.select({ avg: sql<string | null>`round(avg(${ratingsTable.driverRating})::numeric, 2)`, n: count() }).from(ratingsTable).where(gt(ratingsTable.ratedAt, DAY));
+  const flagged = await computeCompliance();
+  const [unreg] = await db.execute(sql`select count(*)::int as n from unregistered_reports where status = 'open'`).then((r) => r.rows as Array<{ n: number }>);
   res.json({
     tripsToday: today?.trips ?? 0,
     revenueToday: Number(today?.revenue ?? 0),
@@ -25,6 +28,9 @@ router.get("/union/overview", async (_req, res): Promise<void> => {
     openOvercharges: overcharge?.n ?? 0,
     avgRating24h: rating?.avg ? Number(rating.avg) : null,
     ratings24h: rating?.n ?? 0,
+    flaggedVehicles: flagged.filter((v) => v.severity !== "ok").length,
+    suspendedVehicles: flagged.filter((v) => v.status === "suspended").length,
+    unregisteredOpen: unreg?.n ?? 0,
   });
 });
 

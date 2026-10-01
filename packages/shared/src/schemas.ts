@@ -23,6 +23,10 @@ export const ResolvedVehicle = z.object({
     shortCode: z.string(),
     driverName: z.string(),
     conductorName: z.string(),
+    /** On the GPRTU register. Optional so older servers (and the offline demo) still parse. */
+    verified: z.boolean().optional(),
+    /** Suspended by the union: payments are refused. */
+    suspended: z.boolean().optional(),
   }),
   route: z.object({
     routeId: z.string(),
@@ -31,6 +35,8 @@ export const ResolvedVehicle = z.object({
     destination: z.string(),
     stops: z.array(Stop),
   }),
+  /** Set when GPRTU changed the fares recently, so passengers see why the price differs from last time. */
+  fareNotice: z.object({ label: z.string(), effectiveFrom: z.string() }).nullable().optional(),
 });
 export type ResolvedVehicle = z.infer<typeof ResolvedVehicle>;
 
@@ -319,6 +325,8 @@ export const DisputeBody = z.object({
   deviceId: z.string().min(8).max(64),
   reason: z.enum(DISPUTE_REASONS),
   description: z.string().max(500).optional(),
+  /** For an overcharge: what the passenger was asked to pay, in GHS. */
+  amountAsked: z.number().positive().max(1000).optional(),
 });
 export type DisputeBody = z.infer<typeof DisputeBody>;
 
@@ -335,3 +343,15 @@ export type PushTokenBody = z.infer<typeof PushTokenBody>;
 /** Union: move a dispute along (`POST /api/union/disputes/:id/status`). */
 export const DisputeStatusBody = z.object({ status: z.enum(DISPUTE_STATUSES) });
 export type DisputeStatusBody = z.infer<typeof DisputeStatusBody>;
+
+/** `POST /api/reports/unregistered`: a passenger reports a vehicle that is not on the GPRTU register. */
+export const UnregisteredReportBody = z.object({
+  deviceId: z.string().min(8).max(64),
+  code: z.string().trim().max(40).optional(),
+  note: z.string().max(500).optional(),
+  lat: z.number().min(-90).max(90).optional(),
+  lng: z.number().min(-180).max(180).optional(),
+});
+export type UnregisteredReportBody = z.infer<typeof UnregisteredReportBody>;
+export const UnregisteredReportResponse = z.object({ ok: z.literal(true), reportId: z.number().int() });
+export type UnregisteredReportResponse = z.infer<typeof UnregisteredReportResponse>;

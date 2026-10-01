@@ -4,7 +4,7 @@ import { and, eq, gt, isNotNull, isNull, lt } from "drizzle-orm";
 import { InitiatePaymentBody, type InitiatePaymentResponse, type PaymentStatusResponse } from "@trotrolink/shared";
 import { db } from "../db";
 import { activeTripsTable, paymentsTable, transactionsTable, tripEventsTable, type Payment } from "../db/schema";
-import { amountDue, checkTrip, guestUserId, insertTrip, round2, stopIndex, userExists, vehicleWithRoute } from "../lib";
+import { amountDue, checkTrip, guestUserId, insertTrip, isSuspended, round2, stopIndex, userExists, vehicleWithRoute } from "../lib";
 import { logger } from "../logger";
 import { getPaymentStatus, isSimulator, momoCurrency, newReferenceId, payerPhoneRequired, requestToPay } from "../services/momo";
 
@@ -121,6 +121,9 @@ export async function initiatePayment(b: InitiatePaymentBody): Promise<InitiateR
   const found = await vehicleWithRoute(b.vehicleCode);
   if (!found) {
     return { status: 404, body: { error: "Vehicle not found" } };
+  }
+  if (isSuspended(found.vehicle)) {
+    return { status: 403, body: { error: "This vehicle is suspended by GPRTU. Please take another trotro." } };
   }
   const check = checkTrip(found.route.stopsJson, b.boardingStop, b.alightingStop, b.amount);
   if (!check.ok) {

@@ -3,6 +3,8 @@ import { eq, or } from "drizzle-orm";
 import { parseScannedCode } from "@trotrolink/shared";
 import { db } from "../db";
 import { routesTable, vehiclesTable } from "../db/schema";
+import { isSuspended } from "../lib";
+import { fareNotice, withFares } from "../services/fares";
 
 const router: IRouter = Router();
 
@@ -31,19 +33,24 @@ router.get("/vehicles/resolve", async (req, res): Promise<void> => {
     return;
   }
 
+  const route = await withFares(row.route);
   res.json({
     vehicle: {
       id: row.vehicle.id,
       shortCode: row.vehicle.shortCode,
       driverName: row.vehicle.driverName,
       conductorName: row.vehicle.conductorName,
+      // Everything on the register is GPRTU Verified; an unknown code is a 404 and the app offers "Report unregistered".
+      verified: true,
+      suspended: isSuspended(row.vehicle),
     },
+    fareNotice: await fareNotice(),
     route: {
-      routeId: row.route.routeId,
-      name: row.route.routeName,
-      origin: row.route.origin,
-      destination: row.route.destination,
-      stops: row.route.stopsJson.map((s) => ({
+      routeId: route.routeId,
+      name: route.routeName,
+      origin: route.origin,
+      destination: route.destination,
+      stops: route.stopsJson.map((s) => ({
         name: s.name,
         etaMinutes: s.etaMinutes,
         officialFare: s.fare,

@@ -197,9 +197,9 @@ function ActiveTripView({ trip, onCleared, onConfirmAlighting }: { trip: ActiveT
       <ReportSheet
         visible={reportOpen}
         onClose={() => setReportOpen(false)}
-        onSubmit={async (reason, description) => {
+        onSubmit={async (reason, description, amountAsked) => {
           // Queued if offline; the server attaches the trip, vehicle and stop history as evidence.
-          await sendOrQueue({ type: 'dispute', body: { tripId: trip.tripId, deviceId: await getDeviceId(), reason, description } });
+          await sendOrQueue({ type: 'dispute', body: { tripId: trip.tripId, deviceId: await getDeviceId(), reason, description, ...(amountAsked !== undefined ? { amountAsked } : {}) } });
           await saveTripReport(trip.tripId, reason);
           setReportOpen(false);
           showToast('Report sent. Union will review within 24h.');

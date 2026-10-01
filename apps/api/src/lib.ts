@@ -1,6 +1,7 @@
 import { eq } from "drizzle-orm";
 import type { RouteStop } from "@trotrolink/shared";
 import { db } from "./db";
+import { withFares } from "./services/fares";
 import { activeTripsTable, routesTable, transactionsTable, tripEventsTable, usersTable, vehiclesTable } from "./db/schema";
 
 /** Finds (or creates) the anonymous user for a device. Real accounts arrive with phone OTP. */
@@ -26,8 +27,20 @@ export async function vehicleWithRoute(shortCode: string) {
     .innerJoin(routesTable, eq(vehiclesTable.routeId, routesTable.id))
     .where(eq(vehiclesTable.shortCode, shortCode.toUpperCase()))
     .limit(1);
-  return row ?? null;
+  // Prices always come from the fare table in force, never from the seeded fares alone.
+  return row ? { vehicle: row.vehicle, route: await withFares(row.route) } : null;
 }
+
+/** A vehicle the union has suspended (and the suspension has not run out) cannot take payments. */
+export function isSuspended(v: { status: string; suspendedUntil: Date | null }): boolean {
+  return v.status === "suspended" && (!v.suspendedUntil || v.suspendedUntil > new Date());
+}
+
+/** The terminal fee booked per trip, in GHS (not charged to passengers). */
+export const terminalFeeGhs = () => {
+  const n = Number(process.env["TERMINAL_FEE_GHS"] ?? "0.10");
+  return Number.isFinite(n) && n >= 0 ? n : 0.1;
+};
 
 export function stopIndex(stops: RouteStop[], name: string): number {
   return stops.findIndex((s) => s.name.toLowerCase() === name.trim().toLowerCase());
@@ -79,6 +92,7 @@ export async function insertTrip(
       amountPaid: p.amountPaid.toFixed(2),
       tripRef: p.tripRef,
       customStopNote: p.customStopNote ?? null,
+      terminalFee: terminalFeeGhs().toFixed(2),
     })
     .returning();
   await tx.insert(activeTripsTable).values({

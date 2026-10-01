@@ -180,7 +180,8 @@ async function route(method: string, path: string, query: URLSearchParams, body:
     const v = vehicle(parseScannedCode(query.get('code') ?? ''));
     if (!v) fail(404, 'Vehicle not found');
     return {
-      vehicle: { id: v!.id, shortCode: v!.shortCode, driverName: v!.driverName, conductorName: v!.conductorName },
+      vehicle: { id: v!.id, shortCode: v!.shortCode, driverName: v!.driverName, conductorName: v!.conductorName, verified: true, suspended: false },
+      fareNotice: null,
       route: { routeId: v!.route.routeId, name: v!.route.routeName, origin: v!.route.origin, destination: v!.route.destination, stops: v!.route.stops.map((s) => ({ name: s.name, etaMinutes: s.etaMinutes, officialFare: s.fare, amountToPay: due(s.fare), lat: s.lat, lng: s.lng })) },
     };
   }
@@ -344,8 +345,12 @@ async function route(method: string, path: string, query: URLSearchParams, body:
   if (post && path === '/disputes') {
     const t = d.trips.find((x) => x.tripId === body.tripId); if (!t) fail(404, 'Trip not found');
     if (t!.deviceId !== body.deviceId) fail(403, 'This is not your trip');
-    d.disputes.push({ id: d.disputes.length + 1, type: body.reason, description: body.description ?? null, trip: { ...t }, events: d.events.filter((e) => e.vehicle === t!.vehicleCode).slice(-40), filedAt: new Date().toISOString() });
+    d.disputes.push({ id: d.disputes.length + 1, type: body.reason, description: body.description ?? null, amountAsked: body.amountAsked ?? null, trip: { ...t }, events: d.events.filter((e) => e.vehicle === t!.vehicleCode).slice(-40), filedAt: new Date().toISOString() });
     await save(); return { ok: true, disputeId: d.disputes.length };
+  }
+  if (post && path === '/reports/unregistered') {
+    d.disputes.push({ id: d.disputes.length + 1, type: 'unregistered_vehicle', code: body.code ?? null, description: body.note ?? null, filedAt: new Date().toISOString() });
+    await save(); return { ok: true, reportId: d.disputes.length };
   }
   if (post && path === '/disputes/unpaid') {
     const own = authed(d, headers);

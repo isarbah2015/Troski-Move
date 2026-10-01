@@ -30,7 +30,8 @@ export function StopSheet({ resolved, onClose, onPay }: Props) {
   const stop = stops.find((s) => s.name === selected) ?? null;
   const customNote = custom ? note.trim() : '';
   // A custom drop-off needs a note describing where exactly; the fare is for the anchor before it.
-  const ready = !!stop && (!custom || customNote.length >= 3);
+  const suspended = !!resolved?.vehicle.suspended;
+  const ready = !!stop && !suspended && (!custom || customNote.length >= 3);
 
   const close = () => {
     setSelected(null);
@@ -53,6 +54,27 @@ export function StopSheet({ resolved, onClose, onPay }: Props) {
                 </View>
                 <Text style={[styles.conductor, { color: colors.mutedForeground }]}>{t('stop.conductor')} {resolved.vehicle.conductorName}</Text>
               </View>
+              {resolved.vehicle.verified ? (
+                <View style={[styles.verified, { backgroundColor: colors.scheme === 'light' ? 'rgba(7,128,90,0.10)' : 'rgba(43,217,159,0.13)', borderRadius: colors.radiusPill }]} accessibilityLabel="GPRTU verified vehicle">
+                  <Feather name="shield" size={14} color={colors.primary} />
+                  <Text style={[styles.verifiedText, { color: colors.primary }]}>{t('verified.badge')}</Text>
+                </View>
+              ) : null}
+              {suspended ? (
+                <View style={[styles.banner, { borderColor: colors.destructive, borderRadius: colors.radius }]} accessibilityRole="alert">
+                  <Feather name="slash" size={18} color={colors.destructive} />
+                  <View style={styles.bannerText}>
+                    <Text style={[styles.bannerTitle, { color: colors.destructive }]}>{t('suspended.title')}</Text>
+                    <Text style={[styles.bannerBody, { color: colors.mutedForeground }]}>{t('suspended.body')}</Text>
+                  </View>
+                </View>
+              ) : null}
+              {resolved.fareNotice ? (
+                <View style={[styles.notice, { borderColor: colors.accent, borderRadius: colors.radiusPill }]}>
+                  <Feather name="trending-up" size={13} color={colors.accent} />
+                  <Text style={[styles.noticeText, { color: colors.accent }]}>{t('fare.notice', { date: new Date(resolved.fareNotice.effectiveFrom).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' }) })}</Text>
+                </View>
+              ) : null}
               <Text style={[styles.route, { color: colors.foreground }]}>{resolved.route.name}</Text>
               <Text style={[styles.label, { color: colors.mutedForeground }]}>{(custom ? t('stop.nearest') : t('stop.where')).toUpperCase()}</Text>
 
@@ -130,6 +152,14 @@ export function StopSheet({ resolved, onClose, onPay }: Props) {
 }
 
 const styles = StyleSheet.create({
+  verified: { alignSelf: 'flex-start', flexDirection: 'row', alignItems: 'center', gap: 6, paddingHorizontal: 12, paddingVertical: 6, marginTop: 10 },
+  verifiedText: { fontFamily: 'PlusJakartaSans_700Bold', fontSize: 12, letterSpacing: 0.3 },
+  banner: { flexDirection: 'row', gap: 12, alignItems: 'flex-start', borderWidth: StyleSheet.hairlineWidth * 2, padding: 14, marginTop: 12 },
+  bannerText: { flex: 1 },
+  bannerTitle: { fontFamily: 'PlusJakartaSans_700Bold', fontSize: 14 },
+  bannerBody: { fontFamily: 'PlusJakartaSans_500Medium', fontSize: 13, lineHeight: 19, marginTop: 2 },
+  notice: { alignSelf: 'flex-start', flexDirection: 'row', alignItems: 'center', gap: 6, borderWidth: StyleSheet.hairlineWidth * 2, paddingHorizontal: 10, paddingVertical: 4, marginTop: 10 },
+  noticeText: { fontFamily: 'PlusJakartaSans_600SemiBold', fontSize: 12 },
   root: { flex: 1, justifyContent: 'flex-end' },
   scrim: { ...StyleSheet.absoluteFillObject, backgroundColor: SCRIM },
   sheet: { padding: 24, paddingBottom: 36, borderWidth: StyleSheet.hairlineWidth * 2, borderBottomWidth: 0, maxHeight: '88%' },
