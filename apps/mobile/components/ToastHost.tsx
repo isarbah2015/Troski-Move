@@ -39,12 +39,12 @@ export function ToastHost() {
       style={[
         styles.toast,
         {
-          top: insets.top + 12,
+          bottom: insets.bottom + 108,
           backgroundColor: colors.card,
           borderColor: kind === 'error' ? colors.destructive : colors.primary,
           borderRadius: colors.radiusPill,
           opacity: anim,
-          transform: [{ translateY: anim.interpolate({ inputRange: [0, 1], outputRange: [-16, 0] }) }],
+          transform: [{ translateY: anim.interpolate({ inputRange: [0, 1], outputRange: [16, 0] }) }],
         },
       ]}
     >

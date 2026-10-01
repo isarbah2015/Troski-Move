@@ -69,6 +69,7 @@ export function StopSheet({ resolved, onClose, onPay }: Props) {
           <View style={[styles.grabber, { backgroundColor: colors.border }]} />
           {resolved ? (
             <>
+              <ScrollView style={styles.body} showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled" bounces={false}>
               <View style={styles.headRow}>
                 <View style={[styles.codePill, { backgroundColor: colors.secondary, borderRadius: colors.radiusPill }]}>
                   <Text style={[styles.codeText, { color: GOLD }]}>{resolved.vehicle.shortCode}</Text>
@@ -124,7 +125,7 @@ export function StopSheet({ resolved, onClose, onPay }: Props) {
               </View>
               <Text style={[styles.label, { color: colors.mutedForeground, marginTop: 14 }]}>{(custom ? t('stop.nearest') : t('stop.where')).toUpperCase()}</Text>
 
-              <ScrollView style={styles.list} showsVerticalScrollIndicator={false}>
+              <View style={styles.list}>
                 {stops.map((s) => {
                   const active = s.name === selected;
                   return (
@@ -145,7 +146,7 @@ export function StopSheet({ resolved, onClose, onPay }: Props) {
                     </Pressable>
                   );
                 })}
-              </ScrollView>
+              </View>
 
               <Pressable
                 onPress={() => {
@@ -183,7 +184,10 @@ export function StopSheet({ resolved, onClose, onPay }: Props) {
                 </View>
               ) : null}
 
-              <Text style={[styles.label, { color: colors.mutedForeground, marginTop: 10 }]}>{t('stop.payWith').toUpperCase()}</Text>
+              </ScrollView>
+
+              {/* Footer: always on screen, however many stops there are. */}
+              <Text style={[styles.label, { color: colors.mutedForeground, marginTop: 12 }]}>{t('stop.payWith').toUpperCase()}</Text>
               <NetworkPicker value={network} onChange={setNetwork} />
 
               <PrimaryButton
@@ -215,7 +219,7 @@ const styles = StyleSheet.create({
   noticeText: { fontFamily: 'PlusJakartaSans_600SemiBold', fontSize: 12 },
   root: { flex: 1, justifyContent: 'flex-end' },
   scrim: { ...StyleSheet.absoluteFillObject, backgroundColor: SCRIM },
-  sheet: { padding: 24, paddingBottom: 40, borderWidth: StyleSheet.hairlineWidth * 2, borderBottomWidth: 0, maxHeight: '88%' },
+  sheet: { padding: 24, paddingBottom: 40, borderWidth: StyleSheet.hairlineWidth * 2, borderBottomWidth: 0, maxHeight: '92%' },
   grabber: { alignSelf: 'center', width: 40, height: 4, borderRadius: 2, marginBottom: 18 },
   headRow: { flexDirection: 'row', alignItems: 'center', gap: 10, marginBottom: 10 },
   codePill: { paddingHorizontal: 12, paddingVertical: 5 },
@@ -223,7 +227,8 @@ const styles = StyleSheet.create({
   conductor: { fontFamily: 'PlusJakartaSans_500Medium', fontSize: 13 },
   route: { fontFamily: 'PlusJakartaSans_700Bold', fontSize: 22, marginBottom: 18 },
   label: { fontFamily: 'PlusJakartaSans_600SemiBold', fontSize: 11, letterSpacing: 1, marginBottom: 10 },
-  list: { flexGrow: 0, flexShrink: 1, minHeight: 200 },
+  body: { flexShrink: 1 },
+  list: { flexGrow: 0 },
   row: { flexDirection: 'row', alignItems: 'center', gap: 12, borderWidth: StyleSheet.hairlineWidth * 2, paddingHorizontal: 16, paddingVertical: 12, marginBottom: 8 },
   stopName: { flex: 1, fontFamily: 'PlusJakartaSans_600SemiBold', fontSize: 16 },
   stopFare: { fontFamily: 'PlusJakartaSans_500Medium', fontSize: 14 },
