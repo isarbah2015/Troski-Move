@@ -7,7 +7,7 @@ import { useColors } from '@/hooks/useColors';
 import { SCRIM } from '@/lib/colors';
 
 // Each language is listed in its own script so visitors can find it, with the English name beneath for the others.
-const NATIVE_NAME: Record<AppLanguage, string> = {
+export const NATIVE_NAME: Record<AppLanguage, string> = {
   English: 'English', Twi: 'Twi (Akan)', Ewe: 'Eʋegbe (Ewe)', German: 'Deutsch', Russian: 'Русский', Dutch: 'Nederlands', Chinese: '中文 (简体)',
 };
 

@@ -8,7 +8,7 @@ import { APPEARANCE_LABEL, AppearanceSheet } from '@/components/AppearanceSheet'
 import { CediIcon } from '@/components/CediIcon';
 import { CurrencySheet } from '@/components/CurrencySheet';
 import { setDisplayCurrency, useDisplayCurrency } from '@/lib/currencyPref';
-import { LanguageSheet } from '@/components/LanguageSheet';
+import { LanguageSheet, NATIVE_NAME } from '@/components/LanguageSheet';
 import { useColors } from '@/hooks/useColors';
 import { ensureNotificationPermission, registerForPush } from '@/lib/notify';
 import { getLanguage, getNotifications, setLanguage, setNotifications } from '@/lib/storage';
@@ -52,7 +52,7 @@ export function SettingsGroup({ onDeleteAccount }: { onDeleteAccount?: () => voi
 
   return (
     <View style={[styles.group, { backgroundColor: colors.card, borderColor: colors.border, borderRadius: colors.radius }]}>
-      <Row icon="globe" label={t('set.language')} value={language} onPress={() => setLanguageOpen(true)} />
+      <Row icon="globe" label={t('set.language')} value={NATIVE_NAME[language]} onPress={() => setLanguageOpen(true)} />
       <Row icon={theme === 'light' ? 'sun' : 'moon'} label={t('set.appearance')} value={APPEARANCE_LABEL[theme]} onPress={() => setThemeOpen(true)} divider />
       <View style={[styles.row, styles.divider, { borderTopColor: colors.border }]}>
         <Feather name="bell" size={20} color={colors.mutedForeground} />
