@@ -328,7 +328,7 @@ function barChart(rows, { fmt, max, gold }) {
 function ask({ title, text, fields, confirm = 'Confirm', danger = false }) {
   return new Promise((resolve) => {
     const d = document.createElement('dialog');
-    d.innerHTML = `<form method="dialog" class="dlg"><h3>${esc(title)}</h3><p>${esc(text || '')}</p>${fields.map((f) => `<label class="f" for="f-${f.name}">${esc(f.label)}</label>${f.type === 'textarea' ? `<textarea id="f-${f.name}" name="${f.name}" maxlength="${f.max || 300}">${esc(f.value || '')}</textarea>` : `<input class="field" id="f-${f.name}" name="${f.name}" type="${f.type || 'text'}" value="${esc(f.value ?? '')}" ${f.min !== undefined ? `min="${f.min}" max="${f.max}"` : ''}>`}`).join('')}<div class="actions"><button class="btn" value="cancel" type="submit">Cancel</button><button class="btn ${danger ? '' : 'primary'}" value="ok" type="submit" ${danger ? 'style="background:var(--err);color:#fff;border-color:transparent"' : ''}>${esc(confirm)}</button></div></form>`;
+    d.innerHTML = `<form method="dialog" class="dlg"><h3>${esc(title)}</h3><p>${esc(text || '')}</p>${fields.map((f) => `<label class="f" for="f-${f.name}">${esc(f.label)}</label>${f.type === 'select' ? `<select class="field" id="f-${f.name}" name="${f.name}">${f.options.map((o) => `<option value="${esc(o.value)}" ${String(o.value) === String(f.value) ? 'selected' : ''}>${esc(o.label)}</option>`).join('')}</select>` : f.type === 'textarea' ? `<textarea id="f-${f.name}" name="${f.name}" maxlength="${f.max || 300}">${esc(f.value || '')}</textarea>` : `<input class="field" id="f-${f.name}" name="${f.name}" type="${f.type || 'text'}" value="${esc(f.value ?? '')}" ${f.min !== undefined ? `min="${f.min}" max="${f.max}"` : ''}>`}`).join('')}<div class="actions"><button class="btn" value="cancel" type="submit">Cancel</button><button class="btn ${danger ? '' : 'primary'}" value="ok" type="submit" ${danger ? 'style="background:var(--err);color:#fff;border-color:transparent"' : ''}>${esc(confirm)}</button></div></form>`;
     document.body.appendChild(d);
     d.addEventListener('close', () => { const ok = d.returnValue === 'ok'; const out = {}; d.querySelectorAll('[name]').forEach((i) => { out[i.name] = i.value; }); d.remove(); resolve(ok ? out : null); });
     d.showModal();
@@ -443,7 +443,7 @@ const views = {
   },
   async stops() {
     const { suggestions: s } = await api('/union/stop-suggestions');
-    return `<p class="muted" style="margin:0 0 16px">Where passengers say they got off between anchors. Frequent places are candidates for new anchors.</p>${table(['Passenger said','After anchor','Times','Example vehicle'], s.map((x) => `<tr><td>${esc(x.note)}</td><td>${esc(x.after)}</td><td class="mono">${x.n}</td><td><span class="veh">${esc(x.vehicle)}</span></td></tr>`), 'No suggestions yet', 'When passengers type their own drop-off, it shows up here.')}`;
+    return `<div class="row-actions" style="display:flex;justify-content:space-between;align-items:center;gap:12px;margin:0 0 16px;flex-wrap:wrap"><p class="muted" style="margin:0;max-width:640px">Passengers pick their destination from the listed stops. When they say their stop is not listed, it appears here. Adding it to the route puts it on every passenger's screen from their next scan.</p><button class="btn primary" data-addstop="">Add a stop to a route</button></div>${table(['Passenger said','After anchor','Times','Example vehicle','Action'], s.map((x) => `<tr><td>${esc(x.note)}</td><td>${esc(x.after)}</td><td class="mono">${x.n}</td><td><span class="veh">${esc(x.vehicle)}</span></td><td><button class="act" data-addstop="${esc(x.note)}" data-after="${esc(x.after)}">Add to route</button></td></tr>`), 'No suggestions yet', 'When passengers type their own stop, it shows up here.')}`;
   },
   async conductors() {
     const { conductors: c } = await api('/union/conductors');
@@ -536,6 +536,25 @@ async function load(quiet) {
     document.querySelectorAll('[data-dispute]').forEach((s) => s.onchange = async () => { await api(`/union/disputes/${s.dataset.dispute}/status`, { method: 'POST', body: JSON.stringify({ status: s.value }) }); });
     document.querySelectorAll('[data-reset]').forEach((b) => b.onclick = async () => { if (!confirm(`Reset the PIN for ${b.dataset.reset}? The conductor will have to choose a new one.`)) return; await api(`/union/conductors/${b.dataset.reset}/reset-pin`, { method: 'POST' }); load(); });
 
+    document.querySelectorAll('[data-addstop]').forEach((b) => b.onclick = async () => {
+      const { routes } = await api('/union/routes');
+      const r1 = await ask({ title: 'Add a stop: which route?', text: 'Choose the route the new stop belongs to.', fields: [{ name: 'route', label: 'Route', type: 'select', value: routes[0].routeId, options: routes.map((r) => ({ value: r.routeId, label: r.name })) }], confirm: 'Next' });
+      if (!r1) return;
+      const route = routes.find((r) => r.routeId === r1.route);
+      const anchors = route.stops.slice(0, -1);
+      const guess = anchors.find((x) => x.name === b.dataset.after) || anchors[0];
+      const nm = (b.dataset.addstop || '').replace(/\b\w/g, (c) => c.toUpperCase());
+      const v = await ask({ title: `Add a stop to ${route.name}`, text: 'The fare must be between the stops on either side. Latitude and longitude are optional; with them the app can detect the stop by GPS.', fields: [
+        { name: 'name', label: 'Stop name', value: nm, max: 60 },
+        { name: 'after', label: 'Comes after', type: 'select', value: guess.name, options: anchors.map((x) => ({ value: x.name, label: `${x.name} (₵${x.fare.toFixed(2)})` })) },
+        { name: 'fare', label: 'Fare from the start (GH₵)', type: 'number', value: guess.fare, min: 0, max: 500 },
+        { name: 'eta', label: 'Minutes from the previous stop', type: 'number', value: 3, min: 1, max: 120 },
+        { name: 'lat', label: 'Latitude (optional)', value: '' }, { name: 'lng', label: 'Longitude (optional)', value: '' }], confirm: 'Add stop' });
+      if (!v) return;
+      const body = { name: v.name, afterStop: v.after, fare: Number(v.fare), etaMinutes: Number(v.eta) };
+      if (v.lat !== '' && v.lng !== '') { body.lat = Number(v.lat); body.lng = Number(v.lng); }
+      try { await api(`/union/routes/${route.routeId}/stops`, { method: 'POST', body: JSON.stringify(body) }); toast(`${v.name} added to ${route.name}`); load(); } catch (e) { toast(e.message || 'Could not add the stop'); }
+    });
     document.querySelectorAll('[data-warn]').forEach((b) => b.onclick = async () => {
       const code = b.dataset.warn;
       const v = await ask({ title: `Issue an official warning to ${code}`, text: 'This is sent by SMS to the driver and recorded. Two warnings in 90 days make the vehicle a repeat offender.', fields: [{ name: 'message', label: 'Message', type: 'textarea', value: `GPRTU OFFICIAL WARNING: Vehicle ${code} has been reported for charging above the official fare. Charge only the fare shown on TrotroLink. Repeat reports lead to suspension from the terminal.` }], confirm: 'Send warning' });

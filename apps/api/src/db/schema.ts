@@ -207,7 +207,7 @@ export const disputesTable = pgTable("disputes", {
 
 export type Dispute = typeof disputesTable.$inferSelect;
 
-export const tripEventTypes = ["boarded", "stop_reached", "arrived", "alighted"] as const;
+export const tripEventTypes = ["boarded", "stop_reached", "arrived", "alighted", "gps_report"] as const;
 
 /** Append-only log of what happened on a vehicle: the conductor's stop marks and each passenger's trip milestones. */
 export const tripEventsTable = pgTable(
@@ -222,7 +222,7 @@ export const tripEventsTable = pgTable(
   },
   (t) => [
     index("trip_events_vehicle_created_idx").on(t.vehicleId, t.createdAt.desc()),
-    check("trip_events_type_chk", sql`${t.eventType} in ('boarded','stop_reached','arrived','alighted')`),
+    check("trip_events_type_chk", sql`${t.eventType} in ('boarded','stop_reached','arrived','alighted','gps_report')`),
   ],
 );
 

@@ -37,6 +37,8 @@ export const ResolvedVehicle = z.object({
   }),
   /** Where the vehicle is now (the conductor's last stop mark), so a passenger boarding mid-route starts from there. */
   currentStop: z.string().optional(),
+  /** Where the passenger is standing, when they shared their position: the listed stop they are nearest to (within 400 m). */
+  detectedBoarding: z.object({ stop: z.string(), distanceM: z.number() }).nullable().optional(),
   /** What passengers' prices round up to (GHS). 1 = whole cedis. */
   roundingStep: z.number().optional(),
   /** Specific stop-to-stop fares set by the union, keyed `From|To`. They win over the usual difference. */
@@ -183,6 +185,25 @@ export const StopMarkBody = z.object({
   deviceId: z.string().min(8).max(64).optional(),
 });
 export type StopMarkBody = z.infer<typeof StopMarkBody>;
+
+/** `POST /api/trips/position`: a passenger's phone says where it is, so the trip can follow the road without anyone tapping. */
+export const PositionBody = z.object({
+  tripId: z.string().min(1),
+  deviceId: z.string().min(8).max(64),
+  lat: z.number().min(-90).max(90),
+  lng: z.number().min(-180).max(180),
+  /** GPS accuracy in metres, when the phone reports it. Readings worse than 100 m are ignored. */
+  accuracy: z.number().nonnegative().optional(),
+});
+export type PositionBody = z.infer<typeof PositionBody>;
+
+export const PositionResponse = z.object({
+  ok: z.literal(true),
+  currentStop: z.string().optional(),
+  arrived: z.boolean().optional(),
+  ignored: z.string().optional(),
+});
+export type PositionResponse = z.infer<typeof PositionResponse>;
 
 export const StopMarkResponse = z.object({ ok: z.literal(true), passengersNotified: z.number().int() });
 export type StopMarkResponse = z.infer<typeof StopMarkResponse>;

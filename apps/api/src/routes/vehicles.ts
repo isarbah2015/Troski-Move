@@ -1,6 +1,6 @@
 import { Router, type IRouter } from "express";
 import { eq, or } from "drizzle-orm";
-import { parseScannedCode } from "@trotrolink/shared";
+import { BOARDING_RADIUS_M, nearestStop, parseScannedCode } from "@trotrolink/shared";
 import { db } from "../db";
 import { routesTable, vehiclesTable } from "../db/schema";
 import { desc, and, gt } from "drizzle-orm";
@@ -41,7 +41,12 @@ router.get("/vehicles/resolve", async (req, res): Promise<void> => {
   const [lastChange] = await db.select().from(routeChangesTable).where(eq(routeChangesTable.vehicleId, row.vehicle.id)).orderBy(desc(routeChangesTable.createdAt)).limit(1);
   const fresh = lastEvent && (!lastChange || lastEvent.createdAt > lastChange.createdAt) && route.stopsJson.some((s) => s.name === lastEvent.stopName);
   const step = getRoundingStep();
+  // Where the passenger is standing: the nearest listed stop (never the last one, nobody boards there) within 400 m.
+  const lat = Number(req.query["lat"]);
+  const lng = Number(req.query["lng"]);
+  const near = Number.isFinite(lat) && Number.isFinite(lng) && req.query["lat"] !== "" ? nearestStop(route.stopsJson.slice(0, -1), { lat, lng }, BOARDING_RADIUS_M) : null;
   res.json({
+    detectedBoarding: near ? { stop: near.stop.name, distanceM: near.distanceM } : null,
     vehicle: {
       id: row.vehicle.id,
       shortCode: row.vehicle.shortCode,

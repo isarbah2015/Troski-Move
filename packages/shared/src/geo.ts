@@ -63,3 +63,19 @@ export function alightCheck(stop: RouteStop | undefined, pos: LatLng | null | un
   const distanceM = Math.round(haversineM(stop, pos));
   return { distanceM, status: distanceM <= ALIGHT_RADIUS_M ? 'near' : 'far' };
 }
+
+/** The listed stop nearest a position, if it is within `maxM` metres. Stops with no coordinates are ignored. */
+export function nearestStop(stops: RouteStop[], pos: LatLng, maxM: number): { index: number; stop: RouteStop; distanceM: number } | null {
+  let best: { index: number; stop: RouteStop; distanceM: number } | null = null;
+  stops.forEach((s, index) => {
+    if (!hasCoords(s)) return;
+    const distanceM = Math.round(haversineM(s, pos));
+    if (distanceM <= maxM && (!best || distanceM < best.distanceM)) best = { index, stop: s, distanceM };
+  });
+  return best;
+}
+
+/** How close the phone must be to a stop for the app to treat it as "at the stop" while riding. */
+export const AT_STOP_RADIUS_M = 150;
+/** How close a passenger must be to a stop for the app to suggest it as "where you are getting on". */
+export const BOARDING_RADIUS_M = 400;

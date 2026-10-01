@@ -25,6 +25,8 @@ import {
   type SplitBody,
   type StartTripBody,
   type StopMarkBody,
+  PositionResponse,
+  type PositionBody,
   ConductorRouteResponse,
   SupportStatusResponse,
   UnregisteredReportBody,
@@ -84,9 +86,10 @@ export function createApiClient(baseUrl: string, options: ApiClientOptions = {})
     },
 
     /** Resolves a short code or scanned QR payload to a vehicle and its route. */
-    async resolveVehicle(code: string) {
+    async resolveVehicle(code: string, position?: { lat: number; lng: number }) {
       try {
-        return ResolvedVehicle.parse(await request(`/vehicles/resolve?code=${encodeURIComponent(parseScannedCode(code))}`));
+        const where = position ? `&lat=${position.lat}&lng=${position.lng}` : '';
+        return ResolvedVehicle.parse(await request(`/vehicles/resolve?code=${encodeURIComponent(parseScannedCode(code))}${where}`));
       } catch (e) {
         if (e instanceof ApiError && e.status === 404) throw new VehicleNotFoundError();
         throw e;
@@ -144,6 +147,11 @@ export function createApiClient(baseUrl: string, options: ApiClientOptions = {})
     /** Where a payment stands. When it returns SUCCESSFUL the trip already exists on the server. */
     async paymentStatus(referenceId: string) {
       return PaymentStatusResponse.parse(await request(`/payments/status/${encodeURIComponent(referenceId)}`));
+    },
+
+    /** A passenger's phone reports where it is; the trip follows the road without anyone tapping. */
+    async reportPosition(body: PositionBody) {
+      return PositionResponse.parse(await post('/trips/position', body));
     },
 
     /** Conductor marks the anchor the vehicle is at; passengers' trips move forward. */

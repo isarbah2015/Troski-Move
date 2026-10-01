@@ -21,6 +21,78 @@ async function findVehicle(code: string) {
   return v ?? null;
 }
 
+
+// ---- Stops: GPRTU adds a stop passengers keep asking for ----------------------------------------------
+
+router.get("/union/routes", async (_req, res): Promise<void> => {
+  const rows = await db.select().from(routesTable).orderBy(routesTable.routeName);
+  res.json({ routes: rows.map((r) => ({ routeId: r.routeId, name: r.routeName, origin: r.origin, destination: r.destination, stops: r.stopsJson })) });
+});
+
+const AddStopBody = z.object({
+  name: z.string().trim().min(2).max(60),
+  /** The stop it goes after, in the route's outbound order. */
+  afterStop: z.string().trim().min(1),
+  /** Official fare from the route's origin to the new stop (GHS). */
+  fare: z.number().nonnegative().max(500),
+  /** Minutes from the previous stop. */
+  etaMinutes: z.number().int().min(1).max(120).default(3),
+  lat: z.number().min(-90).max(90).optional(),
+  lng: z.number().min(-180).max(180).optional(),
+});
+
+/**
+ * Adds a stop to a route, so the trotro's real stops match the app. The fare must sit between its neighbours, and the
+ * minutes are taken out of the next leg so the whole journey time is unchanged. Everyone sees it on their next scan.
+ */
+router.post("/union/routes/:routeId/stops", async (req, res): Promise<void> => {
+  const parsed = AddStopBody.safeParse(req.body);
+  if (!parsed.success) {
+    res.status(400).json({ error: "Invalid body", issues: parsed.error.issues });
+    return;
+  }
+  const b = parsed.data;
+  const [route] = await db.select().from(routesTable).where(eq(routesTable.routeId, String(req.params["routeId"])));
+  if (!route) {
+    res.status(404).json({ error: "Route not found" });
+    return;
+  }
+  const stops = [...route.stopsJson];
+  if (stops.some((s) => s.name.toLowerCase() === b.name.toLowerCase())) {
+    res.status(409).json({ error: `${b.name} is already a stop on this route` });
+    return;
+  }
+  const at = stops.findIndex((s) => s.name.toLowerCase() === b.afterStop.toLowerCase());
+  if (at < 0) {
+    res.status(400).json({ error: `Unknown stop to add it after: ${b.afterStop}` });
+    return;
+  }
+  if (at === stops.length - 1) {
+    res.status(400).json({ error: "A stop cannot be added after the destination" });
+    return;
+  }
+  const prev = stops[at]!;
+  const next = stops[at + 1]!;
+  if (b.fare < prev.fare || b.fare > next.fare) {
+    res.status(400).json({ error: `The fare must be between ${prev.name} (${prev.fare.toFixed(2)}) and ${next.name} (${next.fare.toFixed(2)})` });
+    return;
+  }
+  const eta = Math.min(b.etaMinutes, Math.max(1, next.etaMinutes - 1));
+  const fresh = { name: b.name, fare: Math.round(b.fare * 100) / 100, etaMinutes: eta, ...(b.lat !== undefined && b.lng !== undefined ? { lat: b.lat, lng: b.lng } : {}) };
+  stops.splice(at + 1, 0, fresh);
+  stops[at + 2] = { ...next, etaMinutes: Math.max(1, next.etaMinutes - eta) };
+  await db.update(routesTable).set({ stopsJson: stops }).where(eq(routesTable.id, route.id));
+
+  // If a fare table is in force it names every stop's fare, so give the new stop its fare there too.
+  const [table] = await db.select().from(fareTablesTable).orderBy(desc(fareTablesTable.effectiveFrom), desc(fareTablesTable.id)).limit(1);
+  if (table?.fares[route.routeId]) {
+    await db.update(fareTablesTable).set({ fares: { ...table.fares, [route.routeId]: { ...table.fares[route.routeId], [b.name]: fresh.fare } } }).where(eq(fareTablesTable.id, table.id));
+  }
+  invalidateFareCache();
+  logger.info({ routeId: route.routeId, stop: b.name, after: prev.name }, "stop added by the union");
+  res.json({ ok: true, stops });
+});
+
 // ---- Compliance: flags, warnings, suspensions --------------------------------------------------------
 
 router.get("/union/compliance", async (_req, res): Promise<void> => {

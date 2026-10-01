@@ -1,6 +1,6 @@
 import { Router, type IRouter } from "express";
-import { and, desc, eq, sql } from "drizzle-orm";
-import { alightCheck, AlightBody, ExtendBody, GuestBody, StartTripBody, StopMarkBody, type HistoryTrip, type RouteStop, type ServerTrip } from "@trotrolink/shared";
+import { and, countDistinct, desc, eq, gt, inArray, sql } from "drizzle-orm";
+import { alightCheck, AlightBody, AT_STOP_RADIUS_M, ExtendBody, GuestBody, nearestStop, PositionBody, StartTripBody, StopMarkBody, type HistoryTrip, type RouteStop, type ServerTrip } from "@trotrolink/shared";
 import { db } from "../db";
 import { activeTripsTable, ratingsTable, routesTable, transactionsTable, tripEventsTable, usersTable, vehiclesTable } from "../db/schema";
 import { conductorFromRequest, conductorOf, ownsVehicle, requireConductor } from "../auth";
@@ -75,35 +75,16 @@ router.post("/trips/start", async (req, res): Promise<void> => {
   res.json({ tripId: tripRef, startedAt: startedAt.toISOString(), passengerId });
 });
 
+type FoundVehicle = NonNullable<Awaited<ReturnType<typeof vehicleWithRoute>>>;
+
 /**
- * Conductor marks the anchor the vehicle is at. Every active trip on the vehicle whose boarding stop is
- * behind it moves forward (never backward, and never past the passenger's own stop).
+ * The vehicle has reached the stop at index `at`: every active trip on it moves forward (never backward, never past
+ * its own stop). A trip whose stop is behind `at` starts an overstay, which can end in an automatic extra charge, so
+ * only a signed-in conductor's phone, or several passengers' phones agreeing, may call this.
  */
-/** Conductor-only: the signed-in conductor can mark stops for their own vehicle and nobody else's. */
-router.post("/trips/stop", requireConductor, async (req, res): Promise<void> => {
-  const parsed = StopMarkBody.safeParse(req.body);
-  if (!parsed.success) {
-    res.status(400).json({ error: "Invalid body", issues: parsed.error.issues });
-    return;
-  }
-  const body = parsed.data;
-
-  const found = await vehicleWithRoute(body.vehicleCode);
-  if (!found) {
-    res.status(404).json({ error: "Vehicle not found" });
-    return;
-  }
-  const stops = found.route.stopsJson;
-  const at = stopIndex(stops, body.stopName);
-  if (at < 0) {
-    res.status(400).json({ error: "Unknown stop for this route" });
-    return;
-  }
-
-  if (!ownsVehicle(res, found.vehicle.shortCode)) return;
-  const conductorId = conductorOf(res).id;
-
+async function applyStopMark(found: FoundVehicle, at: number, conductorId: number | null): Promise<number> {
   const pushes: Array<{ token: string | null; title: string; body: string }> = [];
+  const stops = found.route.stopsJson;
   const passengersNotified = await db.transaction(async (tx) => {
     const now = new Date();
     await tx.insert(tripEventsTable).values({ vehicleId: found.vehicle.id, eventType: "stop_reached", stopName: stops[at]!.name });
@@ -150,10 +131,135 @@ router.post("/trips/stop", requireConductor, async (req, res): Promise<void> => 
     return notified;
   });
 
-  // After the database commit; never let a slow push service delay the conductor's tap.
+  // After the database commit; never let a slow push service delay the caller.
   for (const p of pushes) void sendPush(p.token, p.title, p.body);
+  return passengersNotified;
+}
+
+/**
+ * Conductor marks the anchor the vehicle is at. Every active trip on the vehicle whose boarding stop is
+ * behind it moves forward (never backward, and never past the passenger's own stop).
+ */
+/** Conductor-only: the signed-in conductor can mark stops for their own vehicle and nobody else's. */
+router.post("/trips/stop", requireConductor, async (req, res): Promise<void> => {
+  const parsed = StopMarkBody.safeParse(req.body);
+  if (!parsed.success) {
+    res.status(400).json({ error: "Invalid body", issues: parsed.error.issues });
+    return;
+  }
+  const body = parsed.data;
+
+  const found = await vehicleWithRoute(body.vehicleCode);
+  if (!found) {
+    res.status(404).json({ error: "Vehicle not found" });
+    return;
+  }
+  const stops = found.route.stopsJson;
+  const at = stopIndex(stops, body.stopName);
+  if (at < 0) {
+    res.status(400).json({ error: "Unknown stop for this route" });
+    return;
+  }
+
+  if (!ownsVehicle(res, found.vehicle.shortCode)) return;
+  const conductorId = conductorOf(res).id;
+
+  const passengersNotified = await applyStopMark(found, at, conductorId);
   res.json({ ok: true, passengersNotified });
 });
+
+/**
+ * A passenger's phone says where it is, so the trip follows the road without the conductor tapping anything.
+ *  - Their own trip moves forward and arrives at their stop. It never starts an overstay: a passenger who got off and is
+ *    walking away must not be charged for riding on.
+ *  - Their report is also evidence about the vehicle. Once two different passengers' phones agree the trotro has reached
+ *    a stop, the vehicle itself moves on, exactly as if the conductor's phone had said so.
+ */
+router.post("/trips/position", async (req, res): Promise<void> => {
+  const parsed = PositionBody.safeParse(req.body);
+  if (!parsed.success) {
+    res.status(400).json({ error: "Invalid body", issues: parsed.error.issues });
+    return;
+  }
+  const body = parsed.data;
+  const passengerId = await guestUserId(body.deviceId, "passenger");
+  const [row] = await db
+    .select({ trip: activeTripsTable, tripRef: transactionsTable.tripRef, boardingStop: transactionsTable.boardingStop, code: vehiclesTable.shortCode })
+    .from(activeTripsTable)
+    .innerJoin(transactionsTable, eq(activeTripsTable.transactionId, transactionsTable.id))
+    .innerJoin(vehiclesTable, eq(activeTripsTable.vehicleId, vehiclesTable.id))
+    .where(and(eq(transactionsTable.tripRef, body.tripId), eq(activeTripsTable.passengerId, passengerId)));
+  if (!row) {
+    res.status(404).json({ error: "No active trip" });
+    return;
+  }
+  if (body.accuracy !== undefined && body.accuracy > 100) {
+    res.json({ ok: true, currentStop: row.trip.currentStop, ignored: "low_accuracy" });
+    return;
+  }
+  const found = await vehicleWithRoute(row.code);
+  if (!found) {
+    res.status(404).json({ error: "Vehicle not found" });
+    return;
+  }
+  const stops = found.route.stopsJson;
+  const hit = nearestStop(stops, { lat: body.lat, lng: body.lng }, AT_STOP_RADIUS_M);
+  if (!hit) {
+    res.json({ ok: true, currentStop: row.trip.currentStop });
+    return;
+  }
+  const board = row.boardingStop ? stopIndex(stops, row.boardingStop) : 0;
+  const alight = stopIndex(stops, row.trip.alightingStop);
+  const current = stopIndex(stops, row.trip.currentStop);
+  // Only forward progress counts, and not before the stop they boarded at.
+  if (hit.index < board || hit.index <= current) {
+    res.json({ ok: true, currentStop: row.trip.currentStop });
+    return;
+  }
+
+  await db.insert(tripEventsTable).values({ vehicleId: found.vehicle.id, tripId: row.trip.transactionId, eventType: "gps_report", stopName: stops[hit.index]!.name });
+
+  let arrived = false;
+  let currentStop = row.trip.currentStop;
+  if (alight >= 0 && !row.trip.overstayStop) {
+    const target = Math.min(hit.index, alight);
+    if (target > current) {
+      currentStop = stops[target]!.name;
+      await db.update(activeTripsTable).set({ currentStop, etaMinutes: etaBetween(stops, target, alight) }).where(eq(activeTripsTable.id, row.trip.id));
+      if (alight - target === 1) void sendPush(await pushTokenOf(passengerId), "Your stop is next", `Get ready to get off at ${stops[alight]!.name}.`);
+      if (target === alight) {
+        arrived = true;
+        await db.insert(tripEventsTable).values({ vehicleId: found.vehicle.id, tripId: row.trip.transactionId, eventType: "arrived", stopName: stops[alight]!.name });
+        void sendPush(await pushTokenOf(passengerId), "You have arrived", `This is your stop, ${stops[alight]!.name}.`);
+      }
+    }
+  }
+
+  // Vehicle-level evidence: two different passengers' phones within five minutes, at this stop or further on.
+  const [last] = await db
+    .select({ stop: tripEventsTable.stopName })
+    .from(tripEventsTable)
+    .where(and(eq(tripEventsTable.vehicleId, found.vehicle.id), eq(tripEventsTable.eventType, "stop_reached"), gt(tripEventsTable.createdAt, new Date(Date.now() - 6 * 3_600_000))))
+    .orderBy(desc(tripEventsTable.createdAt))
+    .limit(1);
+  const lastIndex = last?.stop ? stopIndex(stops, last.stop) : -1;
+  if (hit.index > lastIndex) {
+    const aheadNames = stops.slice(hit.index).map((s) => s.name);
+    const [{ n } = { n: 0 }] = await db
+      .select({ n: countDistinctTrips() })
+      .from(tripEventsTable)
+      .where(and(eq(tripEventsTable.vehicleId, found.vehicle.id), eq(tripEventsTable.eventType, "gps_report"), inArray(tripEventsTable.stopName, aheadNames), gt(tripEventsTable.createdAt, new Date(Date.now() - 5 * 60_000))));
+    if (Number(n) >= 2) await applyStopMark(found, hit.index, null);
+  }
+  res.json({ ok: true, currentStop, arrived });
+});
+
+const countDistinctTrips = () => countDistinct(tripEventsTable.tripId);
+
+async function pushTokenOf(userId: number): Promise<string | null> {
+  const [u] = await db.select({ t: usersTable.pushToken }).from(usersTable).where(eq(usersTable.id, userId));
+  return u?.t ?? null;
+}
 
 /** Active trips, by vehicle (conductor's passenger count), by trip (a passenger's own state) or by passenger. */
 router.get("/trips/active", async (req, res): Promise<void> => {
