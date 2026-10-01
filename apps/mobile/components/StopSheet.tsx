@@ -160,6 +160,9 @@ export function StopSheet({ resolved, onClose, onPay }: Props) {
                 }}
               />
 
+              </ScrollView>
+
+              {/* Footer: always on screen, however many stops there are. */}
               <Pressable
                 onPress={() => {
                   Haptics.selectionAsync();
@@ -186,20 +189,12 @@ export function StopSheet({ resolved, onClose, onPay }: Props) {
                 </View>
               ) : null}
 
-              {stop ? (
-                <View style={styles.fareBox}>
-                  <Text style={[styles.fareLine, { color: colors.mutedForeground }]}>
-                    {t('stop.official')} {formatCedis(stop.officialFare)}{stop.amountToPay > stop.officialFare + 0.001 ? ` · ${t('stop.roundedUp')}` : ''}
-                  </Text>
-                  <Text style={[styles.fareAmount, { color: colors.foreground }]}>{formatCedis(stop.amountToPay)}</Text>
-                  <Approx amount={stop.amountToPay} />
-                </View>
+              {stop && stop.amountToPay > stop.officialFare + 0.001 ? (
+                <Text style={[styles.fareLine, { color: colors.mutedForeground, textAlign: 'center', marginBottom: 6 }]}>
+                  {t('stop.official')} {formatCedis(stop.officialFare)} · {t('stop.roundedUp')}
+                </Text>
               ) : null}
-
-              </ScrollView>
-
-              {/* Footer: always on screen, however many stops there are. */}
-              <Text style={[styles.label, { color: colors.mutedForeground, marginTop: 12 }]}>{t('stop.payWith').toUpperCase()}</Text>
+              {stop ? <Approx amount={stop.amountToPay} /> : null}
               <NetworkPicker value={network} onChange={setNetwork} />
 
               <PrimaryButton
@@ -239,7 +234,7 @@ const styles = StyleSheet.create({
   noticeText: { fontFamily: 'PlusJakartaSans_600SemiBold', fontSize: 12 },
   root: { flex: 1, justifyContent: 'flex-end' },
   scrim: { ...StyleSheet.absoluteFillObject, backgroundColor: SCRIM },
-  sheet: { padding: 24, paddingBottom: 40, borderWidth: StyleSheet.hairlineWidth * 2, borderBottomWidth: 0, maxHeight: '92%' },
+  sheet: { padding: 24, paddingBottom: 30, borderWidth: StyleSheet.hairlineWidth * 2, borderBottomWidth: 0, maxHeight: '94%' },
   grabber: { alignSelf: 'center', width: 40, height: 4, borderRadius: 2, marginBottom: 18 },
   headRow: { flexDirection: 'row', alignItems: 'center', gap: 10, marginBottom: 10 },
   codePill: { paddingHorizontal: 12, paddingVertical: 5 },

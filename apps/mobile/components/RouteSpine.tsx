@@ -14,7 +14,7 @@ export type SpineStop = {
   behind?: boolean;
 };
 
-const ROW = 58;
+const ROW = 52;
 const RAIL = 36;
 
 /**
@@ -25,7 +25,7 @@ export function RouteSpine({ stops, selected, onSelect, resettable = false, here
   const colors = useColors();
   const hereIdx = stops.findIndex((s) => s.here);
   const selIdx = stops.findIndex((s) => s.name === selected);
-  const idle = colors.border;
+  const idle = colors.scheme === 'light' ? '#C5CEDC' : '#2C3956';
   const tint = colors.scheme === 'light' ? 'rgba(7,128,90,0.09)' : 'rgba(43,217,159,0.12)';
 
   return (
