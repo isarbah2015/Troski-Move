@@ -46,6 +46,25 @@ export async function resetDemo() {
   await AsyncStorage.removeItem(KEY);
 }
 
+/**
+ * Puts a paid, in-progress trip into the demo so the Trip tab has something real to show on first launch: a passenger
+ * on CIR01 from Circle to `alighting`, with the vehicle already at the stop after the origin. Idempotent per trip id.
+ */
+export async function seedTrip(p: { tripId: string; deviceId: string; vehicleCode: string; alighting: string; current: string; minutesAgo: number }) {
+  const d = await load();
+  if (d.trips.some((t) => t.tripId === p.tripId)) return;
+  const v = vehicle(p.vehicleCode)!;
+  const stops = v.route.stops;
+  const to = idx(stops, p.alighting);
+  const paid = due(round2(stops[to]!.fare - stops[0]!.fare));
+  const startedAt = Date.now() - p.minutesAgo * 60_000;
+  d.payments.push({ ref: `demo-seed-${p.tripId}`, tripId: p.tripId, deviceId: p.deviceId, vehicleCode: v.shortCode, boarding: stops[0]!.name, alighting: stops[to]!.name, amount: paid, createdAt: startedAt, status: 'SUCCESSFUL' });
+  d.trips.push({ tripId: p.tripId, deviceId: p.deviceId, vehicleCode: v.shortCode, boarding: stops[0]!.name, alighting: stops[to]!.name, current: p.current, paid, startedAt, active: true, lastMarkAt: Date.now() - 60_000 });
+  d.events.push({ vehicle: v.shortCode, type: 'boarded', stop: stops[0]!.name, at: startedAt });
+  d.events.push({ vehicle: v.shortCode, type: 'stop_reached', stop: p.current, at: Date.now() - 60_000 });
+  await save();
+}
+
 class HttpError extends Error {
   constructor(public status: number, message: string, public extra: Record<string, unknown> = {}) {
     super(message);

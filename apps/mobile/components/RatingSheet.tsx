@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { KeyboardAvoidingView, Modal, Platform, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
-import { Feather } from '@expo/vector-icons';
+import { Feather, Ionicons } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
 import { useColors } from '@/hooks/useColors';
 import { EMERALD, SCRIM, SILVER } from '@/lib/colors';
@@ -43,7 +43,7 @@ function StarRow({ label, name, value, onChange }: { label: string; name: string
             accessibilityState={{ selected: value === n }}
             accessibilityLabel={`${n} ${n === 1 ? 'star' : 'stars'} for ${label.toLowerCase()}`}
           >
-            <Feather name="star" size={36} color={n <= value ? colors.accent : `${SILVER}66`} />
+            <Ionicons name={n <= value ? 'star' : 'star-outline'} size={38} color={n <= value ? colors.accent : `${SILVER}66`} />
           </Pressable>
         ))}
       </View>

@@ -1,5 +1,12 @@
 import type { TripRecord } from '@trotrolink/shared';
-import { saveTripHistory, saveUser } from '@/lib/storage';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { api, DEMO_MODE } from '@/lib/api';
+import { seedTrip } from '@/lib/demoServer';
+import { getDeviceId } from '@/lib/identity';
+import { appendTripRecord, getActiveTrip, saveActiveTrip, saveTripHistory, saveUser } from '@/lib/storage';
+import { buildTrip, buildTripRecord, newTripId } from '@/lib/trip';
+
+const SEEDED_KEY = 'demoTripSeeded';
 
 const STOPS = [
   { name: 'Circle', officialFare: 0, etaMinutes: 0 },
@@ -34,4 +41,36 @@ export async function loadDemoProfile() {
     };
   });
   await saveTripHistory(trips);
+}
+
+/**
+ * Demo mode only, once per install: starts the story with a passenger already riding. A paid trip on CIR01 from
+ * Circle to Mallam, the trotro now at Kaneshie, so the Trip tab opens on the live interface instead of an empty state.
+ * The conductor role (Profile) can then mark Odorkor and Mallam to bring the trip to its arrival and rating.
+ */
+export async function seedDemoActiveTrip() {
+  if (!DEMO_MODE) return;
+  try {
+    if ((await AsyncStorage.getItem(SEEDED_KEY)) || (await getActiveTrip())) return;
+    await AsyncStorage.setItem(SEEDED_KEY, '1');
+    const tripId = newTripId();
+    const resolved = await api.resolveVehicle('CIR01');
+    const mallam = resolved.route.stops.find((s) => s.name === 'Mallam');
+    if (!mallam) return;
+    await seedTrip({ tripId, deviceId: await getDeviceId(), vehicleCode: 'CIR01', alighting: 'Mallam', current: 'Kaneshie', minutesAgo: 6 });
+    const base = buildTrip(resolved, mallam, tripId, undefined, new Date(Date.now() - 6 * 60_000));
+    const names = base.stops.map((s) => s.name);
+    const at = names.indexOf('Kaneshie');
+    const trip = {
+      ...base,
+      currentStop: 'Kaneshie',
+      stopsRemaining: names.indexOf('Mallam') - at,
+      etaMinutes: resolved.route.stops.slice(at + 1, names.indexOf('Mallam') + 1).reduce((a, s) => a + s.etaMinutes, 0),
+      stops: base.stops.map((s, i) => ({ ...s, status: i < at ? ('passed' as const) : i === at ? ('current' as const) : ('upcoming' as const) })),
+    };
+    await saveActiveTrip(trip);
+    await appendTripRecord(buildTripRecord(resolved, mallam, trip));
+  } catch {
+    // The demo still works without the sample trip.
+  }
 }

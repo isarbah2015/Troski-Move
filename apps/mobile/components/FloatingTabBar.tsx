@@ -1,6 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { AccessibilityInfo, Animated, Easing, LayoutChangeEvent, Platform, Pressable, StyleSheet, Text, View } from 'react-native';
 import { BlurView } from 'expo-blur';
+import { LinearGradient } from 'expo-linear-gradient';
 import * as Haptics from 'expo-haptics';
 import type { Tabs } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -11,9 +12,7 @@ import { EMERALD } from '@/lib/colors';
 type BottomTabBarProps = Parameters<NonNullable<React.ComponentProps<typeof Tabs>['tabBar']>>[0];
 
 const PAD = 8;
-// The pill is narrower than its tab by this much on each side, so it never touches the neighbouring icons or labels.
-// Bars with 5+ tabs are tighter, so they use a smaller inset and label.
-const pillInset = (count: number) => (count >= 5 ? 2 : 7);
+const BORDER = StyleSheet.hairlineWidth * 2;
 const SPRING = { damping: 16, stiffness: 190, mass: 0.9, useNativeDriver: true } as const;
 
 /** One tab: the icon lifts and the label brightens when active; pressing squeezes it. */
@@ -49,7 +48,7 @@ function TabItem({ label, focused, compact, icon, onPress, onLongPress, testID }
       style={styles.item}
     >
       <Animated.View style={[styles.itemInner, { transform: [{ scale: press }] }]}>
-        <Animated.View style={{ transform: [{ translateY: lift.interpolate({ inputRange: [0, 1], outputRange: [0, -2] }) }, { scale: lift.interpolate({ inputRange: [0, 1], outputRange: [1, 1.12] }) }] }}>
+        <Animated.View style={{ transform: [{ translateY: lift.interpolate({ inputRange: [0, 1], outputRange: [0, -2] }) }, { scale: lift.interpolate({ inputRange: [0, 1], outputRange: [1, 1.08] }) }] }}>
           {icon(color, focused)}
         </Animated.View>
         <Text numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.85} style={[styles.label, { color, fontSize: compact ? 9.5 : 11, fontFamily: focused ? (compact ? 'PlusJakartaSans_600SemiBold' : 'PlusJakartaSans_700Bold') : 'PlusJakartaSans_500Medium' }]}>
@@ -62,7 +61,7 @@ function TabItem({ label, focused, compact, icon, onPress, onLongPress, testID }
 
 /**
  * Floating "card" tab bar: it hovers above the content with a soft emerald glow and a slow bob, and a
- * pill slides between tabs on a spring. The bob stops when the user prefers reduced motion.
+ * glowing line slides between tabs on a spring. The bob stops when the user prefers reduced motion.
  */
 export function FloatingTabBar({ state, descriptors, navigation, darkRoutes = [] }: BottomTabBarProps & { darkRoutes?: string[] }) {
   // Always-dark screens (the camera) get a dark bar and strip; everything else follows the theme.
@@ -75,8 +74,8 @@ export function FloatingTabBar({ state, descriptors, navigation, darkRoutes = []
   const bob = useRef(new Animated.Value(0)).current;
 
   const count = state.routes.length;
-  const itemWidth = width > 0 ? (width - PAD * 2) / count : 0;
-  const inset = pillInset(count);
+  // The card's border sits outside its padding, so it is subtracted too or the indicator drifts off-centre toward the right.
+  const itemWidth = width > 0 ? (width - PAD * 2 - BORDER * 2) / count : 0;
 
   useEffect(() => {
     Animated.spring(slide, { toValue: state.index, ...SPRING }).start();
@@ -119,22 +118,26 @@ export function FloatingTabBar({ state, descriptors, navigation, darkRoutes = []
         ]}
       >
         <BlurView intensity={40} tint={colors.scheme === 'light' ? 'light' : 'dark'} style={[StyleSheet.absoluteFill, { borderRadius: colors.radiusPill, overflow: 'hidden' }]} pointerEvents="none" />
-        {/* Sliding highlight pill */}
+        {/* Active indicator: a short glowing line on the top edge that slides to the selected tab, centred on it,
+            its glow spilling down onto the bar. */}
         {itemWidth > 0 ? (
           <Animated.View
             pointerEvents="none"
             style={[
-              styles.pill,
+              styles.indicator,
               {
-                width: Math.max(0, itemWidth - inset * 2),
-                marginLeft: inset,
-                backgroundColor: `${EMERALD}${colors.scheme === 'light' ? '26' : '1F'}`,
-                borderColor: `${EMERALD}${colors.scheme === 'light' ? '66' : '55'}`,
-                borderRadius: colors.radiusPill,
+                width: itemWidth,
                 transform: [{ translateX: slide.interpolate({ inputRange: [0, Math.max(1, count - 1)], outputRange: [0, itemWidth * Math.max(1, count - 1)] }) }],
               },
             ]}
-          />
+          >
+            <LinearGradient
+              colors={colors.gradient}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 0 }}
+              style={[styles.line, { shadowColor: colors.scheme === 'light' ? '#047857' : EMERALD }]}
+            />
+          </Animated.View>
         ) : null}
 
         {state.routes.map((route, index) => {
@@ -170,14 +173,15 @@ const styles = StyleSheet.create({
   card: {
     flexDirection: 'row',
     padding: PAD,
-    borderWidth: StyleSheet.hairlineWidth * 2,
+    borderWidth: BORDER,
     // The glow: a wide, low-opacity emerald shadow reads as the card hovering over the screen.
     shadowOpacity: 0.22,
     shadowRadius: 26,
     shadowOffset: { width: 0, height: 10 },
     elevation: Platform.OS === 'android' ? 12 : 0,
   },
-  pill: { position: 'absolute', top: PAD, bottom: PAD, left: PAD, borderWidth: StyleSheet.hairlineWidth * 2 },
+  indicator: { position: 'absolute', top: 0, left: PAD, alignItems: 'center' },
+  line: { width: 34, height: 4, borderBottomLeftRadius: 4, borderBottomRightRadius: 4, shadowOpacity: 0.95, shadowRadius: 14, shadowOffset: { width: 0, height: 5 } },
   item: { flex: 1 },
   itemInner: { alignItems: 'center', justifyContent: 'center', paddingVertical: 9, paddingHorizontal: 2, gap: 3 },
   label: { textAlign: 'center' },

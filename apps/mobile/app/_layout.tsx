@@ -9,6 +9,7 @@ import { restoreTheme } from '@/lib/theme';
 import { restoreLanguage } from '@/lib/i18n';
 import { restoreCurrency } from '@/lib/currencyPref';
 import { registerForPush } from '@/lib/notify';
+import { seedDemoActiveTrip } from '@/lib/demo';
 import { AnimatedSplash } from '@/components/AnimatedSplash';
 import { SyncBanner } from '@/components/SyncBanner';
 import { ToastHost } from '@/components/ToastHost';
@@ -73,6 +74,7 @@ export default function RootLayout() {
     void restoreLanguage();
     void restoreCurrency();
     void registerForPush();
+    void seedDemoActiveTrip();
   }, []);
 
   useEffect(() => {
