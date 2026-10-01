@@ -222,6 +222,20 @@ async function route(method: string, path: string, query: URLSearchParams, body:
     return { ok: true };
   }
 
+  if (post && path === '/account/delete') {
+    d.trips = d.trips.filter((t) => t.deviceId !== body.deviceId);
+    d.payments = d.payments.filter((p) => p.deviceId !== body.deviceId);
+    await save();
+    return { ok: true };
+  }
+  if (post && path === '/conductor/delete') {
+    const own = authed(d, headers);
+    delete d.conductors[own];
+    for (const [t, sess] of Object.entries(d.sessions)) if (sess.vehicleCode === own) delete d.sessions[t];
+    await save();
+    return { ok: true };
+  }
+
   if (post && path === '/trips/stop') {
     const own = authed(d, headers); ownVehicle(own, String(body.vehicleCode));
     const v = vehicle(own)!; const stops = v.route.stops;

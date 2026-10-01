@@ -9,7 +9,7 @@ import { SectionHeader } from '@/components/SectionHeader';
 import { SettingsGroup } from '@/components/SettingsGroup';
 import { useColors } from '@/hooks/useColors';
 import { api } from '@/lib/api';
-import { confirmSignOut } from '@/lib/auth';
+import { confirmDeleteAccount, confirmSignOut } from '@/lib/auth';
 import { useConductorVehicle } from '@/lib/conductor';
 import { setRole, type Role } from '@/lib/storage';
 import { showToast } from '@/lib/toast';
@@ -84,7 +84,14 @@ export default function ConductorProfileScreen() {
       <RoleSwitcher role="conductor" onChange={(r) => void switchRole(r)} />
 
       <SectionHeader>Settings</SectionHeader>
-      <SettingsGroup />
+      <SettingsGroup
+        onDeleteAccount={() =>
+          confirmDeleteAccount('conductor', () => {
+            showToast('Account deleted');
+            router.navigate('/');
+          })
+        }
+      />
 
       <Pressable onPress={signOut} accessibilityRole="button" style={[styles.signOut, { borderColor: colors.destructive, borderRadius: colors.radiusPill }]}>
         <Feather name="log-out" size={18} color={colors.destructive} />

@@ -93,6 +93,16 @@ export function createApiClient(baseUrl: string, options: ApiClientOptions = {})
       return GuestResponse.parse(await post('/guests', { deviceId, role }));
     },
 
+    /** Erases the passenger's personal data on the server. */
+    async deleteAccount(deviceId: string) {
+      await post('/account/delete', { deviceId });
+    },
+
+    /** Erases the conductor's account and frees the vehicle. */
+    async deleteConductorAccount() {
+      await post('/conductor/delete', {});
+    },
+
     /** First launch: choose a PIN for a vehicle (once). */
     async conductorSetup(body: ConductorSetupBody) {
       await post('/conductor/setup', body);

@@ -13,7 +13,7 @@ import { Stars } from '@/components/Stars';
 import { TripDetailSheet } from '@/components/TripDetailSheet';
 import { useColors } from '@/hooks/useColors';
 import { formatCedis } from '@/lib/api';
-import { confirmSignOut } from '@/lib/auth';
+import { confirmDeleteAccount, confirmSignOut } from '@/lib/auth';
 import { loadDemoProfile } from '@/lib/demo';
 import { submitTripRating } from '@/lib/ratings';
 import { formatWhen, GUEST_USER, lifetimeStats, maskMomo, maskPhone } from '@/lib/profile';
@@ -194,7 +194,15 @@ export default function ProfileScreen() {
 
       {/* Settings */}
       <SectionHeader>Settings</SectionHeader>
-      <SettingsGroup />
+      <SettingsGroup
+        onDeleteAccount={() =>
+          confirmDeleteAccount('passenger', async () => {
+            await load();
+            showToast('Account deleted');
+            router.navigate('/');
+          })
+        }
+      />
 
       <Pressable onPress={signOut} accessibilityRole="button" style={[styles.signOut, { borderColor: colors.destructive, borderRadius: colors.radiusPill }]}>
         <Feather name="log-out" size={18} color={colors.destructive} />

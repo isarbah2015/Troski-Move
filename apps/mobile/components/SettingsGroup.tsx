@@ -25,7 +25,7 @@ function Row({ icon, label, value, onPress, divider }: { icon: IconName; label: 
 }
 
 /** Language, Notifications, Privacy and Help: shared by the passenger and conductor Profile tabs. */
-export function SettingsGroup() {
+export function SettingsGroup({ onDeleteAccount }: { onDeleteAccount?: () => void }) {
   const colors = useColors();
   const router = useRouter();
   const [language, setLanguageState] = useState<AppLanguage>('English');
@@ -65,6 +65,12 @@ export function SettingsGroup() {
       </View>
       <Row icon="lock" label="Privacy" onPress={() => router.push('/privacy')} divider />
       <Row icon="help-circle" label="Help" onPress={() => Linking.openURL('mailto:help@trotrolink.app')} divider />
+      {onDeleteAccount ? (
+        <Pressable onPress={onDeleteAccount} accessibilityRole="button" accessibilityLabel="Delete account" style={[styles.row, styles.divider, { borderTopColor: colors.border }]}>
+          <Feather name="trash-2" size={20} color={colors.destructive} />
+          <Text style={[styles.label, { color: colors.destructive }]}>Delete account</Text>
+        </Pressable>
+      ) : null}
 
       <AppearanceSheet
         visible={themeOpen}
