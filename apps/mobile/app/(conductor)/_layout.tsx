@@ -2,11 +2,17 @@ import React from 'react';
 import { StyleSheet } from 'react-native';
 import { Feather } from '@expo/vector-icons';
 import { Tabs } from 'expo-router';
+import { ConductorLogin } from '@/components/ConductorLogin';
 import { FloatingTabBar } from '@/components/FloatingTabBar';
+import { useConductorSession } from '@/lib/conductorSession';
 import { colors } from '@/lib/colors';
 
 // Conductor role: Today, My QR, Leaderboard, Earnings, plus Profile (the role switcher lives there).
 export default function ConductorLayout() {
+  const session = useConductorSession();
+  // Nothing in the conductor app works without a signed-in conductor: show the PIN screen instead of the tabs.
+  if (session === undefined) return null;
+  if (session === null) return <ConductorLogin />;
   return (
     <Tabs
       initialRouteName="today"

@@ -1,5 +1,6 @@
 import {
   ActiveTripsResponse,
+  ConductorLoginResponse,
   DriverRatingsResponse,
   GuestResponse,
   HealthResponse,
@@ -13,6 +14,8 @@ import {
   StartTripResponse,
   StopMarkResponse,
   type AlightBody,
+  type ConductorLoginBody,
+  type ConductorSetupBody,
   type InitiatePaymentBody,
   type RatingSubmission,
   type SplitBody,
@@ -31,14 +34,24 @@ export class ApiError extends Error {
     super(message);
   }
   get retryable() {
-    return this.status >= 500 || this.status === 408 || this.status === 429;
+    // 401: the conductor's session ended; the action waits in the queue until they sign in again.
+    return this.status >= 500 || this.status === 408 || this.status === 429 || this.status === 401;
   }
 }
 
 /** Typed fetch client shared by mobile and web. Endpoints are added as the API grows. */
-export function createApiClient(baseUrl: string) {
-  async function request(path: string, init?: RequestInit): Promise<unknown> {
-    const res = await fetch(`${baseUrl}/api${path}`, init);
+export type ApiClientOptions = {
+  /** Called for every request; a conductor's session token goes out as `Authorization: Bearer`. */
+  getToken?: () => Promise<string | null>;
+  /** Called when the API answers 401 on a request that carried a token (the session expired or was ended). */
+  onUnauthorized?: () => void;
+};
+
+export function createApiClient(baseUrl: string, options: ApiClientOptions = {}) {
+  async function request(path: string, init: RequestInit = {}): Promise<unknown> {
+    const token = await options.getToken?.();
+    const res = await fetch(`${baseUrl}/api${path}`, token ? { ...init, headers: { ...(init.headers as Record<string, string> | undefined), Authorization: `Bearer ${token}` } } : init);
+    if (res.status === 401 && token) options.onUnauthorized?.();
     if (!res.ok) {
       let message = `Request failed (${res.status})`;
       try {
@@ -73,6 +86,19 @@ export function createApiClient(baseUrl: string) {
     /** Anonymous identity for this device until phone OTP accounts exist. */
     async guest(deviceId: string, role: 'passenger' | 'conductor') {
       return GuestResponse.parse(await post('/guests', { deviceId, role }));
+    },
+
+    /** First launch: choose a PIN for a vehicle (once). */
+    async conductorSetup(body: ConductorSetupBody) {
+      await post('/conductor/setup', body);
+    },
+
+    async conductorLogin(body: ConductorLoginBody) {
+      return ConductorLoginResponse.parse(await post('/conductor/login', body));
+    },
+
+    async conductorLogout() {
+      await post('/conductor/logout', {});
     },
 
     /** Passenger paid: records the transaction and starts the active trip. Retrying with the same `tripId` is safe. */

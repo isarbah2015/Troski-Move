@@ -15,7 +15,7 @@ export type SyncAction =
   | { type: 'rating'; body: RatingSubmission }
   | { type: 'split'; body: SplitBody };
 
-type QueueItem = { id: string; action: SyncAction; queuedAt: string };
+type QueueItem = { id: string; action: SyncAction; queuedAt: string; waitingForSignIn?: boolean };
 
 async function perform(action: SyncAction): Promise<void> {
   // A 'start' action queued by an older build is ignored: trips now begin from a successful MoMo payment.
@@ -68,7 +68,8 @@ export async function pendingCount(): Promise<number> {
  */
 export async function sendOrQueue(action: SyncAction): Promise<'sent' | 'queued' | 'rejected'> {
   const queue = await readQueue();
-  if (queue.length === 0) {
+  // Only items that are really retrying block new actions; ones waiting for a conductor sign-in do not.
+  if (!queue.some((i) => !i.waitingForSignIn)) {
     try {
       await perform(action);
       return 'sent';
@@ -83,22 +84,32 @@ export async function sendOrQueue(action: SyncAction): Promise<'sent' | 'queued'
   return 'queued';
 }
 
-/** Retries queued actions in order. Stops at the first transient failure; drops actions the server rejects. */
+/** True for "your conductor session ended": the action waits for the next sign-in and must not block the rest. */
+const needsSignIn = (e: unknown) => e instanceof ApiError && e.status === 401;
+
+/**
+ * Retries queued actions in order. Stops at the first transient failure; drops actions the server rejects;
+ * keeps (but steps over) actions that are waiting for a conductor to sign in.
+ */
 export async function flushQueue(): Promise<void> {
   if (flushing) return;
   flushing = true;
   try {
+    const waiting: QueueItem[] = [];
     let queue = await readQueue();
     while (queue.length > 0) {
       const [head, ...rest] = queue;
       try {
         await perform(head!.action);
       } catch (e) {
-        if (retryable(e)) return;
-        console.warn('Dropping rejected queued action', head!.action.type, e instanceof Error ? e.message : e);
+        if (needsSignIn(e)) waiting.push({ ...head!, waitingForSignIn: true });
+        else if (retryable(e)) {
+          await writeQueue([...waiting, head!, ...rest]);
+          return;
+        } else console.warn('Dropping rejected queued action', head!.action.type, e instanceof Error ? e.message : e);
       }
       queue = rest;
-      await writeQueue(queue);
+      await writeQueue([...waiting, ...queue]);
     }
   } finally {
     flushing = false;

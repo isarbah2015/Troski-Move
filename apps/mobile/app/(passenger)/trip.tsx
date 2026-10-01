@@ -12,10 +12,9 @@ import { formatCedis } from '@/lib/api';
 import { RATING_PROMPT_WINDOW_MS, submitTripRating } from '@/lib/ratings';
 import { clearActiveTrip, getActiveTrip, getTripHistory, getTripRatings, markTripArrived, saveActiveTrip } from '@/lib/storage';
 import { showToast } from '@/lib/toast';
-import { getDeviceId } from '@/lib/identity';
 import { useFocusPolling } from '@/lib/polling';
 import { sendOrQueue } from '@/lib/sync';
-import { advanceTrip, applyServerTrip, tripProgress } from '@/lib/trip';
+import { applyServerTrip, tripProgress } from '@/lib/trip';
 import { api } from '@/lib/api';
 
 function LiveBadge() {
@@ -56,7 +55,7 @@ function Stat({ icon, label, value }: { icon: React.ComponentProps<typeof Feathe
   );
 }
 
-function ActiveTripView({ trip, onCleared, onAdvance, onConfirmAlighting }: { trip: ActiveTrip; onCleared: () => void; onAdvance: () => void; onConfirmAlighting: () => void }) {
+function ActiveTripView({ trip, onCleared, onConfirmAlighting }: { trip: ActiveTrip; onCleared: () => void; onConfirmAlighting: () => void }) {
   const colors = useColors();
   const insets = useSafeAreaInsets();
   const [reportOpen, setReportOpen] = useState(false);
@@ -159,11 +158,6 @@ function ActiveTripView({ trip, onCleared, onAdvance, onConfirmAlighting }: { tr
 
       {__DEV__ ? (
         <View style={styles.devRow}>
-          {!atDestination ? (
-            <Pressable onPress={onAdvance} accessibilityRole="button" style={styles.devLink}>
-              <Text style={[styles.devText, { color: colors.mutedForeground }]}>Advance one stop (dev only)</Text>
-            </Pressable>
-          ) : null}
           <Pressable
             onPress={async () => {
               await clearActiveTrip();
@@ -335,16 +329,6 @@ export default function TripScreen() {
         <ActiveTripView
           trip={trip}
           onCleared={() => setTrip(null)}
-          onAdvance={async () => {
-            // Dev only: act as the conductor and mark the next stop through the API, then show it at once.
-            const next = advanceTrip(trip);
-            if (next.currentStop !== trip.currentStop) {
-              const deviceId = await getDeviceId();
-              void sendOrQueue({ type: 'stop', body: { vehicleCode: trip.vehicleShortCode, stopName: next.currentStop, deviceId } });
-            }
-            await saveActiveTrip(next);
-            setTrip(next);
-          }}
           onConfirmAlighting={() => void confirmAlighting()}
         />
       ) : (

@@ -12,7 +12,6 @@ import { useColors } from '@/hooks/useColors';
 import { api, formatCedis } from '@/lib/api';
 import { colors as tokens } from '@/lib/colors';
 import { bonusFor, formatOnline, MOCK_BONUS, MOCK_TODAY, useConductorVehicle } from '@/lib/conductor';
-import { getDeviceId } from '@/lib/identity';
 import { useFocusPolling } from '@/lib/polling';
 import { sendOrQueue } from '@/lib/sync';
 
@@ -53,7 +52,7 @@ export default function TodayScreen() {
     Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
     setCurrentStop(name);
     if (vehicleCode) {
-      void getDeviceId().then((deviceId) => sendOrQueue({ type: 'stop', body: { vehicleCode, stopName: name, deviceId } }));
+      void sendOrQueue({ type: 'stop', body: { vehicleCode, stopName: name } });
     }
   };
 

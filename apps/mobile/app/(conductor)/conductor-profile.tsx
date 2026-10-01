@@ -8,6 +8,7 @@ import { RoleSwitcher } from '@/components/RoleSwitcher';
 import { SectionHeader } from '@/components/SectionHeader';
 import { SettingsGroup } from '@/components/SettingsGroup';
 import { useColors } from '@/hooks/useColors';
+import { api } from '@/lib/api';
 import { confirmSignOut } from '@/lib/auth';
 import { useConductorVehicle } from '@/lib/conductor';
 import { setRole, type Role } from '@/lib/storage';
@@ -44,11 +45,14 @@ export default function ConductorProfileScreen() {
   };
 
   const signOut = () =>
-    confirmSignOut(() => {
+    confirmSignOut(
+      () => {
       // No (auth)/login screen exists yet, so sign-out clears local data and returns to Scan as a guest.
       showToast('Signed out');
       router.navigate('/');
-    });
+      },
+      () => api.conductorLogout(),
+    );
 
   const card = { backgroundColor: colors.card, borderColor: colors.border, borderRadius: colors.radius };
 
