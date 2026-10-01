@@ -2,6 +2,7 @@ import React from 'react';
 import { StyleSheet } from 'react-native';
 import { Feather } from '@expo/vector-icons';
 import { Tabs } from 'expo-router';
+import { FloatingTabBar } from '@/components/FloatingTabBar';
 import { colors } from '@/lib/colors';
 
 // Conductor role: Today, My QR, Leaderboard, Earnings, plus Profile (the role switcher lives there).
@@ -9,6 +10,7 @@ export default function ConductorLayout() {
   return (
     <Tabs
       initialRouteName="today"
+      tabBar={(props) => <FloatingTabBar {...props} />}
       screenOptions={{
         headerShown: false,
         tabBarActiveTintColor: colors.accentEmerald,
