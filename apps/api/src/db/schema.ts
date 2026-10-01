@@ -248,6 +248,8 @@ export const paymentsTable = pgTable(
     payerPhone: text("payer_phone"),
     /** Which mobile-money wallet is charged: mtn, telecel or airteltigo. */
     network: text("network").notNull().default("mtn"),
+    /** Did the stop they said they got on at match where their phone was? match, far (two or more stops apart) or unknown (no location). */
+    boardingCheck: text("boarding_check").notNull().default("unknown"),
     /** Set when this payment extends an existing trip (the overstay difference) instead of starting one. */
     extendsTripRef: text("extends_trip_ref"),
     customStopNote: text("custom_stop_note"),

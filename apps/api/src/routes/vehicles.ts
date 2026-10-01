@@ -6,7 +6,8 @@ import { routesTable, vehiclesTable } from "../db/schema";
 import { desc, and, gt } from "drizzle-orm";
 import { applyDirection, amountDue, isSuspended } from "../lib";
 import { getRoundingStep, pairFaresFor } from "../services/fares";
-import { routeChangesTable, tripEventsTable } from "../db/schema";
+import { activeTripsTable, routeChangesTable, tripEventsTable } from "../db/schema";
+import { count } from "drizzle-orm";
 import { fareNotice, withFares } from "../services/fares";
 
 const router: IRouter = Router();
@@ -30,6 +31,24 @@ router.get("/vehicles/resolve", async (req, res): Promise<void> => {
   if (!row) {
     res.status(404).json({ error: "Vehicle not found" });
     return;
+  }
+
+  // Nobody has to tell the app the trotro turned round: a passenger scanning while standing at the end of the line, with
+  // nobody on board, means the vehicle is about to run the other way. The change is logged like a conductor's would be.
+  const scanLat = Number(req.query["lat"]);
+  const scanLng = Number(req.query["lng"]);
+  if (req.query["lat"] !== undefined && req.query["lat"] !== "" && Number.isFinite(scanLat) && Number.isFinite(scanLng)) {
+    const shown = applyDirection(await withFares(row.route), row.vehicle.direction).stopsJson;
+    const atEnd = nearestStop(shown, { lat: scanLat, lng: scanLng }, BOARDING_RADIUS_M);
+    if (atEnd && atEnd.index === shown.length - 1) {
+      const [{ n } = { n: 0 }] = await db.select({ n: count() }).from(activeTripsTable).where(eq(activeTripsTable.vehicleId, row.vehicle.id));
+      if (n === 0) {
+        const next = row.vehicle.direction === "outbound" ? "inbound" : "outbound";
+        await db.update(vehiclesTable).set({ direction: next }).where(eq(vehiclesTable.id, row.vehicle.id));
+        await db.insert(routeChangesTable).values({ vehicleId: row.vehicle.id, kind: "direction", fromRoute: row.route.routeId, toRoute: row.route.routeId, fromDirection: row.vehicle.direction, toDirection: next });
+        row.vehicle.direction = next;
+      }
+    }
   }
 
   const route = applyDirection(await withFares(row.route), row.vehicle.direction);

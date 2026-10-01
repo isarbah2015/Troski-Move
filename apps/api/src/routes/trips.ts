@@ -225,7 +225,7 @@ router.post("/trips/position", async (req, res): Promise<void> => {
     const target = Math.min(hit.index, alight);
     if (target > current) {
       currentStop = stops[target]!.name;
-      await db.update(activeTripsTable).set({ currentStop, etaMinutes: etaBetween(stops, target, alight) }).where(eq(activeTripsTable.id, row.trip.id));
+      await db.update(activeTripsTable).set({ currentStop, etaMinutes: etaBetween(stops, target, alight), lastStopMarkedAt: new Date() }).where(eq(activeTripsTable.id, row.trip.id));
       if (alight - target === 1) void sendPush(await pushTokenOf(passengerId), "Your stop is next", `Get ready to get off at ${stops[alight]!.name}.`);
       if (target === alight) {
         arrived = true;
@@ -479,3 +479,21 @@ router.get("/trips/history", async (req, res): Promise<void> => {
 });
 
 export default router;
+
+/**
+ * Closes trips nobody closed: a passenger who reached their stop and never pressed "I got off" would otherwise stay on
+ * the conductor's board as a paid passenger for ever, hiding a real unpaid one. Ten minutes after arriving, or four hours
+ * after starting, the trip ends by itself.
+ */
+export async function closeStaleTrips(): Promise<number> {
+  const arrivedBefore = new Date(Date.now() - 10 * 60_000);
+  const startedBefore = new Date(Date.now() - 4 * 3_600_000);
+  const rows = await db
+    .select({ transactionId: activeTripsTable.transactionId, vehicleId: activeTripsTable.vehicleId, stop: activeTripsTable.alightingStop })
+    .from(activeTripsTable)
+    .where(
+      sql`(${activeTripsTable.currentStop} = ${activeTripsTable.alightingStop} and ${activeTripsTable.overstayStop} is null and coalesce(${activeTripsTable.lastStopMarkedAt}, ${activeTripsTable.startedAt}) < ${arrivedBefore.toISOString()}::timestamptz) or ${activeTripsTable.startedAt} < ${startedBefore.toISOString()}::timestamptz`,
+    );
+  for (const r of rows) await endTrip(r.transactionId, r.vehicleId, r.stop);
+  return rows.length;
+}

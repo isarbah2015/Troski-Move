@@ -5,6 +5,7 @@ import pinoHttp from "pino-http";
 import { logger } from "./logger";
 import routes from "./routes";
 import { processOverstays } from "./routes/payments";
+import { closeStaleTrips } from "./routes/trips";
 
 const app = express();
 
@@ -27,6 +28,9 @@ app.use((err: unknown, _req: express.Request, res: express.Response, _next: expr
 
 // Charges passengers who ignored the overstay prompt for 60 seconds.
 setInterval(() => void processOverstays().catch((err) => logger.error({ err }, "Overstay job failed")), 10_000).unref();
+
+// Closes trips whose passengers never pressed "I got off".
+setInterval(() => void closeStaleTrips().catch((err) => logger.error({ err }, "Stale trip job failed")), 60_000).unref();
 
 const port = Number(process.env.PORT ?? 4000);
 

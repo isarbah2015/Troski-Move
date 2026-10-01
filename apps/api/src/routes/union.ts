@@ -4,7 +4,7 @@ import { and, count, desc, eq, gt, isNotNull, sql } from "drizzle-orm";
 import { requireUnion } from "../auth";
 import { computeCompliance } from "../services/compliance";
 import { db } from "../db";
-import { conductorSessionsTable, disputesTable, ratingsTable, transactionsTable, usersTable, vehiclesTable } from "../db/schema";
+import { conductorSessionsTable, disputesTable, paymentsTable, ratingsTable, transactionsTable, usersTable, vehiclesTable } from "../db/schema";
 
 const router: IRouter = Router();
 router.use("/union", requireUnion);
@@ -38,13 +38,15 @@ router.get("/union/overview", async (_req, res): Promise<void> => {
 
 router.get("/union/transactions", async (_req, res): Promise<void> => {
   const rows = await db
-    .select({ t: transactionsTable, code: vehiclesTable.shortCode })
+    .select({ t: transactionsTable, code: vehiclesTable.shortCode, boarding: paymentsTable.boardingCheck })
     .from(transactionsTable)
     .innerJoin(vehiclesTable, eq(transactionsTable.vehicleId, vehiclesTable.id))
+    .leftJoin(paymentsTable, eq(paymentsTable.tripRef, transactionsTable.tripRef))
     .orderBy(desc(transactionsTable.timestamp))
     .limit(200);
   res.json({
-    transactions: rows.map(({ t, code }) => ({
+    transactions: rows.map(({ t, code, boarding }) => ({
+      boardingCheck: boarding ?? "unknown",
       tripRef: t.tripRef,
       at: t.timestamp,
       vehicle: code,

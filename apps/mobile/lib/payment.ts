@@ -3,6 +3,7 @@ import type { ResolvedVehicle, Stop } from '@trotrolink/shared';
 import { api } from '@/lib/api';
 import { getDeviceId } from '@/lib/identity';
 import { getMomoNetwork } from '@/lib/network';
+import { getPosition } from '@/lib/location';
 import { getUser } from '@/lib/storage';
 
 export const POLL_EVERY_MS = 3_000;
@@ -18,6 +19,12 @@ async function payerPhone(): Promise<string | undefined> {
   const user = await getUser();
   const digits = user?.phone.replace(/[^\d+]/g, '');
   return digits && /^\+?\d{9,15}$/.test(digits) ? digits : undefined;
+}
+
+/** Where the phone is, for the union's boarding check. Silent: no permission prompt, no waiting. */
+async function here(): Promise<{ lat?: number; lng?: number }> {
+  const pos = await getPosition({ timeoutMs: 1500 });
+  return pos ? { lat: pos.lat, lng: pos.lng } : {};
 }
 
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
@@ -47,6 +54,7 @@ export async function payForTrip(p: {
       ...(p.customStopNote ? { customStopNote: p.customStopNote } : {}),
       payerPhone: await payerPhone(),
       network: await getMomoNetwork(),
+      ...(await here()),
     });
     referenceId = started.referenceId;
     tripId = started.tripId; // an identical pending payment may be handed back under its own reference

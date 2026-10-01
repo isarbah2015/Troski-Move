@@ -294,6 +294,9 @@ export const InitiatePaymentBody = z
     payerPhone: z.string().regex(/^\+?\d{9,15}$/).optional(),
     /** Which wallet pays: mtn (default), telecel or airteltigo. */
     network: z.enum(['mtn', 'telecel', 'airteltigo']).optional(),
+    /** Where the phone is when paying, so the union can see that the stop they say they got on at matches where they stood. */
+    lat: z.number().min(-90).max(90).optional(),
+    lng: z.number().min(-180).max(180).optional(),
   })
   .refine((b) => b.passengerId !== undefined || b.deviceId !== undefined, { message: 'passengerId or deviceId is required' });
 export type InitiatePaymentBody = z.infer<typeof InitiatePaymentBody>;

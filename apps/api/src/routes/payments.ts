@@ -6,7 +6,7 @@ import { db } from "../db";
 import { activeTripsTable, paymentsTable, transactionsTable, tripEventsTable, type Payment } from "../db/schema";
 import { amountDue, checkTrip, guestUserId, insertTrip, isSuspended, round2, stopIndex, userExists, vehicleWithRoute } from "../lib";
 import { logger } from "../logger";
-import { guessMomoNetwork, MOMO_NETWORK_LABEL } from "@trotrolink/shared";
+import { guessMomoNetwork, MOMO_NETWORK_LABEL, nearestStop, type RouteStop } from "@trotrolink/shared";
 import { getPaymentStatus, isNetworkEnabled, isSimulator, momoCurrency, newReferenceId, payerPhoneRequired, requestToPay } from "../services/momo";
 
 const router: IRouter = Router();
@@ -110,6 +110,17 @@ export type InitiateResult = { status: number; body: InitiatePaymentResponse | {
  * Starts a MoMo payment for a ride. Used by the app (POST /api/payments/initiate) and by USSD. The server sets the price,
  * refuses a second live charge for the same ride, and never trusts the client's amount.
  */
+/**
+ * Compares the stop a passenger says they get on at with where their phone is. Only a clear mismatch (two or more stops
+ * apart, with the phone within 600 m of a listed stop) is flagged; no location is simply "unknown", never a reason to refuse.
+ */
+function boardingCheckOf(stops: RouteStop[], claimedIndex: number, lat?: number, lng?: number): "match" | "far" | "unknown" {
+  if (lat === undefined || lng === undefined) return "unknown";
+  const near = nearestStop(stops, { lat, lng }, 600);
+  if (!near) return "unknown";
+  return Math.abs(near.index - claimedIndex) >= 2 ? "far" : "match";
+}
+
 export async function initiatePayment(b: InitiatePaymentBody): Promise<InitiateResult> {
 
   // A retry (double tap, flaky network) with the same trip reference returns the same payment: never a second charge.
@@ -178,6 +189,7 @@ export async function initiatePayment(b: InitiatePaymentBody): Promise<InitiateR
       customStopNote: b.customStopNote || null,
       payerPhone: b.payerPhone ?? null,
       network,
+      boardingCheck: boardingCheckOf(stops, check.from, b.lat, b.lng),
     });
     await requestToPay({
       referenceId,
