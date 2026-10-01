@@ -202,7 +202,7 @@ export default function EarningsScreen() {
 }
 
 const styles = StyleSheet.create({
-  scroll: { paddingHorizontal: 24, paddingBottom: 48 },
+  scroll: { paddingHorizontal: 24, paddingBottom: 132 },
   title: { fontFamily: 'PlusJakartaSans_800ExtraBold', letterSpacing: -0.8, fontSize: 32 },
   sub: { fontFamily: 'PlusJakartaSans_500Medium', fontSize: 14, marginTop: 4, marginBottom: 20 },
   totalCard: { borderWidth: 1.5, padding: 20 },

@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { KeyboardAvoidingView, Linking, Modal, Platform, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
+import { KeyboardAvoidingView, Linking, Modal, Platform, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { Feather } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
 import type { DisputeReason } from '@trotrolink/shared';
@@ -59,6 +59,7 @@ export function ReportSheet({ visible, initialReason = null, onSubmit, onClose }
       <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={styles.root}>
         <Pressable style={[styles.scrim, { backgroundColor: SCRIM }]} onPress={onClose} accessibilityLabel="Close" />
         <View style={[styles.sheet, { backgroundColor: colors.card, borderColor: colors.border, borderTopLeftRadius: colors.radiusModal, borderTopRightRadius: colors.radiusModal }]}>
+          <ScrollView style={{ flexShrink: 1 }} showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled" bounces={false}>
           <View style={[styles.grabber, { backgroundColor: colors.border }]} />
           <Text style={[styles.title, { color: colors.foreground }]}>{t('report.title')}</Text>
           {!chosen ? (
@@ -152,6 +153,7 @@ export function ReportSheet({ visible, initialReason = null, onSubmit, onClose }
               />
             </>
           )}
+          </ScrollView>
         </View>
       </KeyboardAvoidingView>
     </Modal>
@@ -161,7 +163,7 @@ export function ReportSheet({ visible, initialReason = null, onSubmit, onClose }
 const styles = StyleSheet.create({
   root: { flex: 1, justifyContent: 'flex-end' },
   scrim: { ...StyleSheet.absoluteFillObject },
-  sheet: { padding: 24, paddingBottom: 40, borderWidth: StyleSheet.hairlineWidth * 2, borderBottomWidth: 0 },
+  sheet: { padding: 24, paddingBottom: 28, maxHeight: '92%', borderWidth: StyleSheet.hairlineWidth * 2, borderBottomWidth: 0 },
   grabber: { alignSelf: 'center', width: 40, height: 4, borderRadius: 2, marginBottom: 20 },
   title: { fontFamily: 'PlusJakartaSans_700Bold', fontSize: 22, marginBottom: 4 },
   sub: { fontFamily: 'PlusJakartaSans_400Regular', fontSize: 14, marginBottom: 18 },

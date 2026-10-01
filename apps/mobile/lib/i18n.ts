@@ -10,7 +10,13 @@ import { getLanguage } from '@/lib/storage';
 type Dict = Record<string, string>;
 
 const en: Dict = {
-  'tab.scan': 'Scan', 'tab.trip': 'Trip', 'tab.profile': 'Profile',
+  'tab.scan': 'Scan', 'tab.trip': 'Trip', 'tab.profile': 'Profile', 'tab.fares': 'Fares',
+  'fares.title': 'Official fares', 'fares.sub': 'What every trotro should charge. Check before you ride.', 'fares.error': "Couldn't load fares. Tap to try again.",
+  'fares.since': 'since', 'fares.original': 'Original GPRTU fares are in force', 'fares.upcoming': 'New fares "{label}" start on {date}',
+  'fares.route': 'Route', 'fares.stops': 'Fare from the first stop', 'fares.from': 'From', 'fares.to': 'To', 'fares.start': 'Start',
+  'fares.pickFrom': 'Tap the stop you get on at', 'fares.pickTo': 'Now tap the stop you get off at', 'fares.official': 'Official fare', 'fares.fixed': 'fixed short-hop price',
+  'fares.foot': 'You pay the official fare, rounded up to the next step set by GPRTU. If a driver asks for more, report it from the Trip screen.',
+  'stop.payWith': 'Pay with', 'profile.networkNote': 'Fares are the same on every network. Pick the wallet you will approve the payment on.',
   'scan.title': 'Scan to ride', 'scan.subtitle': 'Point at the QR sticker inside the trotro',
   'scan.enterCode': 'Enter short code', 'scan.allowCamera': 'Allow camera access to scan the QR code.', 'scan.allow': 'Allow',
   'code.title': 'Enter short code', 'code.hint': 'Find it printed under the QR sticker, e.g. CIR01.', 'code.find': 'Find my trotro',

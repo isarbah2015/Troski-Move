@@ -9,6 +9,9 @@ import { GOLD, SCRIM } from '@/lib/colors';
 import { Approx } from '@/components/Approx';
 import { useT } from '@/lib/i18n';
 import { PrimaryButton } from '@/components/PrimaryButton';
+import { NetworkPicker } from '@/components/NetworkPicker';
+import { MOMO_NETWORK_LABEL } from '@trotrolink/shared';
+import { useMomoNetwork } from '@/lib/network';
 
 type Props = {
   resolved: ResolvedVehicle | null;
@@ -19,6 +22,7 @@ type Props = {
 
 /** Pick the alighting stop, see the official fare and the rounded-up amount to pay. */
 export function StopSheet({ resolved, onClose, onPay }: Props) {
+  const [network, setNetwork] = useMomoNetwork();
   const colors = useColors();
   const t = useT();
   const [selected, setSelected] = useState<string | null>(null);
@@ -95,7 +99,7 @@ export function StopSheet({ resolved, onClose, onPay }: Props) {
               <Text style={[styles.route, { color: colors.foreground }]}>{resolved.route.name}</Text>
               {/* Where the passenger gets on: the trotro's current stop by default, any other stop on the route if they board there */}
               <Text style={[styles.label, { color: colors.mutedForeground }]}>{t('stop.on').toUpperCase()}</Text>
-              <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.boardRow} style={styles.boardScroll}>
+              <View style={styles.boardRow}>
                 {all.slice(0, -1).map((x) => {
                   const on = x.name === boardName;
                   const here = x.name === hereName;
@@ -117,7 +121,7 @@ export function StopSheet({ resolved, onClose, onPay }: Props) {
                     </Pressable>
                   );
                 })}
-              </ScrollView>
+              </View>
               <Text style={[styles.label, { color: colors.mutedForeground, marginTop: 14 }]}>{(custom ? t('stop.nearest') : t('stop.where')).toUpperCase()}</Text>
 
               <ScrollView style={styles.list} showsVerticalScrollIndicator={false}>
@@ -179,10 +183,13 @@ export function StopSheet({ resolved, onClose, onPay }: Props) {
                 </View>
               ) : null}
 
+              <Text style={[styles.label, { color: colors.mutedForeground, marginTop: 10 }]}>{t('stop.payWith').toUpperCase()}</Text>
+              <NetworkPicker value={network} onChange={setNetwork} />
+
               <PrimaryButton
                 disabled={!ready}
                 onPress={() => stop && onPay(stop, customNote || undefined, boardName)}
-                label={stop ? t('stop.pay', { amount: formatCedis(stop.amountToPay) }) : t('stop.choose')}
+                label={stop ? `${t('stop.pay', { amount: formatCedis(stop.amountToPay) }).replace(/MoMo/, MOMO_NETWORK_LABEL[network])}` : t('stop.choose')}
                 style={styles.cta}
               />
             </>
@@ -194,8 +201,7 @@ export function StopSheet({ resolved, onClose, onPay }: Props) {
 }
 
 const styles = StyleSheet.create({
-  boardScroll: { flexGrow: 0, marginHorizontal: -4 },
-  boardRow: { gap: 8, paddingHorizontal: 4, paddingBottom: 2 },
+  boardRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
   boardChip: { flexDirection: 'row', alignItems: 'center', gap: 6, borderWidth: StyleSheet.hairlineWidth * 2, paddingHorizontal: 14, paddingVertical: 9 },
   boardText: { fontFamily: 'PlusJakartaSans_700Bold', fontSize: 13 },
   hereDot: { width: 7, height: 7, borderRadius: 4 },
@@ -209,7 +215,7 @@ const styles = StyleSheet.create({
   noticeText: { fontFamily: 'PlusJakartaSans_600SemiBold', fontSize: 12 },
   root: { flex: 1, justifyContent: 'flex-end' },
   scrim: { ...StyleSheet.absoluteFillObject, backgroundColor: SCRIM },
-  sheet: { padding: 24, paddingBottom: 36, borderWidth: StyleSheet.hairlineWidth * 2, borderBottomWidth: 0, maxHeight: '88%' },
+  sheet: { padding: 24, paddingBottom: 40, borderWidth: StyleSheet.hairlineWidth * 2, borderBottomWidth: 0, maxHeight: '88%' },
   grabber: { alignSelf: 'center', width: 40, height: 4, borderRadius: 2, marginBottom: 18 },
   headRow: { flexDirection: 'row', alignItems: 'center', gap: 10, marginBottom: 10 },
   codePill: { paddingHorizontal: 12, paddingVertical: 5 },
@@ -217,7 +223,7 @@ const styles = StyleSheet.create({
   conductor: { fontFamily: 'PlusJakartaSans_500Medium', fontSize: 13 },
   route: { fontFamily: 'PlusJakartaSans_700Bold', fontSize: 22, marginBottom: 18 },
   label: { fontFamily: 'PlusJakartaSans_600SemiBold', fontSize: 11, letterSpacing: 1, marginBottom: 10 },
-  list: { flexGrow: 0 },
+  list: { flexGrow: 0, flexShrink: 1, minHeight: 120 },
   row: { flexDirection: 'row', alignItems: 'center', gap: 12, borderWidth: StyleSheet.hairlineWidth * 2, paddingHorizontal: 16, paddingVertical: 14, marginBottom: 8 },
   stopName: { flex: 1, fontFamily: 'PlusJakartaSans_600SemiBold', fontSize: 16 },
   stopFare: { fontFamily: 'PlusJakartaSans_500Medium', fontSize: 14 },

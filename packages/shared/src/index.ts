@@ -7,3 +7,4 @@ export * from './seed';
 export * from './geo';
 export * from './currency';
 export * from './fare';
+export * from './momo';

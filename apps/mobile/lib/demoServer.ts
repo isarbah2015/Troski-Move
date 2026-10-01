@@ -192,6 +192,18 @@ async function route(method: string, path: string, query: URLSearchParams, body:
 
   if (path === '/healthz') return { status: 'ok' };
 
+  if (path === '/fares') {
+    return {
+      table: null,
+      upcoming: null,
+      roundingStep: 1,
+      routes: SEED_ROUTES.map((r) => ({
+        routeId: r.routeId, name: r.routeName, origin: r.origin, destination: r.destination,
+        stops: r.stops.map((s) => ({ name: s.name, fare: s.fare })), pairs: {},
+      })),
+    };
+  }
+
   if (path === '/vehicles/resolve') {
     const v = vehicle(parseScannedCode(query.get('code') ?? ''));
     if (!v) fail(404, 'Vehicle not found');

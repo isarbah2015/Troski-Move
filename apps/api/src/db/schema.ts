@@ -246,6 +246,8 @@ export const paymentsTable = pgTable(
     amount: numeric("amount", { precision: 8, scale: 2 }).notNull(),
     currency: text("currency").notNull(),
     payerPhone: text("payer_phone"),
+    /** Which mobile-money wallet is charged: mtn, telecel or airteltigo. */
+    network: text("network").notNull().default("mtn"),
     /** Set when this payment extends an existing trip (the overstay difference) instead of starting one. */
     extendsTripRef: text("extends_trip_ref"),
     customStopNote: text("custom_stop_note"),

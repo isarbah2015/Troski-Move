@@ -19,6 +19,7 @@ import {
   type DisputeBody,
   DisputeResponse,
   type UnpaidDisputeBody,
+  FaresResponse,
   type InitiatePaymentBody,
   type RatingSubmission,
   type SplitBody,
@@ -128,6 +129,11 @@ export function createApiClient(baseUrl: string, options: ApiClientOptions = {})
     /** Passenger paid: records the transaction and starts the active trip. Retrying with the same `tripId` is safe. */
     async startTrip(body: StartTripBody) {
       return StartTripResponse.parse(await post('/trips/start', body));
+    },
+
+    /** Official fares in force now (public). */
+    async fares() {
+      return FaresResponse.parse(await request('/fares'));
     },
 
     /** Starts a MoMo request-to-pay; the passenger approves it on their phone. Retrying with the same `tripId` is safe. */

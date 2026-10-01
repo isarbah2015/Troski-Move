@@ -6,7 +6,8 @@ import { db } from "../db";
 import { activeTripsTable, paymentsTable, transactionsTable, tripEventsTable, type Payment } from "../db/schema";
 import { amountDue, checkTrip, guestUserId, insertTrip, isSuspended, round2, stopIndex, userExists, vehicleWithRoute } from "../lib";
 import { logger } from "../logger";
-import { getPaymentStatus, isSimulator, momoCurrency, newReferenceId, payerPhoneRequired, requestToPay } from "../services/momo";
+import { guessMomoNetwork, MOMO_NETWORK_LABEL } from "@trotrolink/shared";
+import { getPaymentStatus, isNetworkEnabled, isSimulator, momoCurrency, newReferenceId, payerPhoneRequired, requestToPay } from "../services/momo";
 
 const router: IRouter = Router();
 
@@ -130,8 +131,12 @@ export async function initiatePayment(b: InitiatePaymentBody): Promise<InitiateR
     return { status: 400, body: { error: check.error, ...(check.officialFare !== undefined ? { officialFare: check.officialFare } : {}) } };
   }
 
+  const network = b.network ?? guessMomoNetwork(b.payerPhone) ?? "mtn";
+  if (!isNetworkEnabled(network)) {
+    return { status: 400, body: { error: `${MOMO_NETWORK_LABEL[network]} is not switched on yet. Please pay with ${MOMO_NETWORK_LABEL.mtn}.` } };
+  }
   if (payerPhoneRequired() && !b.payerPhone) {
-    return { status: 400, body: { error: "Add your MTN MoMo number to pay" } };
+    return { status: 400, body: { error: `Add your ${MOMO_NETWORK_LABEL[network]} number to pay` } };
   }
 
   // The price is set here, from the route. A client that sends a different amount is refused, not trusted.
@@ -172,6 +177,7 @@ export async function initiatePayment(b: InitiatePaymentBody): Promise<InitiateR
       currency: momoCurrency(),
       customStopNote: b.customStopNote || null,
       payerPhone: b.payerPhone ?? null,
+      network,
     });
     await requestToPay({
       referenceId,

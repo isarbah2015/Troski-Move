@@ -62,7 +62,6 @@ export default function ScanScreen() {
   const [notFound, setNotFound] = useState(false);
   const [reportOpen, setReportOpen] = useState(false);
   const [reportCode, setReportCode] = useState('');
-  const [chipsX, setChipsX] = useState(0);
   const busy = useRef(false);
   const paying = useRef(false);
   const [payment, setPayment] = useState<PaymentState | null>(null);
@@ -226,9 +225,8 @@ export default function ScanScreen() {
         {SHOW_DEMO ? (
           <>
             <Text style={[styles.chipsLabel, { color: colors.mutedForeground }]}>TRY A DEMO CODE</Text>
-            {/* Full-bleed: the row runs edge to edge so chips scroll under the screen edge instead of being cut at the padding. */}
+            {/* Four equal chips: they always fit the screen width, so nothing is cut or needs scrolling. */}
             <View style={styles.chipsWrap}>
-            <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.chips} style={styles.chipsRow} decelerationRate="fast" scrollEventThrottle={32} onScroll={(e) => setChipsX(e.nativeEvent.contentOffset.x)}>
               {DEMO_CODES.map((code) => (
                 <Pressable
                   key={code}
@@ -237,12 +235,9 @@ export default function ScanScreen() {
                   accessibilityLabel={`Use demo code ${code}`}
                   style={[styles.chip, { backgroundColor: colors.card, borderColor: colors.border, borderRadius: colors.radiusPill }]}
                 >
-                  <Text style={[styles.chipText, { color: colors.foreground }]}>{code}</Text>
+                  <Text numberOfLines={1} adjustsFontSizeToFit style={[styles.chipText, { color: colors.foreground }]}>{code}</Text>
                 </Pressable>
               ))}
-            </ScrollView>
-            {chipsX > 8 ? <LinearGradient pointerEvents="none" colors={[colors.background, 'transparent']} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }} style={styles.chipFadeLeft} /> : null}
-            <LinearGradient pointerEvents="none" colors={['transparent', colors.background]} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }} style={styles.chipFade} />
             </View>
           </>
         ) : null}
@@ -303,11 +298,7 @@ const styles = StyleSheet.create({
   reportRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, marginBottom: 14 },
   reportText: { fontFamily: 'PlusJakartaSans_600SemiBold', fontSize: 13 },
   chipsLabel: { fontFamily: 'PlusJakartaSans_700Bold', fontSize: 11, letterSpacing: 1.6, marginBottom: 10 },
-  chipsWrap: { marginHorizontal: -24, marginBottom: 14 },
-  chipsRow: { flexGrow: 0 },
-  chips: { gap: 8, paddingVertical: 4, paddingHorizontal: 24 },
-  chipFadeLeft: { position: 'absolute', left: 0, top: 0, bottom: 0, width: 28 },
-  chipFade: { position: 'absolute', right: 0, top: 0, bottom: 0, width: 36 },
-  chip: { borderWidth: StyleSheet.hairlineWidth * 2, paddingHorizontal: 18, paddingVertical: 11 },
+  chipsWrap: { flexDirection: 'row', gap: 8, marginBottom: 14 },
+  chip: { flex: 1, alignItems: 'center', borderWidth: StyleSheet.hairlineWidth * 2, paddingHorizontal: 4, paddingVertical: 11 },
   chipText: { fontFamily: 'PlusJakartaSans_700Bold', fontSize: 14, letterSpacing: 1.2 },
 });

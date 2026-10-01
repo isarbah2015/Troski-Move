@@ -153,7 +153,7 @@ export default function LeaderboardScreen() {
 }
 
 const styles = StyleSheet.create({
-  scroll: { paddingHorizontal: 24, paddingBottom: 40 },
+  scroll: { paddingHorizontal: 24, paddingBottom: 132 },
   headRow: { flexDirection: 'row', alignItems: 'center', gap: 10, marginBottom: 8 },
   title: { fontFamily: 'PlusJakartaSans_800ExtraBold', letterSpacing: -0.8, fontSize: 28 },
   sub: { fontFamily: 'PlusJakartaSans_500Medium', fontSize: 14, lineHeight: 20 },

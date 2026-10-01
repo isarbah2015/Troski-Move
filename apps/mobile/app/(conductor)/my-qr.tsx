@@ -160,7 +160,7 @@ export default function MyQrScreen() {
 }
 
 const styles = StyleSheet.create({
-  scroll: { paddingHorizontal: 24, paddingBottom: 40 },
+  scroll: { paddingHorizontal: 24, paddingBottom: 132 },
   title: { fontFamily: 'PlusJakartaSans_800ExtraBold', letterSpacing: -0.8, fontSize: 32, marginBottom: 20 },
   center: { paddingVertical: 80, alignItems: 'center' },
   errorCard: { borderWidth: StyleSheet.hairlineWidth * 2, padding: 24, alignItems: 'center', gap: 12 },

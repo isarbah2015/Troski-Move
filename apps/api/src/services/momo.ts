@@ -127,3 +127,13 @@ export async function getPaymentStatus(referenceId: string, createdAt: Date): Pr
 }
 
 export const newReferenceId = () => randomUUID();
+
+/**
+ * Wallets that can be charged. The simulator accepts all of them so every flow can be shown. For live charges only
+ * MTN is wired directly; Telecel Cash and AT Money switch on through MOMO_NETWORKS_ENABLED (e.g. "mtn,telecel,airteltigo")
+ * once a collections provider that covers them is connected.
+ */
+export function isNetworkEnabled(network: string): boolean {
+  if (isSimulator()) return true;
+  return (process.env.MOMO_NETWORKS_ENABLED ?? "mtn").split(",").map((x) => x.trim()).includes(network);
+}

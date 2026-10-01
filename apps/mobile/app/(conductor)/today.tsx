@@ -309,7 +309,7 @@ const styles = StyleSheet.create({
   headingRow: { flexDirection: 'row', gap: 10, marginTop: 16 },
   headingBtn: { flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, paddingVertical: 11, borderWidth: StyleSheet.hairlineWidth * 2, borderRadius: 999 },
   headingText: { fontFamily: 'PlusJakartaSans_700Bold', fontSize: 13 },
-  scroll: { paddingHorizontal: GUTTER, paddingBottom: 40 },
+  scroll: { paddingHorizontal: GUTTER, paddingBottom: 132 },
   kicker: { fontFamily: 'PlusJakartaSans_600SemiBold', fontSize: 12, letterSpacing: 1.4, marginBottom: 16 },
   center: { paddingVertical: 80, alignItems: 'center' },
   errorCard: { borderWidth: StyleSheet.hairlineWidth * 2, padding: 24, alignItems: 'center', gap: 12 },

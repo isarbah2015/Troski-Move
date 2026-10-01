@@ -17,6 +17,9 @@ import { formatCedis } from '@/lib/api';
 import { confirmDeleteAccount, confirmSignOut } from '@/lib/auth';
 import { loadDemoProfile } from '@/lib/demo';
 import { submitTripRating } from '@/lib/ratings';
+import { NetworkPicker } from '@/components/NetworkPicker';
+import { MOMO_NETWORK_LABEL } from '@trotrolink/shared';
+import { useMomoNetwork } from '@/lib/network';
 import { formatWhen, GUEST_USER, lifetimeStats, maskMomo, maskPhone } from '@/lib/profile';
 import {
   clearTripHistory,
@@ -68,6 +71,7 @@ export default function ProfileScreen() {
   const person = user ?? GUEST_USER;
   const stats = lifetimeStats(trips);
   const momo = user ? maskMomo(user.phone) : null;
+  const [network, setNetwork] = useMomoNetwork();
 
   const switchRole = async (next: Role) => {
     if (next === role) return;
@@ -192,10 +196,14 @@ export default function ProfileScreen() {
         <View style={[styles.payIcon, { backgroundColor: colors.secondary }]}>
           <Feather name="smartphone" size={20} color={GOLD} />
         </View>
-        <View>
-          <Text style={[styles.payName, { color: colors.foreground }]}>MTN MoMo</Text>
+        <View style={{ flex: 1 }}>
+          <Text style={[styles.payName, { color: colors.foreground }]}>{MOMO_NETWORK_LABEL[network]}</Text>
           <Text style={[styles.payNumber, { color: colors.mutedForeground }]}>{momo ?? 'No number added yet'}</Text>
         </View>
+      </View>
+      <View style={{ marginTop: 10 }}>
+        <NetworkPicker value={network} onChange={setNetwork} />
+        <Text style={[styles.payNumber, { color: colors.mutedForeground, marginTop: 8 }]}>{t('profile.networkNote')}</Text>
       </View>
 
       {/* Settings */}
@@ -250,7 +258,7 @@ export default function ProfileScreen() {
 }
 
 const styles = StyleSheet.create({
-  scroll: { paddingHorizontal: 24, paddingBottom: 48 },
+  scroll: { paddingHorizontal: 24, paddingBottom: 132 },
   title: { fontFamily: 'PlusJakartaSans_800ExtraBold', fontSize: 32, letterSpacing: -0.8, marginBottom: 20 },
   userCard: { flexDirection: 'row', alignItems: 'center', gap: 16, padding: 22, overflow: 'hidden' },
   avatarRing: { width: 68, height: 68, borderRadius: 34, borderWidth: 2, borderColor: GOLD, alignItems: 'center', justifyContent: 'center' },

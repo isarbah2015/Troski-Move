@@ -271,6 +271,8 @@ export const InitiatePaymentBody = z
     customStopNote: z.string().trim().max(120).optional(),
     /** The MoMo wallet to charge (MSISDN, e.g. 233244567889). Sandbox falls back to MTN's test number. */
     payerPhone: z.string().regex(/^\+?\d{9,15}$/).optional(),
+    /** Which wallet pays: mtn (default), telecel or airteltigo. */
+    network: z.enum(['mtn', 'telecel', 'airteltigo']).optional(),
   })
   .refine((b) => b.passengerId !== undefined || b.deviceId !== undefined, { message: 'passengerId or deviceId is required' });
 export type InitiatePaymentBody = z.infer<typeof InitiatePaymentBody>;

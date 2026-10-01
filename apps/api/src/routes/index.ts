@@ -14,6 +14,7 @@ import unionOpsRouter from "./unionOps";
 import ussdRouter from "./ussd";
 import tripsRouter from "./trips";
 import vehiclesRouter from "./vehicles";
+import faresRouter from "./fares";
 
 const router: IRouter = Router();
 
@@ -23,6 +24,7 @@ router.use(conductorRouteRouter);
 router.use(accountRouter);
 router.use(disputesRouter);
 router.use(vehiclesRouter);
+router.use(faresRouter);
 router.use(leaderboardRouter);
 router.use(paymentsRouter);
 router.use(ratingsRouter);

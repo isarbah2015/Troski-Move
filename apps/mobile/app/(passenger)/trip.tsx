@@ -415,7 +415,7 @@ export default function TripScreen() {
 }
 
 const styles = StyleSheet.create({
-  scroll: { paddingHorizontal: 24, paddingBottom: 40 },
+  scroll: { paddingHorizontal: 24, paddingBottom: 132 },
   headRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 },
   kicker: { fontFamily: 'PlusJakartaSans_600SemiBold', fontSize: 12, letterSpacing: 1.2 },
   live: { flexDirection: 'row', alignItems: 'center', gap: 6, borderWidth: StyleSheet.hairlineWidth * 2, paddingHorizontal: 10, paddingVertical: 4 },

@@ -5,7 +5,7 @@ import { FloatingTabBar } from '@/components/FloatingTabBar';
 import { useColors } from '@/hooks/useColors';
 import { useT } from '@/lib/i18n';
 
-// Passenger role: exactly 3 tabs (Scan, Trip, Profile). Scan (index.tsx) is the first tab and owns `/`.
+// Passenger role: 4 tabs (Scan, Fares, Trip, Profile). Scan (index.tsx) is the first tab and owns `/`.
 export default function PassengerLayout() {
   const colors = useColors();
   const t = useT();
@@ -21,6 +21,7 @@ export default function PassengerLayout() {
       }}
     >
       <Tabs.Screen name="index" options={{ title: t('tab.scan'), tabBarIcon: ({ color }) => <Feather name="maximize" size={22} color={color} /> }} />
+      <Tabs.Screen name="fares" options={{ title: t('tab.fares'), tabBarIcon: ({ color }) => <Feather name="tag" size={22} color={color} /> }} />
       <Tabs.Screen name="trip" options={{ title: t('tab.trip'), tabBarIcon: ({ color }) => <Feather name="navigation" size={22} color={color} /> }} />
       <Tabs.Screen name="profile" options={{ title: t('tab.profile'), tabBarIcon: ({ color }) => <Feather name="user" size={22} color={color} /> }} />
     </Tabs>

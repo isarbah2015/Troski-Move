@@ -2,6 +2,7 @@ import { ApiError } from '@trotrolink/api-client';
 import type { ResolvedVehicle, Stop } from '@trotrolink/shared';
 import { api } from '@/lib/api';
 import { getDeviceId } from '@/lib/identity';
+import { getMomoNetwork } from '@/lib/network';
 import { getUser } from '@/lib/storage';
 
 export const POLL_EVERY_MS = 3_000;
@@ -45,6 +46,7 @@ export async function payForTrip(p: {
       amount: p.stop.amountToPay,
       ...(p.customStopNote ? { customStopNote: p.customStopNote } : {}),
       payerPhone: await payerPhone(),
+      network: await getMomoNetwork(),
     });
     referenceId = started.referenceId;
     tripId = started.tripId; // an identical pending payment may be handed back under its own reference

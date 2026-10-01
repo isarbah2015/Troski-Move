@@ -1,4 +1,4 @@
-import { desc, lte } from "drizzle-orm";
+import { asc, desc, gt, lte } from "drizzle-orm";
 import type { RouteStop } from "@trotrolink/shared";
 import { db } from "../db";
 import { fareTablesTable, routesTable } from "../db/schema";
@@ -81,4 +81,10 @@ export async function currentPairs(): Promise<Record<string, Record<string, numb
 export async function buildPercentPairs(percent: number): Promise<Record<string, Record<string, number>>> {
   const pairs = await currentPairs();
   return Object.fromEntries(Object.entries(pairs).map(([r, m]) => [r, Object.fromEntries(Object.entries(m).map(([k, v]) => [k, roundFare(v * (1 + percent / 100))]))]));
+}
+
+/** A table announced for a future date, so the app can warn passengers before prices change. */
+export async function upcomingFareTable(): Promise<FareTable | null> {
+  const [t] = await db.select().from(fareTablesTable).where(gt(fareTablesTable.effectiveFrom, new Date())).orderBy(asc(fareTablesTable.effectiveFrom)).limit(1);
+  return t ?? null;
 }
