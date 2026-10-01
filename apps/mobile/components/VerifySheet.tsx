@@ -143,7 +143,7 @@ const styles = StyleSheet.create({
   or: { alignItems: 'center', marginVertical: 14 },
   orText: { fontFamily: 'PlusJakartaSans_600SemiBold', fontSize: 12, letterSpacing: 0.6 },
   codeRow: { flexDirection: 'row', gap: 10 },
-  input: { flex: 1, height: 54, borderWidth: StyleSheet.hairlineWidth * 2, paddingHorizontal: 16, fontFamily: 'PlusJakartaSans_700Bold', fontSize: 18, letterSpacing: 2 },
+  input: { flex: 1, width: 0, minWidth: 0, height: 54, borderWidth: StyleSheet.hairlineWidth * 2, paddingHorizontal: 16, fontFamily: 'PlusJakartaSans_700Bold', fontSize: 18, letterSpacing: 2 },
   checkBtn: { height: 54, paddingHorizontal: 22, alignItems: 'center', justifyContent: 'center' },
   checkText: { fontFamily: 'PlusJakartaSans_700Bold', fontSize: 16 },
   result: { marginTop: 18, borderWidth: 2, padding: 20, alignItems: 'center', gap: 6 },
