@@ -1,18 +1,12 @@
 import { Router, type IRouter } from "express";
 import { desc, eq } from "drizzle-orm";
 import { DisputeBody, UnpaidDisputeBody } from "@trotrolink/shared";
-import { conductorOf, requireConductor } from "../auth";
+import { conductorOf, requireConductor, requireUnion } from "../auth";
 import { db } from "../db";
 import { disputesTable, routesTable, transactionsTable, tripEventsTable, usersTable, vehiclesTable } from "../db/schema";
 import { guestUserId } from "../lib";
 
 const router: IRouter = Router();
-
-/** The union's read key. In development, with no key set, the list is open. */
-function unionAllowed(key: string | undefined): boolean {
-  const want = process.env.UNION_API_KEY;
-  return want ? key === want : process.env.NODE_ENV !== "production";
-}
 
 /** A passenger reports their trip. The server attaches the evidence, so the report cannot be doctored afterwards. */
 router.post("/disputes", async (req, res): Promise<void> => {
@@ -69,11 +63,7 @@ router.post("/disputes/unpaid", requireConductor, async (req, res): Promise<void
 });
 
 /** For the union dashboard (later): newest first, with the evidence attached. */
-router.get("/disputes", async (req, res): Promise<void> => {
-  if (!unionAllowed(req.header("x-union-key"))) {
-    res.status(401).json({ error: "Union access only" });
-    return;
-  }
+router.get("/disputes", requireUnion, async (_req, res): Promise<void> => {
   const rows = await db.select().from(disputesTable).orderBy(desc(disputesTable.createdAt)).limit(200);
   res.json({ disputes: rows });
 });

@@ -1,0 +1,135 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>TrotroLink · Union dashboard</title>
+<style>
+  :root { --bg:#F4F7FB; --card:#fff; --text:#0B1220; --muted:#475569; --border:#D5DDE8; --accent:#047857; --on-accent:#fff; --gold:#A16207; --err:#DC2626; --navy:#0B1F3A; }
+  @media (prefers-color-scheme: dark) { :root { --bg:#0B1220; --card:#121A2B; --text:#fff; --muted:#94A3B8; --border:#1E293B; --accent:#10B981; --on-accent:#0B1F3A; --gold:#D4A437; --err:#EF4444; } }
+  * { box-sizing: border-box; }
+  body { margin:0; font-family: Inter, system-ui, -apple-system, Segoe UI, sans-serif; background:var(--bg); color:var(--text); }
+  header { display:flex; align-items:center; justify-content:space-between; gap:12px; padding:16px 24px; border-bottom:1px solid var(--border); background:var(--card); position:sticky; top:0; z-index:5; flex-wrap:wrap; }
+  h1 { font-size:18px; margin:0; } h1 small { color:var(--muted); font-weight:500; margin-left:8px; }
+  nav { display:flex; gap:6px; flex-wrap:wrap; padding:12px 24px 0; }
+  nav button { border:1px solid var(--border); background:var(--card); color:var(--muted); padding:8px 14px; border-radius:999px; font:600 13px inherit; cursor:pointer; }
+  nav button[aria-selected="true"] { background:var(--accent); color:var(--on-accent); border-color:var(--accent); }
+  main { padding:16px 24px 48px; max-width:1200px; margin:0 auto; }
+  .grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(180px,1fr)); gap:12px; }
+  .card { background:var(--card); border:1px solid var(--border); border-radius:16px; padding:16px; }
+  .stat b { display:block; font-size:28px; margin-top:6px; } .stat span { color:var(--muted); font-size:13px; }
+  table { width:100%; border-collapse:collapse; font-size:14px; } th,td { text-align:left; padding:10px 8px; border-bottom:1px solid var(--border); vertical-align:top; }
+  th { color:var(--muted); font-weight:600; font-size:12px; text-transform:uppercase; letter-spacing:.06em; }
+  .pill { display:inline-block; padding:2px 10px; border-radius:999px; border:1px solid var(--border); font-size:12px; font-weight:600; }
+  .ok { color:var(--accent); border-color:var(--accent); } .warn { color:var(--gold); border-color:var(--gold); } .bad { color:var(--err); border-color:var(--err); }
+  button.act { border:1px solid var(--border); background:var(--card); color:var(--text); padding:6px 12px; border-radius:10px; font:600 12px inherit; cursor:pointer; }
+  button.danger { color:var(--err); border-color:var(--err); }
+  input, select { padding:10px 12px; border-radius:12px; border:1px solid var(--border); background:var(--bg); color:var(--text); font:500 14px inherit; }
+  .muted { color:var(--muted); } .empty { padding:32px; text-align:center; color:var(--muted); }
+  .ussd { max-width:360px; margin:0 auto; } .screen { background:#0b1220; color:#d1fae5; font-family:ui-monospace,Menlo,monospace; padding:16px; border-radius:14px; min-height:200px; white-space:pre-wrap; border:2px solid var(--border); }
+  .row { display:flex; gap:8px; margin-top:12px; } .row input { flex:1; }
+  #login { max-width:420px; margin:80px auto; } #login .row { margin-top:16px; }
+  [hidden] { display:none !important; } pre { white-space:pre-wrap; font-size:12px; background:var(--bg); padding:10px; border-radius:10px; border:1px solid var(--border); max-height:240px; overflow:auto; }
+</style>
+</head>
+<body>
+<section id="login" class="card" hidden>
+  <h1>Union dashboard</h1>
+  <p class="muted">Enter the union key to continue.</p>
+  <div class="row"><input id="key" type="password" placeholder="Union key" aria-label="Union key" autocomplete="off"><button class="act" id="go">Open</button></div>
+  <p id="loginErr" class="muted"></p>
+</section>
+
+<div id="app" hidden>
+  <header><h1>TrotroLink <small>Union dashboard</small></h1><button class="act" id="refresh">Refresh</button></header>
+  <nav role="tablist" id="tabs"></nav>
+  <main id="view" aria-live="polite"></main>
+</div>
+
+<script>
+const TABS = [['overview','Overview'],['transactions','Transactions'],['disputes','Disputes'],['ratings','Ratings'],['stops','Stop suggestions'],['conductors','Conductors'],['ussd','USSD tester']];
+const $ = (s) => document.querySelector(s);
+const esc = (v) => String(v ?? '').replace(/[&<>"']/g, (c) => ({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' }[c]));
+const cedi = (n) => '₵' + Number(n).toFixed(2);
+const when = (iso) => iso ? new Date(iso).toLocaleString('en-GB', { day:'numeric', month:'short', hour:'2-digit', minute:'2-digit' }) : '—';
+let key = sessionStorage.getItem('unionKey') || '';
+let tab = 'overview';
+
+async function api(path, opts = {}) {
+  const res = await fetch('/api' + path, { ...opts, headers: { 'Content-Type': 'application/json', 'x-union-key': key, ...(opts.headers || {}) } });
+  if (res.status === 401) { sessionStorage.removeItem('unionKey'); key = ''; showLogin('That key was not accepted.'); throw new Error('unauthorized'); }
+  if (!res.ok) throw new Error((await res.json().catch(() => ({}))).error || res.statusText);
+  return res.json();
+}
+function showLogin(msg = '') { $('#app').hidden = true; $('#login').hidden = false; $('#loginErr').textContent = msg; }
+function showApp() { $('#login').hidden = true; $('#app').hidden = false; renderTabs(); load(); }
+function renderTabs() {
+  $('#tabs').innerHTML = TABS.map(([id, label]) => `<button role="tab" aria-selected="${id === tab}" data-tab="${id}">${label}</button>`).join('');
+  document.querySelectorAll('[data-tab]').forEach((b) => b.onclick = () => { tab = b.dataset.tab; renderTabs(); load(); });
+}
+const table = (heads, rows) => rows.length ? `<div class="card" style="overflow:auto"><table><thead><tr>${heads.map((h) => `<th>${h}</th>`).join('')}</tr></thead><tbody>${rows.join('')}</tbody></table></div>` : '<div class="card empty">Nothing here yet.</div>';
+
+const views = {
+  async overview() {
+    const o = await api('/union/overview');
+    const s = (label, v) => `<div class="card stat"><span>${label}</span><b>${v}</b></div>`;
+    return `<div class="grid">${s('Trips (24 h)', o.tripsToday)}${s('Fares (24 h)', cedi(o.revenueToday))}${s('Trips in progress', o.activeTrips)}${s('Open disputes', o.openDisputes)}${s('Open overcharge reports', o.openOvercharges)}${s('Average rating (24 h)', o.avgRating24h ?? '—')}${s('Ratings (24 h)', o.ratings24h)}</div>`;
+  },
+  async transactions() {
+    const { transactions: t } = await api('/union/transactions');
+    return table(['Time','Trip','Vehicle','Route','Fare','Paid','GPS at alighting'], t.map((x) => `<tr><td>${when(x.at)}</td><td>${esc(x.tripRef)}</td><td>${esc(x.vehicle)}</td><td>${esc(x.from)} → ${esc(x.to)}${x.customStop ? `<br><span class="muted">near: ${esc(x.customStop)}</span>` : ''}</td><td>${cedi(x.officialFare)}</td><td>${cedi(x.paid)}${x.paid > x.officialFare ? ' <span class="muted">(rounded up)</span>' : ''}</td><td>${x.gps ? `<span class="pill ${x.gps.status === 'near' ? 'ok' : 'warn'}">${x.gps.status} · ${x.gps.distanceM} m</span>` : '<span class="muted">—</span>'}</td></tr>`));
+  },
+  async disputes() {
+    const { disputes: d } = await api('/union/disputes');
+    return table(['Filed','Type','Status','Details','Action'], d.map((x) => `<tr><td>${when(x.createdAt)}</td><td><span class="pill ${x.disputeType === 'overcharge' ? 'bad' : 'warn'}">${esc(x.disputeType.replace(/_/g,' '))}</span></td><td>${esc(x.status)}</td><td>${esc(x.description || '')}<details><summary class="muted">Evidence</summary><pre>${esc(JSON.stringify(x.evidence, null, 2))}</pre></details></td><td><select data-dispute="${x.id}" aria-label="Status"><option ${x.status==='open'?'selected':''}>open</option><option ${x.status==='investigating'?'selected':''}>investigating</option><option ${x.status==='resolved'?'selected':''}>resolved</option><option ${x.status==='rejected'?'selected':''}>rejected</option></select></td></tr>`));
+  },
+  async ratings() {
+    const { vehicles: v, comments: c } = await api('/union/ratings');
+    return `<h3>By vehicle</h3>${table(['Vehicle','Driver','Driver ★','Conductor ★','Ratings'], v.map((x) => `<tr><td>${esc(x.vehicle)}</td><td>${esc(x.driver)}</td><td>${x.avgDriver}</td><td>${x.avgConductor}</td><td>${x.n}</td></tr>`))}<h3>Latest comments</h3>${table(['When','Vehicle','Driver ★','Conductor ★','Comment'], c.map((x) => `<tr><td>${when(x.at)}</td><td>${esc(x.vehicle)}</td><td>${x.driver}</td><td>${x.conductor}</td><td>${esc(x.comment)}</td></tr>`))}`;
+  },
+  async stops() {
+    const { suggestions: s } = await api('/union/stop-suggestions');
+    return `<p class="muted">Where passengers say they got off between anchors. Frequent places are candidates for new anchors.</p>${table(['Passenger said','After anchor','Times','Example vehicle'], s.map((x) => `<tr><td>${esc(x.note)}</td><td>${esc(x.after)}</td><td>${x.n}</td><td>${esc(x.vehicle)}</td></tr>`))}`;
+  },
+  async conductors() {
+    const { conductors: c } = await api('/union/conductors');
+    return `<p class="muted">Resetting a PIN ends the conductor's sessions. They then choose a new PIN with "First time? Set up your PIN".</p>${table(['Vehicle','Conductor','Driver','PIN','Last sign-in','Action'], c.map((x) => `<tr><td>${esc(x.vehicle)}</td><td>${esc(x.conductor)}</td><td>${esc(x.driver)}</td><td>${x.lockedUntil ? '<span class="pill bad">locked</span>' : x.hasPin ? '<span class="pill ok">set</span>' : '<span class="pill">not set up</span>'}</td><td>${when(x.lastLoginAt)}</td><td>${x.hasPin ? `<button class="act danger" data-reset="${esc(x.vehicle)}">Reset PIN</button>` : ''}</td></tr>`))}`;
+  },
+  async ussd() {
+    return `<div class="ussd card"><p class="muted">Simulates dialling the USSD code. Real handsets reach this through Africa's Talking.</p>
+      <div class="row"><input id="phone" value="+233244000111" aria-label="Caller phone number"></div>
+      <div class="screen" id="screen" aria-live="polite">Press Dial to start.</div>
+      <div class="row"><input id="entry" placeholder="Your reply" aria-label="Your reply"><button class="act" id="send">Send</button></div>
+      <div class="row"><button class="act" id="dial">Dial *123#</button></div></div>`;
+  },
+};
+
+let ussdText = '';
+async function ussdStep(input) {
+  const phone = $('#phone').value.trim();
+  ussdText = input === null ? '' : (ussdText ? ussdText + '*' + input : input);
+  const res = await fetch('/api/ussd', { method: 'POST', headers: { 'Content-Type': 'application/x-www-form-urlencoded' }, body: new URLSearchParams({ sessionId: 'dash', serviceCode: '*123#', phoneNumber: phone, text: ussdText }) });
+  const out = await res.text();
+  $('#screen').textContent = out.replace(/^(CON|END) /, '') + (out.startsWith('END') ? '\n\n[session ended]' : '');
+  if (out.startsWith('END')) ussdText = '';
+  $('#entry').value = ''; $('#entry').focus();
+}
+
+async function load() {
+  const el = $('#view');
+  el.innerHTML = '<div class="card empty">Loading…</div>';
+  try {
+    el.innerHTML = await views[tab]();
+    document.querySelectorAll('[data-dispute]').forEach((s) => s.onchange = async () => { await api(`/union/disputes/${s.dataset.dispute}/status`, { method: 'POST', body: JSON.stringify({ status: s.value }) }); });
+    document.querySelectorAll('[data-reset]').forEach((b) => b.onclick = async () => { if (!confirm(`Reset the PIN for ${b.dataset.reset}? The conductor will have to choose a new one.`)) return; await api(`/union/conductors/${b.dataset.reset}/reset-pin`, { method: 'POST' }); load(); });
+    if (tab === 'ussd') { $('#dial').onclick = () => ussdStep(null); $('#send').onclick = () => $('#entry').value && ussdStep($('#entry').value.trim()); $('#entry').onkeydown = (e) => e.key === 'Enter' && $('#send').click(); }
+  } catch (e) { if (e.message !== 'unauthorized') el.innerHTML = `<div class="card empty">Could not load: ${esc(e.message)}</div>`; }
+}
+
+$('#refresh').onclick = load;
+$('#go').onclick = async () => { key = $('#key').value.trim(); sessionStorage.setItem('unionKey', key); try { await api('/union/overview'); showApp(); } catch {} };
+$('#key').onkeydown = (e) => e.key === 'Enter' && $('#go').click();
+(async () => { try { await api('/union/overview'); showApp(); } catch { if (!key) showLogin(); } })();
+</script>
+</body>
+</html>

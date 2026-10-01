@@ -2,9 +2,10 @@ import { Router, type IRouter } from "express";
 import { and, desc, eq, sql } from "drizzle-orm";
 import { alightCheck, AlightBody, ExtendBody, GuestBody, StartTripBody, StopMarkBody, type HistoryTrip, type RouteStop, type ServerTrip } from "@trotrolink/shared";
 import { db } from "../db";
-import { activeTripsTable, ratingsTable, routesTable, transactionsTable, tripEventsTable, vehiclesTable } from "../db/schema";
+import { activeTripsTable, ratingsTable, routesTable, transactionsTable, tripEventsTable, usersTable, vehiclesTable } from "../db/schema";
 import { conductorFromRequest, conductorOf, ownsVehicle, requireConductor } from "../auth";
 import { isSimulator } from "../services/momo";
+import { sendPush } from "../services/push";
 import { initiateExtension } from "./payments";
 import { amountDue, checkTrip, etaBetween, round2, guestUserId, insertTrip, newTripRef, stopIndex, userExists, vehicleWithRoute } from "../lib";
 
@@ -101,18 +102,20 @@ router.post("/trips/stop", requireConductor, async (req, res): Promise<void> => 
   if (!ownsVehicle(res, found.vehicle.shortCode)) return;
   const conductorId = conductorOf(res).id;
 
+  const pushes: Array<{ token: string | null; title: string; body: string }> = [];
   const passengersNotified = await db.transaction(async (tx) => {
     const now = new Date();
     await tx.insert(tripEventsTable).values({ vehicleId: found.vehicle.id, eventType: "stop_reached", stopName: stops[at]!.name });
 
     const active = await tx
-      .select({ trip: activeTripsTable, boardingStop: transactionsTable.boardingStop })
+      .select({ trip: activeTripsTable, boardingStop: transactionsTable.boardingStop, pushToken: usersTable.pushToken })
       .from(activeTripsTable)
       .innerJoin(transactionsTable, eq(activeTripsTable.transactionId, transactionsTable.id))
+      .innerJoin(usersTable, eq(activeTripsTable.passengerId, usersTable.id))
       .where(eq(activeTripsTable.vehicleId, found.vehicle.id));
 
     let notified = 0;
-    for (const { trip, boardingStop } of active) {
+    for (const { trip, boardingStop, pushToken } of active) {
       const board = boardingStop ? stopIndex(stops, boardingStop) : 0;
       const alight = stopIndex(stops, trip.alightingStop);
       const current = stopIndex(stops, trip.currentStop);
@@ -124,6 +127,7 @@ router.post("/trips/stop", requireConductor, async (req, res): Promise<void> => 
           .update(activeTripsTable)
           .set({ overstayStop: stops[furthest]!.name, overstayAt: trip.overstayAt ?? now, lastStopMarkedAt: now, conductorId, currentStop: stops[alight]!.name, etaMinutes: 0 })
           .where(eq(activeTripsTable.id, trip.id));
+        if (!trip.overstayStop) pushes.push({ token: pushToken, title: `You have passed ${stops[alight]!.name}`, body: "Open TrotroLink to extend your trip or get off." });
         notified += 1;
         continue;
       }
@@ -135,7 +139,9 @@ router.post("/trips/stop", requireConductor, async (req, res): Promise<void> => 
         .update(activeTripsTable)
         .set({ currentStop: stops[target]!.name, etaMinutes: etaBetween(stops, target, alight), lastStopMarkedAt: now, conductorId })
         .where(eq(activeTripsTable.id, trip.id));
+      if (alight - target === 1) pushes.push({ token: pushToken, title: "Your stop is next", body: `Get ready to get off at ${stops[alight]!.name}.` });
       if (target === alight) {
+        pushes.push({ token: pushToken, title: "You have arrived", body: `This is your stop, ${stops[alight]!.name}.` });
         await tx.insert(tripEventsTable).values({ vehicleId: found.vehicle.id, tripId: trip.transactionId, eventType: "arrived", stopName: stops[alight]!.name });
       }
       notified += 1;
@@ -143,6 +149,8 @@ router.post("/trips/stop", requireConductor, async (req, res): Promise<void> => 
     return notified;
   });
 
+  // After the database commit; never let a slow push service delay the conductor's tap.
+  for (const p of pushes) void sendPush(p.token, p.title, p.body);
   res.json({ ok: true, passengersNotified });
 });
 

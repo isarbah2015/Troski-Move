@@ -32,7 +32,8 @@
       "expo-router",
       "expo-font",
       "expo-web-browser",
-      "./plugins/withGradleMemory"
+      "./plugins/withGradleMemory",
+      ["expo-notifications", { "color": "#10B981" }]
     ],
     "experiments": {
       "typedRoutes": true,

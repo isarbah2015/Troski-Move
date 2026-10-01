@@ -8,6 +8,7 @@ import type { ActiveTrip, TripRecord } from '@trotrolink/shared';
 import { RatingSheet, type RatingTarget } from '@/components/RatingSheet';
 import { alightCheck } from '@trotrolink/shared';
 import { getPosition } from '@/lib/location';
+import { notifyOnce } from '@/lib/notify';
 import { useLiveEta } from '@/lib/liveEta';
 import { Approx } from '@/components/Approx';
 import { OverstaySheet } from '@/components/OverstaySheet';
@@ -25,7 +26,7 @@ import { useFocusPolling } from '@/lib/polling';
 import { sendOrQueue } from '@/lib/sync';
 import { applyServerTrip, tripProgress } from '@/lib/trip';
 import { EMERALD, GOLD, WHITE } from '@/lib/colors';
-import { useT } from '@/lib/i18n';
+import { t as tt, useT } from '@/lib/i18n';
 
 function LiveBadge() {
   const colors = useColors();
@@ -297,6 +298,10 @@ export default function TripScreen() {
         return;
       }
       setOverstay(server.overstay ?? null);
+      // Local alerts (they fire while the app is open or recently backgrounded; closed-app push comes from the server).
+      if (server.overstay) notifyOnce(`${current.tripId}:over`, tt('notif.over.title', { stop: current.alightingStop }), tt('notif.over.body'));
+      else if (server.stopsRemaining === 1) notifyOnce(`${current.tripId}:next`, tt('notif.next.title'), tt('notif.next.body', { stop: server.alightingStop }));
+      else if (server.stopsRemaining === 0) notifyOnce(`${current.tripId}:arrived:${server.alightingStop}`, tt('notif.arrived.title'), tt('notif.arrived.body', { stop: server.alightingStop }));
       const next = applyServerTrip(current, server);
       if (next.alightingStop !== current.alightingStop) {
         // An overstay extension went through (we paid, or the 60 s auto-charge ran): keep the stored trip in step.

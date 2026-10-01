@@ -37,6 +37,7 @@ const en: Dict = {
   'profile.settings': 'Settings', 'profile.signOut': 'Sign out',
   'set.language': 'Language', 'set.appearance': 'Appearance', 'set.notifications': 'Notifications', 'set.privacy': 'Privacy',
   'set.help': 'Help', 'set.delete': 'Delete account', 'set.languageNote': 'Twi and Ewe wording is a first version and may change.',
+  'notif.next.title': 'Your stop is next', 'notif.next.body': 'Get ready to get off at {stop}.', 'notif.arrived.title': 'You have arrived', 'notif.arrived.body': 'This is your stop, {stop}.', 'notif.over.title': 'You have passed {stop}', 'notif.over.body': 'Open TrotroLink to extend your trip or get off.',
   'report.title': 'Report an issue', 'report.what': 'What went wrong on this trip?', 'report.send': 'Send report',
 };
 
@@ -68,6 +69,7 @@ const tw: Dict = {
   'profile.settings': 'Nhyehyɛeɛ', 'profile.signOut': 'Pue',
   'set.language': 'Kasa', 'set.appearance': 'Sɛnea ɛte', 'set.notifications': 'Nkra', 'set.privacy': 'Kokoamsɛm',
   'set.help': 'Mmoa', 'set.delete': 'Pepa akawnt no', 'set.languageNote': 'Twi ne Ewe nsɛmfua yi yɛ ntease a ɛdi kan na ebia ɛbɛsesa.',
+  'notif.next.title': 'Wo gyinabea na edi hɔ', 'notif.next.body': 'Siesie wo ho na wosiane wɔ {stop}.', 'notif.arrived.title': 'Woadu hɔ', 'notif.arrived.body': 'Wo gyinabea nie, {stop}.', 'notif.over.title': 'Woatwam {stop}', 'notif.over.body': 'Bue TrotroLink na wokɔ so anaa woasiane.',
   'report.title': 'Ka asɛm bi ho amanneɛ', 'report.what': 'Dɛn na ɛkɔɔ basaa wɔ akwantuo yi mu?', 'report.send': 'Fa amanneɛ no kɔ',
 };
 
@@ -99,6 +101,7 @@ const ee: Dict = {
   'profile.settings': 'Ɖoɖowo', 'profile.signOut': 'Do go',
   'set.language': 'Gbe', 'set.appearance': 'Nɔnɔme', 'set.notifications': 'Nyatakakawo', 'set.privacy': 'Nuŋlɔŋlɔ ɣaɣla',
   'set.help': 'Kpekpeɖeŋu', 'set.delete': 'Tsɔ akɔntu la ɖa', 'set.languageNote': 'Twi kple Ewe nyawo nye gɔmedzedze gbãtɔ eye ŋudɔwɔwɔ ate ŋu atrɔ.',
+  'notif.next.title': 'Wò ɖoƒe le ŋgɔ', 'notif.next.body': 'Ɖo ɖoɖo be nàɖi anyi le {stop}.', 'notif.arrived.title': 'Èɖo', 'notif.arrived.body': 'Esia nye wò ɖoƒe, {stop}.', 'notif.over.title': 'Èdze {stop} dzi', 'notif.over.body': 'Ʋu TrotroLink be nàyi ŋgɔ alo nàɖi anyi.',
   'report.title': 'Ʋu nya aɖe ŋu', 'report.what': 'Nu ka dze le mɔzɔzɔ sia me?', 'report.send': 'Ɖo nyatakaka la ɖa',
 };
 

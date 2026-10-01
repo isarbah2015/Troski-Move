@@ -7,6 +7,8 @@ import leaderboardRouter from "./leaderboard";
 import paymentsRouter from "./payments";
 import ratingsRouter from "./ratings";
 import splitsRouter from "./splits";
+import unionRouter from "./union";
+import ussdRouter from "./ussd";
 import tripsRouter from "./trips";
 import vehiclesRouter from "./vehicles";
 
@@ -22,5 +24,7 @@ router.use(paymentsRouter);
 router.use(ratingsRouter);
 router.use(tripsRouter);
 router.use(splitsRouter);
+router.use(ussdRouter);
+router.use(unionRouter);
 
 export default router;

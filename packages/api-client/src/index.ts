@@ -93,6 +93,11 @@ export function createApiClient(baseUrl: string, options: ApiClientOptions = {})
       return GuestResponse.parse(await post('/guests', { deviceId, role }));
     },
 
+    /** Registers this phone for push notifications (the closed-app alerts). */
+    async registerPushToken(deviceId: string, token: string) {
+      await post('/users/push-token', { deviceId, token });
+    },
+
     /** Erases the passenger's personal data on the server. */
     async deleteAccount(deviceId: string) {
       await post('/account/delete', { deviceId });

@@ -1,3 +1,4 @@
+import { fileURLToPath } from "node:url";
 import cors from "cors";
 import express from "express";
 import pinoHttp from "pino-http";
@@ -10,7 +11,11 @@ const app = express();
 app.use(pinoHttp({ logger }));
 app.use(cors());
 app.use(express.json());
+app.use(express.urlencoded({ extended: false })); // USSD providers post forms
 app.use("/api", routes);
+
+// The union dashboard is one static page; it calls /api/union/* with the union key.
+app.get("/union", (_req, res) => res.sendFile(fileURLToPath(new URL("../public/union.html", import.meta.url))));
 
 // Async route errors land here (Express 5 forwards rejected promises): log and answer with JSON.
 app.use((err: unknown, _req: express.Request, res: express.Response, _next: express.NextFunction) => {

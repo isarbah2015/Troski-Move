@@ -9,6 +9,7 @@ import { CurrencySheet } from '@/components/CurrencySheet';
 import { setDisplayCurrency, useDisplayCurrency } from '@/lib/currencyPref';
 import { LanguageSheet } from '@/components/LanguageSheet';
 import { useColors } from '@/hooks/useColors';
+import { ensureNotificationPermission, registerForPush } from '@/lib/notify';
 import { getLanguage, getNotifications, setLanguage, setNotifications } from '@/lib/storage';
 import { getThemePreference, setThemePreference } from '@/lib/theme';
 import { setAppLanguage, useT } from '@/lib/i18n';
@@ -62,6 +63,10 @@ export function SettingsGroup({ onDeleteAccount }: { onDeleteAccount?: () => voi
               Haptics.selectionAsync();
               setNotificationsState(on);
               await setNotifications(on);
+              if (on) {
+                await ensureNotificationPermission();
+                void registerForPush();
+              }
             }}
             trackColor={{ false: colors.border, true: colors.primary }}
             thumbColor="#FFFFFF"

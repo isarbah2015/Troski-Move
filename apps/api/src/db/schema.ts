@@ -29,6 +29,8 @@ export const usersTable = pgTable("users", {
   conductorVehicleCode: text("conductor_vehicle_code").unique(),
   lastLoginAt: timestamp("last_login_at", { withTimezone: true }),
   failedPinAttempts: integer("failed_pin_attempts").notNull().default(0),
+  /** Expo push token of the phone, for closed-app "your stop is next" alerts. */
+  pushToken: text("push_token"),
   lockedUntil: timestamp("locked_until", { withTimezone: true }),
 });
 

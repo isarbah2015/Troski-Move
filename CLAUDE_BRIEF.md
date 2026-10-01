@@ -186,3 +186,20 @@ Trip tab shows **Confirm alighting** once the vehicle's current stop (set by the
 - Vertical timeline in Trip; trip added at payment, stamped at arrival; rating fallback is a card
 - Added `POST /api/trips/alight` and `POST /api/guests` (not in the sync brief); `trip_events.vehicle_id` references the vehicle by id rather than storing the code, and `trip_id` is an integer FK to `transactions` (the public reference is `transactions.trip_ref`)
 - API uses tsx in dev; `apps/web` placeholder
+
+## Added after the "Missing" list (built)
+- **Custom drop-off**: passenger can pick "Somewhere else" in the stop sheet and type a note (`customStopNote`). Fare is that of the nearest anchor; the note is stored on the payment, trip and transaction, and feeds the union's stop suggestions.
+- **GPS check at alighting**: `alightCheck` (`packages/shared/src/geo.ts`), 200 m radius. Optional and never blocking; result stored as `alightDistanceM` / `alightGps` and shown in union transactions.
+- **ETA by position**: `interpolatedEta` uses GPS along the leg, else time since the last stop mark, capped at 90 %. Stop lat/lng are approximate.
+- **Languages**: English, Twi, Ewe (`apps/mobile/lib/i18n.ts`, `useT()`). Twi/Ewe are a first pass for native-speaker review; conductor screens stay English.
+- **Currency**: `₵` everywhere. Visitors can view approximate USD/EUR/GBP/NGN (`packages/shared/src/currency.ts`); rates are fixed rough figures, replace with a live source. "Visiting Ghana?" guide is general advice to verify.
+- **Notifications**: local notifications (`lib/notify.ts`) work while the app is alive. Server push (`services/push.ts`, Expo push API) needs FCM credentials and `EXPO_PUBLIC_EAS_PROJECT_ID` from GPRTU.
+- **USSD**: `POST /api/ussd` (form-encoded, Africa's Talking style). Flow: vehicle code, stop number, confirm, MoMo prompt. Text says "GHS" (GSM 7-bit has no ₵).
+- **Union dashboard**: static page at `/union` (`apps/api/public/union.html`) over `/api/union/*`: overview, transactions, disputes (status), ratings, stop suggestions, conductors with PIN reset, USSD tester. Deviation from the original plan (Next.js) because of disk space. Protected by `x-union-key` = `UNION_API_KEY`; open only outside production when unset.
+- **Conductor PIN reset**: union clears the PIN and sessions; the conductor sets a new one via "First time? Set up your PIN".
+
+### Env vars added
+`UNION_API_KEY`, `CONDUCTOR_SETUP_CODE`, `MTN_MOMO_WEBHOOK_SECRET`, `PUSH_ENABLED`, `EXPO_PUBLIC_EAS_PROJECT_ID`.
+
+### Known limits
+Today/Earnings numbers, scan counts and average rating in the conductor app are still mock. Demo mode is single-phone. Tema and Madina routes/fares are placeholders. Live MoMo and closed-app push are GPRTU's to configure.

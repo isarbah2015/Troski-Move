@@ -8,6 +8,7 @@ import { useColors } from '@/hooks/useColors';
 import { restoreTheme } from '@/lib/theme';
 import { restoreLanguage } from '@/lib/i18n';
 import { restoreCurrency } from '@/lib/currencyPref';
+import { registerForPush } from '@/lib/notify';
 import { SyncBanner } from '@/components/SyncBanner';
 import { ToastHost } from '@/components/ToastHost';
 import { useSyncLoop } from '@/lib/sync';
@@ -65,6 +66,7 @@ export default function RootLayout() {
     void restoreTheme();
     void restoreLanguage();
     void restoreCurrency();
+    void registerForPush();
   }, []);
 
   useEffect(() => {

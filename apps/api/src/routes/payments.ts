@@ -103,50 +103,44 @@ function statusBody(p: Payment): PaymentStatusResponse {
 }
 
 /** Starts a MoMo request-to-pay. The passenger approves it on their phone. */
-router.post("/payments/initiate", async (req, res): Promise<void> => {
-  const parsed = InitiatePaymentBody.safeParse(req.body);
-  if (!parsed.success) {
-    res.status(400).json({ error: "Invalid body", issues: parsed.error.issues });
-    return;
-  }
-  const b = parsed.data;
+export type InitiateResult = { status: number; body: InitiatePaymentResponse | { error: string; [k: string]: unknown } };
+
+/**
+ * Starts a MoMo payment for a ride. Used by the app (POST /api/payments/initiate) and by USSD. The server sets the price,
+ * refuses a second live charge for the same ride, and never trusts the client's amount.
+ */
+export async function initiatePayment(b: InitiatePaymentBody): Promise<InitiateResult> {
 
   // A retry (double tap, flaky network) with the same trip reference returns the same payment: never a second charge.
   const [existing] = await db.select().from(paymentsTable).where(eq(paymentsTable.tripRef, b.tripId));
   if (existing) {
     const body: InitiatePaymentResponse = { referenceId: existing.referenceId, tripId: existing.tripRef, status: existing.status, simulator: isSimulator() };
-    res.json(body);
-    return;
+    return { status: 200, body };
   }
 
   const found = await vehicleWithRoute(b.vehicleCode);
   if (!found) {
-    res.status(404).json({ error: "Vehicle not found" });
-    return;
+    return { status: 404, body: { error: "Vehicle not found" } };
   }
   const check = checkTrip(found.route.stopsJson, b.boardingStop, b.alightingStop, b.amount);
   if (!check.ok) {
-    res.status(400).json({ error: check.error, ...(check.officialFare !== undefined ? { officialFare: check.officialFare } : {}) });
-    return;
+    return { status: 400, body: { error: check.error, ...(check.officialFare !== undefined ? { officialFare: check.officialFare } : {}) } };
   }
 
   if (payerPhoneRequired() && !b.payerPhone) {
-    res.status(400).json({ error: "Add your MTN MoMo number to pay" });
-    return;
+    return { status: 400, body: { error: "Add your MTN MoMo number to pay" } };
   }
 
   // The price is set here, from the route. A client that sends a different amount is refused, not trusted.
   const due = amountDue(check.officialFare);
   if (Math.abs(b.amount - due) > 0.001) {
-    res.status(400).json({ error: "Amount does not match the fare for this trip", amountDue: due });
-    return;
+    return { status: 400, body: { error: "Amount does not match the fare for this trip", amountDue: due } };
   }
 
   let passengerId = b.passengerId;
   if (passengerId === undefined) passengerId = await guestUserId(b.deviceId!, "passenger");
   else if (!(await userExists(passengerId))) {
-    res.status(404).json({ error: "Passenger not found" });
-    return;
+    return { status: 404, body: { error: "Passenger not found" } };
   }
 
   // One live charge per ride: if this passenger already has a pending payment for the same vehicle and stop, hand that
@@ -157,8 +151,7 @@ router.post("/payments/initiate", async (req, res): Promise<void> => {
     .where(and(eq(paymentsTable.passengerId, passengerId), eq(paymentsTable.vehicleCode, found.vehicle.shortCode), eq(paymentsTable.alightingStop, found.route.stopsJson[check.to]!.name), eq(paymentsTable.status, "PENDING"), gt(paymentsTable.createdAt, new Date(Date.now() - PENDING_EXPIRY_MS))));
   if (duplicate) {
     const body: InitiatePaymentResponse = { referenceId: duplicate.referenceId, tripId: duplicate.tripRef, status: duplicate.status, simulator: isSimulator() };
-    res.json(body);
-    return;
+    return { status: 200, body };
   }
 
   const referenceId = newReferenceId();
@@ -187,12 +180,20 @@ router.post("/payments/initiate", async (req, res): Promise<void> => {
   } catch (err) {
     logger.error({ err, referenceId }, "MoMo requestToPay failed");
     await settleFailure(referenceId, "Could not reach MTN MoMo. Try again.", { error: err instanceof Error ? err.message : String(err) });
-    res.status(502).json({ error: "Could not start the MoMo payment. Try again." });
-    return;
+    return { status: 502, body: { error: "Could not start the MoMo payment. Try again." } };
   }
 
-  const body: InitiatePaymentResponse = { referenceId, tripId: b.tripId, status: "PENDING", simulator: isSimulator() };
-  res.json(body);
+  return { status: 200, body: { referenceId, tripId: b.tripId, status: "PENDING", simulator: isSimulator() } };
+}
+
+router.post("/payments/initiate", async (req, res): Promise<void> => {
+  const parsed = InitiatePaymentBody.safeParse(req.body);
+  if (!parsed.success) {
+    res.status(400).json({ error: "Invalid body", issues: parsed.error.issues });
+    return;
+  }
+  const result = await initiatePayment(parsed.data);
+  res.status(result.status).json(result.body);
 });
 
 /** The payment's state. On the first SUCCESSFUL answer the trip is created; polling again is harmless. */
@@ -314,8 +315,8 @@ export async function processOverstays(): Promise<void> {
     await db.update(activeTripsTable).set({ autoExtendedAt: new Date() }).where(eq(activeTripsTable.id, a.id));
     if (t.tripRef && a.overstayStop) await initiateExtension(t.tripRef, a.overstayStop);
   }
-  // Settle charges nobody is polling (the passenger's app is closed): ask MTN, and apply the answer.
-  const pending = await db.select().from(paymentsTable).where(and(eq(paymentsTable.status, "PENDING"), isNotNull(paymentsTable.extendsTripRef)));
+  // Settle charges nobody is polling (USSD callers, closed apps): ask MTN, and apply the answer.
+  const pending = await db.select().from(paymentsTable).where(eq(paymentsTable.status, "PENDING"));
   for (const p of pending) await refresh(p).catch((err) => logger.error({ err, referenceId: p.referenceId }, "Could not settle a pending extension"));
 }
 

@@ -59,3 +59,18 @@ export function ownsVehicle(res: Response, vehicleCode: string): boolean {
   res.status(403).json({ error: "This is not your vehicle" });
   return false;
 }
+
+/**
+ * Union access: the `x-union-key` header must equal UNION_API_KEY. With no key set, access is open in development
+ * only; production refuses everything until a key is configured.
+ */
+export function requireUnion(req: Request, res: Response, next: NextFunction): void {
+  const want = process.env.UNION_API_KEY;
+  const given = req.header("x-union-key");
+  const ok = want ? typeof given === "string" && given.length === want.length && timingSafeEqual(Buffer.from(given), Buffer.from(want)) : process.env.NODE_ENV !== "production";
+  if (!ok) {
+    res.status(401).json({ error: "Union access only" });
+    return;
+  }
+  next();
+}

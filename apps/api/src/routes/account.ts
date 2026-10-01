@@ -1,6 +1,6 @@
 import { Router, type IRouter } from "express";
 import { and, eq, inArray } from "drizzle-orm";
-import { AlightBody } from "@trotrolink/shared";
+import { AlightBody, PushTokenBody } from "@trotrolink/shared";
 import { conductorOf, requireConductor } from "../auth";
 import { db } from "../db";
 import { activeTripsTable, conductorSessionsTable, disputesTable, paymentsTable, ratingsTable, transactionsTable, usersTable } from "../db/schema";
@@ -24,10 +24,21 @@ async function anonymise(userId: number) {
     await tx.delete(conductorSessionsTable).where(eq(conductorSessionsTable.conductorId, userId));
     await tx
       .update(usersTable)
-      .set({ phone: `deleted-${userId}`, name: "Deleted account", conductorPinHash: null, conductorVehicleCode: null, lockedUntil: null })
+      .set({ phone: `deleted-${userId}`, name: "Deleted account", conductorPinHash: null, conductorVehicleCode: null, lockedUntil: null, pushToken: null })
       .where(eq(usersTable.id, userId));
   });
 }
+
+/** Stores the phone's push token so the server can send "your stop is next" while the app is closed. */
+router.post("/users/push-token", async (req, res): Promise<void> => {
+  const parsed = PushTokenBody.safeParse(req.body);
+  if (!parsed.success) {
+    res.status(400).json({ error: "Invalid body" });
+    return;
+  }
+  await db.update(usersTable).set({ pushToken: parsed.data.token }).where(eq(usersTable.phone, `guest-${parsed.data.deviceId}-passenger`));
+  res.json({ ok: true });
+});
 
 /** A passenger deletes their (guest) account from their own device. */
 router.post("/account/delete", async (req, res): Promise<void> => {

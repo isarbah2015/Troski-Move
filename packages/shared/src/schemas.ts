@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { USER_ROLES } from './constants';
+import { DISPUTE_STATUSES, USER_ROLES } from './constants';
 
 export const HealthResponse = z.object({ status: z.literal('ok') });
 export type HealthResponse = z.infer<typeof HealthResponse>;
@@ -328,3 +328,10 @@ export type UnpaidDisputeBody = z.infer<typeof UnpaidDisputeBody>;
 
 export const DisputeResponse = z.object({ ok: z.literal(true), disputeId: z.number().int() });
 export type DisputeResponse = z.infer<typeof DisputeResponse>;
+
+export const PushTokenBody = z.object({ deviceId: z.string().min(8).max(64), token: z.string().min(10).max(200) });
+export type PushTokenBody = z.infer<typeof PushTokenBody>;
+
+/** Union: move a dispute along (`POST /api/union/disputes/:id/status`). */
+export const DisputeStatusBody = z.object({ status: z.enum(DISPUTE_STATUSES) });
+export type DisputeStatusBody = z.infer<typeof DisputeStatusBody>;
