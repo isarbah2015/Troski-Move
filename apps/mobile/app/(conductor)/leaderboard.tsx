@@ -155,7 +155,7 @@ export default function LeaderboardScreen() {
 const styles = StyleSheet.create({
   scroll: { paddingHorizontal: 24, paddingBottom: 132 },
   headRow: { flexDirection: 'row', alignItems: 'center', gap: 10, marginBottom: 8 },
-  title: { fontFamily: 'PlusJakartaSans_800ExtraBold', letterSpacing: -0.8, fontSize: 28 },
+  title: { fontFamily: 'PlusJakartaSans_800ExtraBold', letterSpacing: -0.8, fontSize: 32 },
   sub: { fontFamily: 'PlusJakartaSans_500Medium', fontSize: 14, lineHeight: 20 },
   sample: { alignSelf: 'flex-start', borderWidth: StyleSheet.hairlineWidth * 2, paddingHorizontal: 12, paddingVertical: 4, marginTop: 10 },
   sampleText: { fontFamily: 'PlusJakartaSans_600SemiBold', fontSize: 11 },
@@ -167,7 +167,7 @@ const styles = StyleSheet.create({
   list: { marginTop: 20, gap: 10 },
   row: { flexDirection: 'row', alignItems: 'center', borderWidth: StyleSheet.hairlineWidth * 2, padding: 16, gap: 14 },
   rankCol: { width: 44, alignItems: 'center', gap: 2 },
-  rank: { fontFamily: 'PlusJakartaSans_800ExtraBold', letterSpacing: -0.8, fontSize: 28 },
+  rank: { fontFamily: 'PlusJakartaSans_800ExtraBold', letterSpacing: -0.8, fontSize: 32 },
   mid: { flex: 1 },
   code: { fontFamily: 'PlusJakartaSans_700Bold', fontSize: 18, letterSpacing: 0.5 },
   driver: { fontFamily: 'PlusJakartaSans_500Medium', fontSize: 14, marginTop: 2 },

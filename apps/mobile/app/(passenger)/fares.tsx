@@ -175,7 +175,7 @@ export default function FaresScreen() {
 
 const styles = StyleSheet.create({
   scroll: { paddingHorizontal: 24 },
-  title: { fontFamily: 'PlusJakartaSans_800ExtraBold', letterSpacing: -0.8, fontSize: 30 },
+  title: { fontFamily: 'PlusJakartaSans_800ExtraBold', letterSpacing: -0.8, fontSize: 32 },
   sub: { fontFamily: 'PlusJakartaSans_400Regular', fontSize: 15, lineHeight: 22, marginTop: 6, marginBottom: 18 },
   banner: { flexDirection: 'row', alignItems: 'center', gap: 10, borderWidth: StyleSheet.hairlineWidth * 2, padding: 14, marginBottom: 10 },
   bannerText: { flex: 1, fontFamily: 'PlusJakartaSans_600SemiBold', fontSize: 13, lineHeight: 19 },
