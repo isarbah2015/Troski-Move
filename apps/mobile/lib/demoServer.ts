@@ -340,7 +340,7 @@ async function route(method: string, path: string, query: URLSearchParams, body:
     let n = 0;
     for (const t of d.trips.filter((x) => x.active && x.vehicleCode === own)) {
       const board = idx(stops, t.boarding), alight = idx(stops, t.alighting), cur = idx(stops, t.current);
-      t.lastMarkAt = Date.now();
+      t.lastMarkAt = Date.now(); t.gpsAt = Date.now();
       if (at > alight) {
         const furthest = t.overstayStop ? Math.max(at, idx(stops, t.overstayStop)) : at;
         t.overstayStop = stops[furthest]!.name; t.overstayAt ??= Date.now(); t.current = stops[alight]!.name; n++; continue;
