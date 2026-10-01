@@ -226,3 +226,41 @@ export const GuestBody = z.object({ deviceId: z.string().min(8).max(64), role: z
 export type GuestBody = z.infer<typeof GuestBody>;
 export const GuestResponse = z.object({ userId: z.number().int() });
 export type GuestResponse = z.infer<typeof GuestResponse>;
+
+// ---- Payments (MTN MoMo) --------------------------------------------------------------------------
+
+/** `POST /api/payments/initiate`. Send `passengerId` or, for a guest, `deviceId`. */
+export const InitiatePaymentBody = z
+  .object({
+    /** Client-made trip reference (TRX-…). Unique: retrying with the same one returns the same payment. */
+    tripId: z.string().min(1).max(40),
+    passengerId: z.number().int().optional(),
+    deviceId: z.string().min(8).max(64).optional(),
+    vehicleCode: shortCode,
+    boardingStop: z.string().optional(),
+    alightingStop: z.string().min(1),
+    amount: z.number().positive(),
+    /** The MoMo wallet to charge (MSISDN, e.g. 233244567889). Sandbox falls back to MTN's test number. */
+    payerPhone: z.string().regex(/^\+?\d{9,15}$/).optional(),
+  })
+  .refine((b) => b.passengerId !== undefined || b.deviceId !== undefined, { message: 'passengerId or deviceId is required' });
+export type InitiatePaymentBody = z.infer<typeof InitiatePaymentBody>;
+
+export const PaymentStatus = z.enum(['PENDING', 'SUCCESSFUL', 'FAILED']);
+export type PaymentStatus = z.infer<typeof PaymentStatus>;
+
+export const InitiatePaymentResponse = z.object({
+  referenceId: z.string(),
+  status: PaymentStatus,
+  /** True while the API runs without MoMo credentials and auto-approves after a few seconds. */
+  simulator: z.boolean(),
+});
+export type InitiatePaymentResponse = z.infer<typeof InitiatePaymentResponse>;
+
+export const PaymentStatusResponse = z.object({
+  status: PaymentStatus,
+  /** Set once the payment succeeded and the trip exists. */
+  tripId: z.string().optional(),
+  reason: z.string().optional(),
+});
+export type PaymentStatusResponse = z.infer<typeof PaymentStatusResponse>;

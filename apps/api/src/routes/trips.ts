@@ -3,7 +3,7 @@ import { and, desc, eq, sql } from "drizzle-orm";
 import { AlightBody, GuestBody, StartTripBody, StopMarkBody, type HistoryTrip, type ServerTrip } from "@trotrolink/shared";
 import { db } from "../db";
 import { activeTripsTable, ratingsTable, routesTable, transactionsTable, tripEventsTable, vehiclesTable } from "../db/schema";
-import { etaBetween, guestUserId, newTripRef, round2, stopIndex, userExists, vehicleWithRoute } from "../lib";
+import { checkTrip, etaBetween, guestUserId, insertTrip, newTripRef, stopIndex, userExists, vehicleWithRoute } from "../lib";
 
 const router: IRouter = Router();
 
@@ -19,6 +19,11 @@ router.post("/guests", async (req, res): Promise<void> => {
 
 /** Passenger has paid: record the transaction and start an active trip. Safe to retry with the same `tripId`. */
 router.post("/trips/start", async (req, res): Promise<void> => {
+  // Real trips are created by a successful payment (POST /api/payments/*). This unpaid shortcut is dev-only.
+  if (process.env.NODE_ENV === "production") {
+    res.status(404).json({ error: "Not found" });
+    return;
+  }
   const parsed = StartTripBody.safeParse(req.body);
   if (!parsed.success) {
     res.status(400).json({ error: "Invalid body", issues: parsed.error.issues });
@@ -32,17 +37,12 @@ router.post("/trips/start", async (req, res): Promise<void> => {
     return;
   }
   const stops = found.route.stopsJson;
-  const from = body.boardingStop ? stopIndex(stops, body.boardingStop) : 0;
-  const to = stopIndex(stops, body.alightingStop);
-  if (from < 0 || to < 0 || to <= from) {
-    res.status(400).json({ error: "Unknown or out-of-order stops for this route" });
+  const check = checkTrip(stops, body.boardingStop, body.alightingStop, body.amountPaid);
+  if (!check.ok) {
+    res.status(400).json({ error: check.error, ...(check.officialFare !== undefined ? { officialFare: check.officialFare } : {}) });
     return;
   }
-  const officialFare = round2(stops[to]!.fare - stops[from]!.fare);
-  if (body.amountPaid + 0.001 < officialFare) {
-    res.status(400).json({ error: "Amount paid is below the official fare", officialFare });
-    return;
-  }
+  const { from, to, officialFare } = check;
 
   let passengerId = body.passengerId;
   if (passengerId === undefined) passengerId = await guestUserId(body.deviceId!, "passenger");
@@ -63,29 +63,8 @@ router.post("/trips/start", async (req, res): Promise<void> => {
   }
 
   const startedAt = await db.transaction(async (tx) => {
-    const [t] = await tx
-      .insert(transactionsTable)
-      .values({
-        vehicleId: found.vehicle.id,
-        passengerId: passengerId!,
-        alightingStop: stops[to]!.name,
-        boardingStop: stops[from]!.name,
-        officialFare: officialFare.toFixed(2),
-        amountPaid: body.amountPaid.toFixed(2),
-        tripRef,
-      })
-      .returning();
-    await tx.insert(activeTripsTable).values({
-      passengerId: passengerId!,
-      vehicleId: found.vehicle.id,
-      alightingStop: stops[to]!.name,
-      currentStop: stops[from]!.name,
-      etaMinutes: etaBetween(stops, from, to),
-      transactionId: t!.id,
-      startedAt: t!.timestamp,
-    });
-    await tx.insert(tripEventsTable).values({ vehicleId: found.vehicle.id, tripId: t!.id, eventType: "boarded", stopName: stops[from]!.name });
-    return t!.timestamp;
+    const t = await insertTrip(tx, { vehicleId: found.vehicle.id, passengerId: passengerId!, stops, from, to, officialFare, amountPaid: body.amountPaid, tripRef });
+    return t.timestamp;
   });
 
   res.json({ tripId: tripRef, startedAt: startedAt.toISOString(), passengerId });
@@ -95,6 +74,7 @@ router.post("/trips/start", async (req, res): Promise<void> => {
  * Conductor marks the anchor the vehicle is at. Every active trip on the vehicle whose boarding stop is
  * behind it moves forward (never backward, and never past the passenger's own stop).
  */
+// TODO(MUST FIX before launch): authenticate the conductor and check they work this vehicle. Today anyone can post a stop mark.
 router.post("/trips/stop", async (req, res): Promise<void> => {
   const parsed = StopMarkBody.safeParse(req.body);
   if (!parsed.success) {

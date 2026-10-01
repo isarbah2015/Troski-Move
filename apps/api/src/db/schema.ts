@@ -179,3 +179,33 @@ export const tripEventsTable = pgTable(
 );
 
 export type TripEvent = typeof tripEventsTable.$inferSelect;
+
+export const paymentStatuses = ["PENDING", "SUCCESSFUL", "FAILED"] as const;
+
+/** One MTN MoMo request-to-pay. The trip is only created once the payment is SUCCESSFUL. */
+export const paymentsTable = pgTable(
+  "payments",
+  {
+    id: serial("id").primaryKey(),
+    /** The MoMo `X-Reference-Id` (a UUID the API generates). */
+    referenceId: text("reference_id").notNull().unique(),
+    /** Public trip reference the client chose (TRX-…); unique, so a double tap never charges twice. */
+    tripRef: text("trip_ref").notNull().unique(),
+    passengerId: integer("passenger_id").notNull().references(() => usersTable.id),
+    vehicleCode: text("vehicle_code").notNull(),
+    boardingStop: text("boarding_stop").notNull(),
+    alightingStop: text("alighting_stop").notNull(),
+    amount: numeric("amount", { precision: 8, scale: 2 }).notNull(),
+    currency: text("currency").notNull(),
+    payerPhone: text("payer_phone"),
+    status: text("status").$type<(typeof paymentStatuses)[number]>().notNull().default("PENDING"),
+    failureReason: text("failure_reason"),
+    tripId: integer("trip_id").references(() => transactionsTable.id),
+    momoResponse: jsonb("momo_response"),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    completedAt: timestamp("completed_at", { withTimezone: true }),
+  },
+  (t) => [check("payments_status_chk", sql`${t.status} in ('PENDING','SUCCESSFUL','FAILED')`)],
+);
+
+export type Payment = typeof paymentsTable.$inferSelect;
