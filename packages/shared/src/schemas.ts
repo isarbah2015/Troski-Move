@@ -251,6 +251,8 @@ export type PaymentStatus = z.infer<typeof PaymentStatus>;
 
 export const InitiatePaymentResponse = z.object({
   referenceId: z.string(),
+  /** The trip reference this payment will create. Equals the one sent, unless an identical payment was already pending. */
+  tripId: z.string(),
   status: PaymentStatus,
   /** True while the API runs without MoMo credentials and auto-approves after a few seconds. */
   simulator: z.boolean(),

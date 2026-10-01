@@ -4,13 +4,16 @@ import {
   GuestResponse,
   HealthResponse,
   HistoryResponse,
+  InitiatePaymentResponse,
   LeaderboardResponse,
+  PaymentStatusResponse,
   parseScannedCode,
   ResolvedVehicle,
   SplitResponse,
   StartTripResponse,
   StopMarkResponse,
   type AlightBody,
+  type InitiatePaymentBody,
   type RatingSubmission,
   type SplitBody,
   type StartTripBody,
@@ -75,6 +78,16 @@ export function createApiClient(baseUrl: string) {
     /** Passenger paid: records the transaction and starts the active trip. Retrying with the same `tripId` is safe. */
     async startTrip(body: StartTripBody) {
       return StartTripResponse.parse(await post('/trips/start', body));
+    },
+
+    /** Starts a MoMo request-to-pay; the passenger approves it on their phone. Retrying with the same `tripId` is safe. */
+    async initiatePayment(body: InitiatePaymentBody) {
+      return InitiatePaymentResponse.parse(await post('/payments/initiate', body));
+    },
+
+    /** Where a payment stands. When it returns SUCCESSFUL the trip already exists on the server. */
+    async paymentStatus(referenceId: string) {
+      return PaymentStatusResponse.parse(await request(`/payments/status/${encodeURIComponent(referenceId)}`));
     },
 
     /** Conductor marks the anchor the vehicle is at; passengers' trips move forward. */

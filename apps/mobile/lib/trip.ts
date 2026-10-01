@@ -11,7 +11,7 @@ export function newTripId(now = new Date()): string {
  * Builds the trip that starts after payment. Boarding is the route origin and the vehicle starts
  * there; from now on the conductor's stop marks (via the API) move it forward.
  */
-export function buildTrip(resolved: ResolvedVehicle, alighting: Stop, now = new Date()): ActiveTrip {
+export function buildTrip(resolved: ResolvedVehicle, alighting: Stop, tripId: string, now = new Date()): ActiveTrip {
   const names = resolved.route.stops.map((s) => s.name);
   const alightIdx = Math.max(names.indexOf(alighting.name), 1);
   const currentIdx = 0;
@@ -20,7 +20,7 @@ export function buildTrip(resolved: ResolvedVehicle, alighting: Stop, now = new 
     .reduce((sum, s) => sum + s.etaMinutes, 0);
 
   return {
-    tripId: newTripId(now),
+    tripId,
     vehicleShortCode: resolved.vehicle.shortCode,
     driverName: resolved.vehicle.driverName,
     routeName: resolved.route.name,

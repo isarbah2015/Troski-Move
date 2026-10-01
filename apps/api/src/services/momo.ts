@@ -9,7 +9,8 @@ import { logger } from "../logger";
  * (`simulator: true`) so it can never be mistaken for a real charge.
  */
 
-export const SIMULATOR_APPROVE_MS = 3000;
+/** Dev knob: MOMO_SIMULATOR_APPROVE_MS lengthens the delay to test the pending and timeout screens. */
+export const SIMULATOR_APPROVE_MS = Number(process.env.MOMO_SIMULATOR_APPROVE_MS ?? 3000);
 
 export type MomoStatus = "PENDING" | "SUCCESSFUL" | "FAILED";
 export type MomoResult = { status: MomoStatus; reason?: string; raw?: unknown };

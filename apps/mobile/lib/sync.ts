@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { AppState } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { ApiError } from '@trotrolink/api-client';
-import type { AlightBody, RatingSubmission, SplitBody, StartTripBody, StopMarkBody } from '@trotrolink/shared';
+import type { AlightBody, RatingSubmission, SplitBody, StopMarkBody } from '@trotrolink/shared';
 import { api } from '@/lib/api';
 
 const QUEUE_KEY = 'offlineQueue';
@@ -10,7 +10,6 @@ export const FLUSH_INTERVAL_MS = 30_000;
 
 /** Every write the app makes to the API. Each is idempotent on the server, so a retry can never double-apply. */
 export type SyncAction =
-  | { type: 'start'; body: StartTripBody }
   | { type: 'stop'; body: StopMarkBody }
   | { type: 'alight'; body: AlightBody }
   | { type: 'rating'; body: RatingSubmission }
@@ -19,21 +18,19 @@ export type SyncAction =
 type QueueItem = { id: string; action: SyncAction; queuedAt: string };
 
 async function perform(action: SyncAction): Promise<void> {
-  switch (action.type) {
-    case 'start':
-      await api.startTrip(action.body);
-      return;
+  // A 'start' action queued by an older build is ignored: trips now begin from a successful MoMo payment.
+  switch (action.type as string) {
     case 'stop':
-      await api.markStop(action.body);
+      await api.markStop((action as Extract<SyncAction, { type: 'stop' }>).body);
       return;
     case 'alight':
-      await api.alight(action.body);
+      await api.alight((action as Extract<SyncAction, { type: 'alight' }>).body);
       return;
     case 'rating':
-      await api.submitRating(action.body);
+      await api.submitRating((action as Extract<SyncAction, { type: 'rating' }>).body);
       return;
     case 'split':
-      await api.saveSplit(action.body);
+      await api.saveSplit((action as Extract<SyncAction, { type: 'split' }>).body);
       return;
   }
 }

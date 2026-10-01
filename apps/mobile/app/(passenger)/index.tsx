@@ -4,18 +4,21 @@ import { Feather } from '@expo/vector-icons';
 import { CameraView, useCameraPermissions } from 'expo-camera';
 import * as Haptics from 'expo-haptics';
 import { useFocusEffect, useLocalSearchParams, useRouter } from 'expo-router';
-import type { ResolvedVehicle } from '@trotrolink/shared';
+import type { ResolvedVehicle, Stop } from '@trotrolink/shared';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { CodeEntrySheet } from '@/components/CodeEntrySheet';
+import { PaymentSheet, type PaymentPhase } from '@/components/PaymentSheet';
 import { StopSheet } from '@/components/StopSheet';
 import { useColors } from '@/hooks/useColors';
 import { colors as tokens } from '@/lib/colors';
-import { api, VehicleNotFoundError } from '@/lib/api';
-import { getDeviceId } from '@/lib/identity';
+import { VehicleNotFoundError } from '@/lib/api';
+import { api } from '@/lib/api';
+import { payForTrip } from '@/lib/payment';
 import { appendTripRecord, saveActiveTrip } from '@/lib/storage';
-import { sendOrQueue } from '@/lib/sync';
 import { showToast } from '@/lib/toast';
-import { buildTrip, buildTripRecord } from '@/lib/trip';
+import { buildTrip, buildTripRecord, newTripId } from '@/lib/trip';
+
+type PaymentState = { phase: PaymentPhase; resolved: ResolvedVehicle; stop: Stop; simulator: boolean; message?: string; referenceId?: string; tripId?: string };
 
 const FRAME = 260;
 // Demo codes for web / simulators that have no camera.
@@ -41,6 +44,8 @@ export default function ScanScreen() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const busy = useRef(false);
+  const paying = useRef(false);
+  const [payment, setPayment] = useState<PaymentState | null>(null);
 
   const resolve = useCallback(async (code: string) => {
     if (busy.current) return;
@@ -61,6 +66,66 @@ export default function ScanScreen() {
       setTimeout(() => { busy.current = false; }, 1200);
     }
   }, []);
+
+  /**
+   * MoMo flow: ask the API to charge the passenger, wait for their approval, and only then start the
+   * trip. Each attempt uses a fresh trip reference, so a declined or abandoned attempt never blocks a retry.
+   */
+  const finishPaid = async (res: ResolvedVehicle, stop: Stop, tripId: string) => {
+    const trip = buildTrip(res, stop, tripId);
+    await saveActiveTrip(trip);
+    await appendTripRecord(buildTripRecord(res, stop, trip));
+    Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+    setPayment((p) => (p ? { ...p, phase: 'success' } : p));
+    await new Promise((r) => setTimeout(r, 900));
+    setPayment(null);
+    setResolved(null);
+    showToast('Payment successful');
+    router.navigate('/trip');
+  };
+
+  const pay = async (res: ResolvedVehicle, stop: Stop, previous?: { referenceId: string; tripId: string }) => {
+    if (paying.current) return;
+    paying.current = true;
+    try {
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+      // iOS cannot present a second modal over the stop sheet: close it first and let it finish animating.
+      if (resolved) {
+        setResolved(null);
+        await new Promise((r) => setTimeout(r, 450));
+      }
+      setPayment({ phase: 'sending', resolved: res, stop, simulator: false });
+
+      // A timed-out request may still have been approved: check it before charging again, so a retry never double-charges.
+      if (previous) {
+        try {
+          if ((await api.paymentStatus(previous.referenceId)).status === 'SUCCESSFUL') {
+            await finishPaid(res, stop, previous.tripId);
+            return;
+          }
+        } catch {
+          // Could not check; fall through and start a fresh attempt.
+        }
+      }
+
+      const tripId = newTripId();
+      const outcome = await payForTrip({
+        resolved: res,
+        stop,
+        boardingStop: res.route.stops[0]!.name,
+        tripId,
+        onPending: ({ referenceId, simulator, tripId: serverTripId }) => setPayment((p) => (p ? { ...p, phase: 'pending', simulator, referenceId, tripId: serverTripId } : p)),
+      });
+      if (outcome.kind === 'success') {
+        await finishPaid(res, stop, outcome.tripId);
+      } else {
+        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+        setPayment((p) => (p ? { ...p, phase: outcome.kind, message: outcome.kind === 'failed' ? outcome.reason : undefined } : p));
+      }
+    } finally {
+      paying.current = false;
+    }
+  };
 
   // "Ride again" from Profile arrives with ?code=CIR01&n=<timestamp>: open the short-code sheet pre-filled.
   useEffect(() => {
@@ -144,27 +209,18 @@ export default function ScanScreen() {
       </View>
 
       <CodeEntrySheet initialCode={initialCode} visible={codeOpen} loading={loading} error={error} onSubmit={resolve} onClose={() => setCodeOpen(false)} />
-      <StopSheet
-        resolved={resolved}
-        onClose={() => setResolved(null)}
-        onPay={async (stop) => {
-          if (!resolved) return;
-          // TODO: Wire to MTN MoMo sandbox — see apps/api/src/services/momo.ts
-          const trip = buildTrip(resolved, stop);
-          await saveActiveTrip(trip);
-          await appendTripRecord(buildTripRecord(resolved, stop, trip));
-          // Tell the API (queued if offline): it records the payment and puts the trip on the conductor's board.
-          void getDeviceId().then((deviceId) =>
-            sendOrQueue({
-              type: 'start',
-              body: { tripId: trip.tripId, deviceId, vehicleCode: resolved.vehicle.shortCode, boardingStop: trip.boardingStop, alightingStop: stop.name, amountPaid: stop.amountToPay },
-            }),
-          );
-          Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-          setResolved(null);
-          showToast('Payment successful');
-          router.navigate('/trip');
-        }}
+      <StopSheet resolved={resolved} onClose={() => setResolved(null)} onPay={(stop) => resolved && void pay(resolved, stop)} />
+      <PaymentSheet
+        phase={payment?.phase ?? null}
+        amount={payment?.stop.amountToPay ?? 0}
+        destination={payment?.stop.name ?? ''}
+        message={payment?.message}
+        simulator={payment?.simulator ?? false}
+        onRetry={() =>
+          payment &&
+          void pay(payment.resolved, payment.stop, payment.phase === 'timeout' && payment.referenceId && payment.tripId ? { referenceId: payment.referenceId, tripId: payment.tripId } : undefined)
+        }
+        onClose={() => setPayment(null)}
       />
     </View>
   );

@@ -1,6 +1,6 @@
 import { timingSafeEqual } from "node:crypto";
 import { Router, type IRouter } from "express";
-import { eq } from "drizzle-orm";
+import { and, eq, gt } from "drizzle-orm";
 import { InitiatePaymentBody, type InitiatePaymentResponse, type PaymentStatusResponse } from "@trotrolink/shared";
 import { db } from "../db";
 import { paymentsTable, transactionsTable, type Payment } from "../db/schema";
@@ -9,6 +9,8 @@ import { logger } from "../logger";
 import { getPaymentStatus, isSimulator, momoCurrency, newReferenceId, payerPhoneRequired, requestToPay } from "../services/momo";
 
 const router: IRouter = Router();
+
+const PENDING_EXPIRY_MS = 10 * 60 * 1000;
 
 /**
  * Turns a SUCCESSFUL payment into a trip. Idempotent and race-safe: the payment row is locked, so the
@@ -55,6 +57,14 @@ async function settleFailure(referenceId: string, reason: string | undefined, ra
 /** Asks MTN (or the simulator) where a payment stands and records the outcome. Safe to call repeatedly. */
 async function refresh(p: Payment): Promise<Payment> {
   if (p.status !== "PENDING") return p;
+  // A request nobody approved is dead after 10 minutes (the wallet prompt has expired): close it so it can never be charged late.
+  if (Date.now() - p.createdAt.getTime() > PENDING_EXPIRY_MS) {
+    const result = await getPaymentStatus(p.referenceId, p.createdAt).catch(() => null);
+    if (result?.status === "SUCCESSFUL") return settleSuccess(p.referenceId, result.raw);
+    await settleFailure(p.referenceId, "The payment request expired", result?.raw);
+    const [fresh] = await db.select().from(paymentsTable).where(eq(paymentsTable.id, p.id));
+    return fresh!;
+  }
   const result = await getPaymentStatus(p.referenceId, p.createdAt);
   if (result.status === "SUCCESSFUL") return settleSuccess(p.referenceId, result.raw);
   if (result.status === "FAILED") {
@@ -85,7 +95,7 @@ router.post("/payments/initiate", async (req, res): Promise<void> => {
   // A retry (double tap, flaky network) with the same trip reference returns the same payment: never a second charge.
   const [existing] = await db.select().from(paymentsTable).where(eq(paymentsTable.tripRef, b.tripId));
   if (existing) {
-    const body: InitiatePaymentResponse = { referenceId: existing.referenceId, status: existing.status, simulator: isSimulator() };
+    const body: InitiatePaymentResponse = { referenceId: existing.referenceId, tripId: existing.tripRef, status: existing.status, simulator: isSimulator() };
     res.json(body);
     return;
   }
@@ -120,6 +130,18 @@ router.post("/payments/initiate", async (req, res): Promise<void> => {
     return;
   }
 
+  // One live charge per ride: if this passenger already has a pending payment for the same vehicle and stop, hand that
+  // one back instead of asking their wallet for a second payment (a double tap, a retry, or a buggy client).
+  const [duplicate] = await db
+    .select()
+    .from(paymentsTable)
+    .where(and(eq(paymentsTable.passengerId, passengerId), eq(paymentsTable.vehicleCode, found.vehicle.shortCode), eq(paymentsTable.alightingStop, found.route.stopsJson[check.to]!.name), eq(paymentsTable.status, "PENDING"), gt(paymentsTable.createdAt, new Date(Date.now() - PENDING_EXPIRY_MS))));
+  if (duplicate) {
+    const body: InitiatePaymentResponse = { referenceId: duplicate.referenceId, tripId: duplicate.tripRef, status: duplicate.status, simulator: isSimulator() };
+    res.json(body);
+    return;
+  }
+
   const referenceId = newReferenceId();
   const stops = found.route.stopsJson;
   try {
@@ -149,7 +171,7 @@ router.post("/payments/initiate", async (req, res): Promise<void> => {
     return;
   }
 
-  const body: InitiatePaymentResponse = { referenceId, status: "PENDING", simulator: isSimulator() };
+  const body: InitiatePaymentResponse = { referenceId, tripId: b.tripId, status: "PENDING", simulator: isSimulator() };
   res.json(body);
 });
 
