@@ -106,30 +106,47 @@ Real trotros don't stop at fixed stations: passengers hail and alight anywhere. 
 
 ### Completed
 - Monorepo + design tokens
-- Drizzle schema + seed (Circle→Kasoa, Madina, Tema); `ratings.rated_at`
-- API: health, `GET /api/vehicles/resolve`, leaderboard endpoints (sample data until ratings exist), `POST /api/ratings` (validates and logs; not stored yet)
-- Passenger: Scan, Trip (incl. Confirm alighting), Profile (incl. Rate trip chip)
+- Drizzle schema + seed (+ `trip_events`, trip reference / boarding stop / arrived-at on `transactions`, `total_fares` on `daily_splits`, conductor and last-stop columns on `active_trips`)
+- Passenger: Scan, Trip, Profile
 - Conductor: Today, My QR, Leaderboard, Earnings, Profile
-- Shared components (SettingsGroup, RoleSwitcher, RatingSheet, confirmSignOut) and QR payload parser
+- Shared components + QR payload parser
 - Rating sheet after arrival + history integration
+- **Backend sync** (see below): trips, stop marks, ratings, splits, leaderboard; offline queue; verified across two simulators
 
 ### In Progress
-- Nothing (awaiting sign-off on the rating sheet)
+- Nothing (awaiting sign-off that sync works cross-device)
 
 ### Next
-- Backend sync for stop marks + splits
-- Real ratings POST endpoint (insert into `ratings`, invalidate leaderboard cache)
-- MoMo sandbox integration (replace Pay stub)
+- MoMo sandbox integration (replace the Pay stub)
+- Push notifications (FCM)
 - Union web dashboard
+- USSD fallback
+- GTFS import
+
+### API (Express 5 + Drizzle, port 4000)
+| Endpoint | What it does |
+|---|---|
+| `POST /api/guests` | anonymous user for a device (`deviceId`) until phone OTP exists |
+| `POST /api/trips/start` | after payment: writes `transactions` + `active_trips` + a `boarded` event. Validates stops and that `amountPaid` ≥ the official fare. Idempotent on the client's `tripId` |
+| `POST /api/trips/stop` | conductor marks an anchor: logs `stop_reached`, moves every active trip on that vehicle forward (never backward, never past the passenger's stop), logs `arrived` when one reaches its stop; returns `passengersNotified` |
+| `GET /api/trips/active?vehicleCode=` / `?tripId=` / `?passengerId=` | the conductor's passenger count / a passenger's own live state |
+| `POST /api/trips/alight` | passenger got off: stamps `arrived_at`, removes the active row, logs `alighted` (idempotent) |
+| `POST /api/ratings` | upserts the rating (one per trip), ends the trip, drops the leaderboard cache |
+| `GET /api/trips/history?passengerId=` | last 50 trips + their ratings (built, **not yet used by the mobile app**, which still reads local history) |
+| `POST /api/splits` | upserts `daily_splits` per (vehicle, date); returns the net |
+| `GET /api/leaderboard/daily` | the real 24 h query (≥ 3 ratings), cached 5 minutes, cache cleared on every new rating; sample data (tagged) only when nothing qualifies in non-production |
+
+### Mobile sync
+- Every write goes through `sendOrQueue` (`lib/sync.ts`): it sends now, and on a network error or 5xx/408/429 saves to the AsyncStorage `offlineQueue` and shows the **"X actions pending sync"** banner (tap to retry). The queue flushes at launch, every 30 s and when the app returns to the foreground. It keeps order, and drops an action the server rejects with a 4xx (logged). All writes are idempotent server-side.
+- Conductor Today polls `GET /api/trips/active?vehicleCode=` every 10 s for the passenger count; passenger Trip polls `?tripId=` every 10 s (only while focused). WebSockets are a later upgrade.
+- Identity: a random `deviceId` (AsyncStorage) maps to a guest user on the server. Sign-out clears it (a fresh guest).
 
 ### Not Started
-- Push notifications (FCM)
-- USSD fallback
-- GTFS import from GhanaAPI
 - Custom alighting ("near Melcom") — deferred, not forgotten
 - ETA interpolation by distance — deferred
 - Real QR regeneration endpoint
 - Phone OTP auth and an `(auth)/login` screen
+- Passenger history from `GET /api/trips/history` (sync across devices)
 
 ### Locked formulas
 - `stopsAway = index(alightingStop) - index(currentStop)`
@@ -141,40 +158,24 @@ Real trotros don't stop at fixed stations: passengers hail and alight anywhere. 
 - Bronze: 0–19 · Silver: 20–99 · Gold: 100–499 · Platinum: 500+
 
 ### Rating flow
-1. Trip tab shows **Confirm alighting** only when `currentStop === alightingStop`. Tapping it stamps `arrivedAt` (on `activeTrip` and the history record) and opens the rating sheet.
-2. The sheet needs ≥ 1 star for the driver **and** the conductor before Submit enables; the comment is optional (200 chars).
-3. **Submit:** saves `tripRatings[tripId]`, POSTs `/api/ratings` (best effort), ends the trip (removes `activeTrip`), toasts "Thanks for rating!", returns to Scan.
-4. **Skip for now:** ends the trip without a rating. The trip stays in history with a **Rate trip** chip, and the Trip tab shows a "How was your trip to X?" prompt for 24 hours after `arrivedAt` (fallback trigger; a card, not a forced popup).
-5. The **Rate trip** chip in Profile history reopens the same sheet for that trip (driver and conductor names come from the history record).
+Trip tab shows **Confirm alighting** once the vehicle's current stop (set by the conductor) equals the passenger's stop → the rating sheet (driver + conductor stars both required, comment optional) → Submit saves `tripRatings`, queues `POST /api/ratings`, ends the trip. Skip leaves a **Rate trip** chip in history and a 24-hour card on the Trip tab.
 
 ### Local storage keys (AsyncStorage)
-`activeTrip`, `user`, `tripHistory` (newest first, capped at 200; a trip is added at payment and stamped with `arrivedAt` on arrival), `tripRatings` (`{ [tripId]: { driverRating, conductorRating, comment?, ratedAt } }`), `role`, `language`, `notifications`, `conductorVehicle` (defaults to CIR01), `conductorQr`, `dailySplits` (`{ [YYYY-MM-DD]: … }`). Sign-out clears everything.
-
-### Stops are anchors (locked)
-- Pre-load named landmarks only
-- Passenger picks nearest anchor
-- Custom alighting (text note) for between-anchor stops
-- Conductor can skip anchors
+`activeTrip`, `user`, `tripHistory`, `tripRatings`, `dailySplits`, `role`, `language`, `notifications`, `conductorVehicle`, `conductorQr`, `deviceId`, `offlineQueue`. Sign-out clears everything.
 
 ### Known limitations (v1)
-- No real auth (guest state); the conductor is hard-wired to CIR01
-- Language choice stored, UI English (real i18n later)
-- Light mode deferred to v1.1
-- Printed date updates on share-sheet / print-dialog open, not on save confirmation
-- Regenerate QR is local (old QR still resolves)
-- Stop marker, splits and ratings are local (ratings also POST to a logging stub)
-- The passenger's current stop never changes by itself: real updates need the conductor's stop marks via backend sync. Until then the dev-only "Advance one stop" link is the only way to reach **Confirm alighting**
-- History stars show the driver rating; the detail sheet shows both ratings and the comment
-- Conductor earnings, scans, rating, riders, on-board count and "total fares" are mock data; the leaderboard shows tagged sample data while no ratings exist (non-production)
-- Status bar: verify on a real device before launch
-- **Dev-only links must be stripped/guarded before production** (all `__DEV__`): Load demo data, Clear history (Profile); Clear trip, Advance one stop (Trip); leaderboard real/empty toggle; Load demo week (Earnings)
-- Camera scan path untested (the simulator has no camera)
+- No real auth (guest identities); the conductor is hard-wired to CIR01 and anyone can post a stop mark for a vehicle (needs conductor auth before launch)
+- Passenger Trip only updates while the Trip tab is focused; no push yet
+- Conductor earnings, scan count, rating and "total fares" on Today/Earnings are still mock numbers (the passenger count is live)
+- The leaderboard shows tagged sample data until a vehicle has ≥ 3 ratings in the last 24 h (non-production only)
+- Language choice stored, UI English; light mode deferred; status bar: verify on a real device
+- Printed date updates on share-sheet open; Regenerate QR is local (old QR still resolves)
+- **Dev-only links must be stripped/guarded before production** (all `__DEV__`): Load demo data, Clear history (Profile); Clear trip, Advance one stop (Trip); leaderboard real/empty toggle; Load demo week (Earnings). "Advance one stop" now sends a real stop mark through the API.
+- Camera scan path untested (simulators have no camera)
 
 ### Deviations
-- `(passenger)/index.tsx` is Scan
-- `conductor-profile.tsx` (not `profile.tsx`): route collision avoidance
-- #1 leaderboard uses the `award` icon (no Feather crown); #3 uses muted gold (no bronze token)
-- Vertical timeline in Trip
-- Rating sheet uses a Feather `check-circle` instead of the 🎉 emoji (Feather icons only); stars are gold/grey outlines (Feather has no filled star)
-- API uses tsx in dev
-- `apps/web` placeholder
+- `(passenger)/index.tsx` is Scan; `conductor-profile.tsx` (not `profile.tsx`)
+- #1 leaderboard uses the `award` icon; #3 uses muted gold
+- Vertical timeline in Trip; trip added at payment, stamped at arrival; rating fallback is a card
+- Added `POST /api/trips/alight` and `POST /api/guests` (not in the sync brief); `trip_events.vehicle_id` references the vehicle by id rather than storing the code, and `trip_id` is an integer FK to `transactions` (the public reference is `transactions.trip_ref`)
+- API uses tsx in dev; `apps/web` placeholder

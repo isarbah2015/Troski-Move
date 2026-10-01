@@ -12,7 +12,8 @@ import { formatCedis } from '@/lib/api';
 import { colors as tokens } from '@/lib/colors';
 import { MOCK_TODAY, formatOnline } from '@/lib/conductor';
 import { DEFAULT_SPLITS, localDateKey, netEarnings, parseAmount, sanitizeAmount, weekDays } from '@/lib/earnings';
-import { getDailySplits, saveDailySplit, type DailySplitRecord } from '@/lib/storage';
+import { getConductorVehicleCode, getDailySplits, saveDailySplit, type DailySplitRecord } from '@/lib/storage';
+import { sendOrQueue } from '@/lib/sync';
 import { showToast } from '@/lib/toast';
 
 type Field = 'ownerDrop' | 'conductorWage' | 'fuelCost';
@@ -89,7 +90,6 @@ export default function EarningsScreen() {
       {
         text: 'Save',
         onPress: async () => {
-          // TODO: POST /api/splits so the owner and union see the daily split.
           const record: DailySplitRecord = {
             date: todayKey,
             total,
@@ -100,6 +100,9 @@ export default function EarningsScreen() {
             savedAt: new Date().toISOString(),
           };
           await saveDailySplit(record);
+          void getConductorVehicleCode().then((vehicleCode) =>
+            sendOrQueue({ type: 'split', body: { vehicleCode, date: todayKey, totalFares: total, ownerDrop: record.ownerDrop, conductorWage: record.conductorWage, fuelCost: record.fuelCost } }),
+          );
           setSaved(await getDailySplits());
           Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
           showToast('Day saved');

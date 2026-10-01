@@ -12,7 +12,11 @@ import { formatCedis } from '@/lib/api';
 import { RATING_PROMPT_WINDOW_MS, submitTripRating } from '@/lib/ratings';
 import { clearActiveTrip, getActiveTrip, getTripHistory, getTripRatings, markTripArrived, saveActiveTrip } from '@/lib/storage';
 import { showToast } from '@/lib/toast';
-import { advanceTrip, tripProgress } from '@/lib/trip';
+import { getDeviceId } from '@/lib/identity';
+import { useFocusPolling } from '@/lib/polling';
+import { sendOrQueue } from '@/lib/sync';
+import { advanceTrip, applyServerTrip, tripProgress } from '@/lib/trip';
+import { api } from '@/lib/api';
 
 function LiveBadge() {
   const colors = useColors();
@@ -249,6 +253,27 @@ export default function TripScreen() {
     return history.find((t) => t.arrivedAt && new Date(t.arrivedAt).getTime() > cutoff && !ratings[t.tripId]) ?? null;
   }, []);
 
+  // While a trip is live, ask the API every 10 seconds where the vehicle is (the conductor's stop marks).
+  const tripRef = useRef<ActiveTrip | null>(null);
+  tripRef.current = trip;
+  const pollTrip = useCallback(async () => {
+    const current = tripRef.current;
+    if (!current) return;
+    try {
+      const { trips } = await api.activeTrips({ tripId: current.tripId });
+      const server = trips[0];
+      if (!server) return;
+      const next = applyServerTrip(current, server);
+      if (next.currentStop !== current.currentStop || next.etaMinutes !== current.etaMinutes) {
+        await saveActiveTrip(next);
+        setTrip(next);
+      }
+    } catch {
+      // Offline: keep showing the last known state.
+    }
+  }, []);
+  useFocusPolling(pollTrip, !!trip && !trip.arrivedAt);
+
   useFocusEffect(
     useCallback(() => {
       let active = true;
@@ -270,6 +295,7 @@ export default function TripScreen() {
     Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
     // The trip already sits in history from payment; stamp it as arrived and open the rating sheet.
     await Promise.all([saveActiveTrip({ ...trip, arrivedAt }), markTripArrived(trip.tripId, arrivedAt)]);
+    void sendOrQueue({ type: 'alight', body: { tripId: trip.tripId } });
     setTrip({ ...trip, arrivedAt });
     setTarget({
       tripId: trip.tripId,
@@ -310,7 +336,12 @@ export default function TripScreen() {
           trip={trip}
           onCleared={() => setTrip(null)}
           onAdvance={async () => {
+            // Dev only: act as the conductor and mark the next stop through the API, then show it at once.
             const next = advanceTrip(trip);
+            if (next.currentStop !== trip.currentStop) {
+              const deviceId = await getDeviceId();
+              void sendOrQueue({ type: 'stop', body: { vehicleCode: trip.vehicleShortCode, stopName: next.currentStop, deviceId } });
+            }
             await saveActiveTrip(next);
             setTrip(next);
           }}

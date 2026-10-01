@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useCallback, useState } from 'react';
 import { ActivityIndicator, Alert, Pressable, ScrollView, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
 import { Feather } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
@@ -9,9 +9,12 @@ import { CONDUCTOR_BONUS } from '@trotrolink/shared';
 import { PulseDot } from '@/components/PulseDot';
 import { SectionHeader } from '@/components/SectionHeader';
 import { useColors } from '@/hooks/useColors';
-import { formatCedis } from '@/lib/api';
+import { api, formatCedis } from '@/lib/api';
 import { colors as tokens } from '@/lib/colors';
 import { bonusFor, formatOnline, MOCK_BONUS, MOCK_TODAY, useConductorVehicle } from '@/lib/conductor';
+import { getDeviceId } from '@/lib/identity';
+import { useFocusPolling } from '@/lib/polling';
+import { sendOrQueue } from '@/lib/sync';
 
 const GUTTER = 24;
 const GAP = 12;
@@ -25,6 +28,7 @@ export default function TodayScreen() {
 
   const [currentStop, setCurrentStop] = useState<string | null>(null);
   const [online, setOnline] = useState(true);
+  const [onBoard, setOnBoard] = useState<number | null>(null);
 
   const stops = data?.route.stops ?? [];
   const current = currentStop ?? stops[0]?.name ?? null;
@@ -32,11 +36,25 @@ export default function TodayScreen() {
   const tile = (width - GUTTER * 2 - GAP) / 2;
   const card = { backgroundColor: colors.card, borderColor: colors.border, borderRadius: colors.radius };
 
+  // Passengers who have paid for this vehicle and not yet alighted, refreshed every 10 seconds.
+  const vehicleCode = data?.vehicle.shortCode;
+  const refreshOnBoard = useCallback(async () => {
+    if (!vehicleCode) return;
+    try {
+      setOnBoard((await api.activeTrips({ vehicleCode })).trips.length);
+    } catch {
+      // Offline: keep the last count.
+    }
+  }, [vehicleCode]);
+  useFocusPolling(refreshOnBoard, !!vehicleCode && online);
+
   const markStop = (name: string) => {
     if (name === current) return;
     Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
     setCurrentStop(name);
-    // TODO: POST /api/trips/stop { vehicleId, stop } so passengers' Trip tabs update live.
+    if (vehicleCode) {
+      void getDeviceId().then((deviceId) => sendOrQueue({ type: 'stop', body: { vehicleCode, stopName: name, deviceId } }));
+    }
   };
 
   const endShift = () => {
@@ -157,7 +175,7 @@ export default function TodayScreen() {
 
           <View style={styles.onBoard}>
             <Feather name="users" size={16} color={colors.mutedForeground} />
-            <Text style={[styles.onBoardText, { color: colors.mutedForeground }]}>{MOCK_TODAY.onBoard} passengers on board</Text>
+            <Text style={[styles.onBoardText, { color: colors.mutedForeground }]}>{onBoard === null ? '–' : onBoard} {onBoard === 1 ? 'passenger' : 'passengers'} on board</Text>
           </View>
 
           <Pressable onPress={endShift} accessibilityRole="button" style={[styles.endShift, { borderColor: colors.destructive, borderRadius: colors.radiusPill }]}>

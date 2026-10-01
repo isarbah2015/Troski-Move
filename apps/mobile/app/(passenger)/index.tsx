@@ -11,7 +11,9 @@ import { StopSheet } from '@/components/StopSheet';
 import { useColors } from '@/hooks/useColors';
 import { colors as tokens } from '@/lib/colors';
 import { api, VehicleNotFoundError } from '@/lib/api';
+import { getDeviceId } from '@/lib/identity';
 import { appendTripRecord, saveActiveTrip } from '@/lib/storage';
+import { sendOrQueue } from '@/lib/sync';
 import { showToast } from '@/lib/toast';
 import { buildTrip, buildTripRecord } from '@/lib/trip';
 
@@ -151,6 +153,13 @@ export default function ScanScreen() {
           const trip = buildTrip(resolved, stop);
           await saveActiveTrip(trip);
           await appendTripRecord(buildTripRecord(resolved, stop, trip));
+          // Tell the API (queued if offline): it records the payment and puts the trip on the conductor's board.
+          void getDeviceId().then((deviceId) =>
+            sendOrQueue({
+              type: 'start',
+              body: { tripId: trip.tripId, deviceId, vehicleCode: resolved.vehicle.shortCode, boardingStop: trip.boardingStop, alightingStop: stop.name, amountPaid: stop.amountToPay },
+            }),
+          );
           Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
           setResolved(null);
           showToast('Payment successful');

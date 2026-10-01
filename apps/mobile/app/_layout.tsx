@@ -5,7 +5,9 @@ import { KeyboardProvider } from 'react-native-keyboard-controller';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { ErrorBoundary } from '@/components/ErrorBoundary';
 import { colors } from '@/lib/colors';
+import { SyncBanner } from '@/components/SyncBanner';
 import { ToastHost } from '@/components/ToastHost';
+import { useSyncLoop } from '@/lib/sync';
 import {
   Inter_400Regular,
   Inter_500Medium,
@@ -22,6 +24,7 @@ SplashScreen.preventAutoHideAsync();
 const queryClient = new QueryClient();
 
 function RootLayoutNav() {
+  useSyncLoop();
   return (
     <Stack
       screenOptions={{
@@ -62,6 +65,7 @@ export default function RootLayout() {
           <GestureHandlerRootView>
             <KeyboardProvider>
               <RootLayoutNav />
+              <SyncBanner />
               <ToastHost />
             </KeyboardProvider>
           </GestureHandlerRootView>
