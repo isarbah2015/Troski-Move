@@ -1,12 +1,11 @@
 import React, { useEffect, useRef } from 'react';
-import { AccessibilityInfo, Animated, Easing, StyleSheet, Text, View } from 'react-native';
-import { Feather } from '@expo/vector-icons';
+import { AccessibilityInfo, Animated, Easing, Image, StyleSheet, Text, View } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import * as Haptics from 'expo-haptics';
 import { EMERALD, GOLD } from '@/lib/colors';
 
 const INK = '#060A13';
-const TILE = 112;
+const TILE = 124;
 const SPRING = { damping: 11, stiffness: 90, mass: 1, useNativeDriver: true } as const;
 
 /**
@@ -98,15 +97,11 @@ export function AnimatedSplash({ onDone }: { onDone: () => void }) {
               },
             ]}
           >
-            <LinearGradient
-              colors={i === 0 ? ['#4CE8B4', '#0E9F76'] : i === 1 ? ['#1B8F73', '#0B5B49'] : ['#12493F', '#0A2B2A']}
-              start={{ x: 0, y: 0 }}
-              end={{ x: 1, y: 1 }}
-              style={styles.tileFill}
-            >
-              {i === 0 ? <Feather name="navigation" size={46} color="#04130D" style={styles.glyph} /> : null}
-              {i === 0 ? <View style={styles.sheen} /> : null}
-            </LinearGradient>
+            {i === 0 ? (
+              <Image source={require('../assets/images/icon.png')} style={styles.logo} resizeMode="cover" accessibilityIgnoresInvertColors />
+            ) : (
+              <LinearGradient colors={i === 1 ? ['#1B7C86', '#0B4F5A'] : ['#0E5560', '#083A44']} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={styles.tileFill} />
+            )}
           </Animated.View>
         ))}
       </Animated.View>
@@ -127,8 +122,7 @@ const styles = StyleSheet.create({
   bead: { position: 'absolute', top: -6, width: 12, height: 12, borderRadius: 6, backgroundColor: GOLD, shadowColor: GOLD, shadowOpacity: 0.9, shadowRadius: 8, shadowOffset: { width: 0, height: 0 } },
   tile: { position: 'absolute', width: TILE, height: TILE, borderRadius: 32, overflow: 'hidden', shadowColor: '#000', shadowOpacity: 0.5, shadowRadius: 22, shadowOffset: { width: 0, height: 14 }, elevation: 12 },
   tileFill: { flex: 1, alignItems: 'center', justifyContent: 'center' },
-  glyph: { transform: [{ rotate: '-8deg' }] },
-  sheen: { position: 'absolute', top: 0, left: 0, right: 0, height: '45%', backgroundColor: 'rgba(255,255,255,0.16)' },
+  logo: { width: TILE, height: TILE },
   words: { position: 'absolute', bottom: '24%', alignItems: 'center' },
   name: { fontFamily: 'PlusJakartaSans_800ExtraBold', fontSize: 36, letterSpacing: -1, color: '#F6F8FC' },
   tag: { fontFamily: 'PlusJakartaSans_500Medium', fontSize: 14, color: '#8A97AE', marginTop: 8, letterSpacing: 0.2 },
