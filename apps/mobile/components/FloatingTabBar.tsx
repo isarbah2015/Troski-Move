@@ -10,11 +10,15 @@ import { colors as tokens } from '@/lib/colors';
 type BottomTabBarProps = Parameters<NonNullable<React.ComponentProps<typeof Tabs>['tabBar']>>[0];
 
 const PAD = 8;
+// The pill is narrower than its tab by this much on each side, so it never touches the neighbouring icons or labels.
+// Bars with 5+ tabs are tighter, so they use a smaller inset and label.
+const pillInset = (count: number) => (count >= 5 ? 2 : 7);
 const SPRING = { damping: 16, stiffness: 190, mass: 0.9, useNativeDriver: true } as const;
 
 /** One tab: the icon lifts and the label brightens when active; pressing squeezes it. */
-function TabItem({ label, focused, icon, onPress, onLongPress, testID }: {
+function TabItem({ label, focused, compact, icon, onPress, onLongPress, testID }: {
   label: string;
+  compact: boolean;
   focused: boolean;
   icon: (color: string, focused: boolean) => React.ReactNode;
   onPress: () => void;
@@ -47,7 +51,7 @@ function TabItem({ label, focused, icon, onPress, onLongPress, testID }: {
         <Animated.View style={{ transform: [{ translateY: lift.interpolate({ inputRange: [0, 1], outputRange: [0, -2] }) }, { scale: lift.interpolate({ inputRange: [0, 1], outputRange: [1, 1.12] }) }] }}>
           {icon(color, focused)}
         </Animated.View>
-        <Text numberOfLines={1} style={[styles.label, { color, fontFamily: focused ? 'Inter_700Bold' : 'Inter_500Medium' }]}>
+        <Text numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.85} style={[styles.label, { color, fontSize: compact ? 9.5 : 11, fontFamily: focused ? (compact ? 'Inter_600SemiBold' : 'Inter_700Bold') : 'Inter_500Medium' }]}>
           {label}
         </Text>
       </Animated.View>
@@ -68,6 +72,7 @@ export function FloatingTabBar({ state, descriptors, navigation }: BottomTabBarP
 
   const count = state.routes.length;
   const itemWidth = width > 0 ? (width - PAD * 2) / count : 0;
+  const inset = pillInset(count);
 
   useEffect(() => {
     Animated.spring(slide, { toValue: state.index, ...SPRING }).start();
@@ -94,7 +99,7 @@ export function FloatingTabBar({ state, descriptors, navigation }: BottomTabBarP
 
   return (
     // The wrapper takes part in layout (so screens end above it) and stays transparent so the card floats.
-    <View style={[styles.wrap, { paddingBottom: Math.max(insets.bottom, 10) + 4 }]} pointerEvents="box-none">
+    <View style={[styles.wrap, { paddingBottom: Math.max(insets.bottom - 18, 4) }]} pointerEvents="box-none">
       <Animated.View
         onLayout={(e: LayoutChangeEvent) => setWidth(e.nativeEvent.layout.width)}
         style={[
@@ -104,7 +109,7 @@ export function FloatingTabBar({ state, descriptors, navigation }: BottomTabBarP
             borderColor: colors.border,
             borderRadius: colors.radiusModal,
             shadowColor: tokens.accentEmerald,
-            transform: [{ translateY: bob.interpolate({ inputRange: [0, 1], outputRange: [1.5, -2.5] }) }],
+            transform: [{ translateY: bob.interpolate({ inputRange: [0, 1], outputRange: [1, -2] }) }],
           },
         ]}
       >
@@ -115,7 +120,8 @@ export function FloatingTabBar({ state, descriptors, navigation }: BottomTabBarP
             style={[
               styles.pill,
               {
-                width: itemWidth,
+                width: Math.max(0, itemWidth - inset * 2),
+                marginLeft: inset,
                 backgroundColor: `${tokens.accentEmerald}1F`,
                 borderColor: `${tokens.accentEmerald}55`,
                 borderRadius: colors.radius,
@@ -134,6 +140,7 @@ export function FloatingTabBar({ state, descriptors, navigation }: BottomTabBarP
               key={route.key}
               label={label}
               focused={focused}
+              compact={count >= 5}
               testID={options.tabBarButtonTestID}
               icon={(color, f) => options.tabBarIcon?.({ color, size: 22, focused: f }) ?? null}
               onPress={() => {
@@ -166,6 +173,6 @@ const styles = StyleSheet.create({
   },
   pill: { position: 'absolute', top: PAD, bottom: PAD, left: PAD, borderWidth: 1 },
   item: { flex: 1 },
-  itemInner: { alignItems: 'center', justifyContent: 'center', paddingVertical: 8, gap: 3 },
-  label: { fontSize: 11 },
+  itemInner: { alignItems: 'center', justifyContent: 'center', paddingVertical: 9, paddingHorizontal: 2, gap: 3 },
+  label: { textAlign: 'center' },
 });
