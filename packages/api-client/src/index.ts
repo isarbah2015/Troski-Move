@@ -24,6 +24,7 @@ import {
   type SplitBody,
   type StartTripBody,
   type StopMarkBody,
+  ConductorRouteResponse,
   SupportStatusResponse,
   UnregisteredReportBody,
   UnregisteredReportResponse,
@@ -173,6 +174,21 @@ export function createApiClient(baseUrl: string, options: ApiClientOptions = {})
     /** The union's live answer (status and message) to this passenger's urgent reports on a trip. */
     async supportStatus(tripId: string, deviceId: string) {
       return SupportStatusResponse.parse(await request(`/disputes/status?tripId=${encodeURIComponent(tripId)}&deviceId=${encodeURIComponent(deviceId)}`));
+    },
+
+    /** Conductor: the vehicle's current heading and the routes it could switch to. */
+    async conductorRoute() {
+      return ConductorRouteResponse.parse(await request('/conductor/route'));
+    },
+
+    /** Conductor: turn the vehicle round (Circle → Kasoa becomes Kasoa → Circle). Refused while passengers are on board. */
+    async switchDirection() {
+      return ConductorRouteResponse.parse(await post('/conductor/direction', {}));
+    },
+
+    /** Conductor: move the vehicle to another route for the day. Refused while passengers are on board. */
+    async setRoute(routeId: string) {
+      return ConductorRouteResponse.parse(await post('/conductor/route', { routeId }));
     },
 
     /** Passenger reports a vehicle that is not on the GPRTU register (no sticker, or a code that does not exist). */

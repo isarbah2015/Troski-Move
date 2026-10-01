@@ -366,3 +366,19 @@ export const SupportStatusResponse = z.object({
   reports: z.array(z.object({ id: z.number().int(), reason: z.enum(DISPUTE_REASONS), status: z.string(), reply: z.string().nullable(), repliedAt: z.string().nullable(), createdAt: z.string() })),
 });
 export type SupportStatusResponse = z.infer<typeof SupportStatusResponse>;
+
+// ---- Direction and route changes (conductor) --------------------------------------------------------
+
+export const ROUTE_DIRECTIONS = ['outbound', 'inbound'] as const;
+export type RouteDirection = (typeof ROUTE_DIRECTIONS)[number];
+
+/** `GET /api/conductor/route`: where this vehicle is heading now, and the routes it could switch to. */
+export const ConductorRouteResponse = z.object({
+  current: z.object({ routeId: z.string(), name: z.string(), origin: z.string(), destination: z.string(), direction: z.enum(ROUTE_DIRECTIONS) }),
+  routes: z.array(z.object({ routeId: z.string(), name: z.string(), origin: z.string(), destination: z.string() })),
+  /** Paid passengers still on board: direction and route cannot change until they have all got off. */
+  onBoard: z.number().int(),
+});
+export type ConductorRouteResponse = z.infer<typeof ConductorRouteResponse>;
+export const SetRouteBody = z.object({ routeId: z.string().min(1).max(40) });
+export type SetRouteBody = z.infer<typeof SetRouteBody>;

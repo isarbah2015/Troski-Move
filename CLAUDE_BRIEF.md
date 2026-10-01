@@ -213,3 +213,9 @@ Today/Earnings numbers, scan counts and average rating in the conductor app are 
 - **Statements** (`/union/statements`): monthly trips/fares/rating per vehicle, only with the owner's recorded consent (`vehicles.credit_consent`), only from fares collected through TrotroLink. Eligibility thresholds (6 months, 15 active days) are placeholders for the lender to set. CSV download and print from the dashboard.
 - Migration: `pnpm --filter api db:push` adds the new columns and tables (`warnings`, `fare_tables`, `unregistered_reports`, vehicle status/phone/consent, `transactions.terminal_fee`, `disputes.amount_asked`). Re-run `db:seed` to put placeholder driver phone numbers on seeded vehicles.
 - Not built: bank partnerships and referral fees, real driver phone numbers (placeholders only), FCM credentials.
+
+## Direction and route changes
+- A vehicle has a `direction` (`outbound` or `inbound`) and a route. `inbound` is the return leg: `lib.ts` `applyDirection` reverses the stops, recomputes each fare from the new origin (route total minus the old fare, so fares stay symmetric), keeps each leg's time, and flips the route name and ends. Everything that reads a vehicle's route (`vehicleWithRoute`, `/vehicles/resolve`, active trips) goes through it, so scans, prices, stop marking and USSD all follow the direction.
+- Conductor (Today tab): **Turn round** (`POST /conductor/direction`) and **Change route** (`GET /conductor/route`, `POST /conductor/route`). Both are refused with 409 while paid passengers are on board, so no trip changes under a passenger.
+- Every change is logged in `route_changes` and listed on the union dashboard (Registration tab); more than two route switches in a day is flagged "Unusual".
+- The offline demo mirrors all of this (`lib/demoServer.ts`).

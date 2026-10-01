@@ -1,8 +1,9 @@
 import React, { useCallback, useState } from 'react';
-import { ActivityIndicator, Alert, Pressable, ScrollView, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
+import { ActivityIndicator, Alert, Pressable, ScrollView, StyleSheet, Text, useWindowDimensions, View, Platform } from 'react-native';
 import { Feather } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
 import { LinearGradient } from 'expo-linear-gradient';
+import { RouteSheet } from '@/components/RouteSheet';
 import { useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { CEDI, CONDUCTOR_BONUS, type ServerTrip } from '@trotrolink/shared';
@@ -62,6 +63,36 @@ export default function TodayScreen() {
     }
   };
 
+  const [routeOpen, setRouteOpen] = useState(false);
+  const afterRouteChange = () => {
+    setCurrentStop(null);
+    void reload();
+    void refreshOnBoard();
+  };
+  /** The return leg: the same road the other way. The stops, fares and route name flip from the next scan. */
+  const turnRound = () => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+    const to = data ? `${data.route.destination} → ${data.route.origin}` : 'the return leg';
+    const message = `This trotro will now run ${to}. Passengers who scan next will see the return stops and fares.`;
+    const go = async () => {
+      try {
+        await api.switchDirection();
+        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+        showToast('Turned round. Now running the return leg.');
+        afterRouteChange();
+      } catch (e) {
+        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+        showToast(e instanceof Error ? e.message : "Couldn't turn round.", 'error');
+      }
+    };
+    // React Native's Alert does nothing on the web build, so confirm with the browser's own dialog there.
+    if (Platform.OS === 'web') {
+      if (typeof window !== 'undefined' && window.confirm(`Turn round?\n\n${message}`)) void go();
+      return;
+    }
+    Alert.alert('Turn round?', message, [{ text: 'Cancel', style: 'cancel' }, { text: 'Turn round', onPress: () => void go() }]);
+  };
+
   const endShift = () => {
     Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
     Alert.alert('End shift?', "You'll go offline and your stop marker resets. Today's totals are on the Earnings tab.", [
@@ -80,6 +111,7 @@ export default function TodayScreen() {
 
   return (
     <ScrollView style={{ backgroundColor: colors.background }} contentContainerStyle={[styles.scroll, { paddingTop: insets.top + 16 }]} showsVerticalScrollIndicator={false}>
+      <RouteSheet visible={routeOpen} onClose={() => setRouteOpen(false)} onChanged={afterRouteChange} />
       <DemoBadge />
       <Text style={[styles.kicker, { color: colors.mutedForeground, marginTop: 8 }]}>TROTROLINK · CONDUCTOR</Text>
 
@@ -118,6 +150,17 @@ export default function TodayScreen() {
             </View>
             <Text style={[styles.route, { color: WHITE }]}>{data.route.origin} → {data.route.destination}</Text>
             <Text style={[styles.driver, { color: SILVER }]}>{data.vehicle.driverName} (driver)</Text>
+            {/* Heading: turn round for the return leg, or move to another route. Blocked while passengers are on board. */}
+            <View style={styles.headingRow}>
+              <Pressable onPress={turnRound} accessibilityRole="button" accessibilityLabel={`Turn round. Now heading to ${data.route.destination}`} style={[styles.headingBtn, { borderColor: 'rgba(255,255,255,0.22)', backgroundColor: 'rgba(255,255,255,0.08)' }]}>
+                <Feather name="repeat" size={15} color={WHITE} />
+                <Text style={[styles.headingText, { color: WHITE }]}>Turn round</Text>
+              </Pressable>
+              <Pressable onPress={() => { Haptics.selectionAsync(); setRouteOpen(true); }} accessibilityRole="button" accessibilityLabel="Change route" style={[styles.headingBtn, { borderColor: 'rgba(255,255,255,0.22)', backgroundColor: 'rgba(255,255,255,0.08)' }]}>
+                <Feather name="map" size={15} color={WHITE} />
+                <Text style={[styles.headingText, { color: WHITE }]}>Change route</Text>
+              </Pressable>
+            </View>
           </LinearGradient>
 
           {/* Earnings */}
@@ -263,6 +306,9 @@ export default function TodayScreen() {
 }
 
 const styles = StyleSheet.create({
+  headingRow: { flexDirection: 'row', gap: 10, marginTop: 16 },
+  headingBtn: { flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, paddingVertical: 11, borderWidth: StyleSheet.hairlineWidth * 2, borderRadius: 999 },
+  headingText: { fontFamily: 'PlusJakartaSans_700Bold', fontSize: 13 },
   scroll: { paddingHorizontal: GUTTER, paddingBottom: 40 },
   kicker: { fontFamily: 'PlusJakartaSans_600SemiBold', fontSize: 12, letterSpacing: 1.4, marginBottom: 16 },
   center: { paddingVertical: 80, alignItems: 'center' },

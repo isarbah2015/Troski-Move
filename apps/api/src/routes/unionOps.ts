@@ -3,7 +3,7 @@ import { z } from "zod";
 import { and, desc, eq, inArray, isNotNull, sql } from "drizzle-orm";
 import { requireUnion } from "../auth";
 import { db } from "../db";
-import { disputesTable, fareTablesTable, routesTable, unregisteredReportsTable, usersTable, vehiclesTable, warningsTable } from "../db/schema";
+import { disputesTable, fareTablesTable, routeChangesTable, routesTable, unregisteredReportsTable, usersTable, vehiclesTable, warningsTable } from "../db/schema";
 import { logger } from "../logger";
 import { computeCompliance, RULES } from "../services/compliance";
 import { buildPercentTable, currentFares, invalidateFareCache } from "../services/fares";
@@ -124,6 +124,23 @@ router.post("/union/disputes/:id/reply", async (req, res): Promise<void> => {
     if (v) smsStatus = await sendSms(v.driverPhone, `GPRTU: a passenger has reported ${ALERT_LABEL[d.disputeType] ?? "an incident"} on ${v.shortCode}. Drive carefully and call your terminal chairman now.`);
   }
   res.json({ ok: true, smsStatus });
+});
+
+// ---- Direction and route changes by conductors ----------------------------------------------------------
+
+router.get("/union/route-changes", async (_req, res): Promise<void> => {
+  const rows = await db
+    .select({ c: routeChangesTable, code: vehiclesTable.shortCode, driver: vehiclesTable.driverName })
+    .from(routeChangesTable)
+    .innerJoin(vehiclesTable, eq(routeChangesTable.vehicleId, vehiclesTable.id))
+    .orderBy(desc(routeChangesTable.createdAt))
+    .limit(100);
+  const todayCount = new Map<string, number>();
+  const startOfDay = new Date(); startOfDay.setUTCHours(0, 0, 0, 0);
+  for (const { c, code } of rows) if (c.kind === "route" && c.createdAt >= startOfDay) todayCount.set(code, (todayCount.get(code) ?? 0) + 1);
+  res.json({
+    changes: rows.map(({ c, code, driver }) => ({ id: c.id, vehicle: code, driver, kind: c.kind, from: c.fromRoute, to: c.toRoute, fromDirection: c.fromDirection, toDirection: c.toDirection, at: c.createdAt, /** More than two route switches in one day looks like dodging the route. */ unusual: c.kind === "route" && (todayCount.get(code) ?? 0) > 2 })),
+  });
 });
 
 // ---- Registration: reports of unregistered vehicles ---------------------------------------------------

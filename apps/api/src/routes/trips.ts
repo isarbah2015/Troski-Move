@@ -7,7 +7,8 @@ import { conductorFromRequest, conductorOf, ownsVehicle, requireConductor } from
 import { isSimulator } from "../services/momo";
 import { sendPush } from "../services/push";
 import { initiateExtension } from "./payments";
-import { amountDue, checkTrip, etaBetween, round2, guestUserId, insertTrip, newTripRef, stopIndex, userExists, vehicleWithRoute } from "../lib";
+import { amountDue, checkTrip, etaBetween, round2, guestUserId, insertTrip, newTripRef, reverseStops, stopIndex, userExists, vehicleWithRoute } from "../lib";
+import { activeFareTable, overlayFares } from "../services/fares";
 
 const router: IRouter = Router();
 
@@ -184,7 +185,7 @@ router.get("/trips/active", async (req, res): Promise<void> => {
       : eq(activeTripsTable.passengerId, passengerId!);
 
   const rows = await db
-    .select({ trip: activeTripsTable, tripRef: transactionsTable.tripRef, boardingStop: transactionsTable.boardingStop, paid: transactionsTable.amountPaid, note: transactionsTable.customStopNote, code: vehiclesTable.shortCode, stops: routesTable.stopsJson })
+    .select({ trip: activeTripsTable, tripRef: transactionsTable.tripRef, boardingStop: transactionsTable.boardingStop, paid: transactionsTable.amountPaid, note: transactionsTable.customStopNote, code: vehiclesTable.shortCode, stops: routesTable.stopsJson, routeId: routesTable.routeId, direction: vehiclesTable.direction })
     .from(activeTripsTable)
     .innerJoin(transactionsTable, eq(activeTripsTable.transactionId, transactionsTable.id))
     .innerJoin(vehiclesTable, eq(activeTripsTable.vehicleId, vehiclesTable.id))
@@ -192,7 +193,11 @@ router.get("/trips/active", async (req, res): Promise<void> => {
     .where(filter)
     .orderBy(desc(activeTripsTable.startedAt));
 
-  const trips: ServerTrip[] = rows.map(({ trip, tripRef, boardingStop, paid, note, code, stops }) => ({
+  const fareTable = await activeFareTable();
+  const trips: ServerTrip[] = rows.map(({ trip, tripRef, boardingStop, paid, note, code, stops: seeded, routeId, direction }) => {
+    // The stops in the order, and at the fares, the vehicle is running them now.
+    const stops = direction === "inbound" ? reverseStops(overlayFares(routeId, seeded, fareTable)) : overlayFares(routeId, seeded, fareTable);
+    return {
     tripId: tripRef ?? `TRX-${trip.transactionId}`,
     passengerId: trip.passengerId,
     vehicleCode: code,
@@ -206,7 +211,8 @@ router.get("/trips/active", async (req, res): Promise<void> => {
     amountPaid: Number(paid),
     customStopNote: note,
     overstay: trip.overstayStop && trip.overstayAt ? overstayInfo(trip, stops, boardingStop, Number(paid)) : null,
-  }));
+  };
+  });
   res.json({ trips });
 });
 

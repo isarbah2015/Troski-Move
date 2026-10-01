@@ -3,7 +3,7 @@ import { eq, or } from "drizzle-orm";
 import { parseScannedCode } from "@trotrolink/shared";
 import { db } from "../db";
 import { routesTable, vehiclesTable } from "../db/schema";
-import { isSuspended } from "../lib";
+import { applyDirection, isSuspended } from "../lib";
 import { fareNotice, withFares } from "../services/fares";
 
 const router: IRouter = Router();
@@ -33,7 +33,7 @@ router.get("/vehicles/resolve", async (req, res): Promise<void> => {
     return;
   }
 
-  const route = await withFares(row.route);
+  const route = applyDirection(await withFares(row.route), row.vehicle.direction);
   res.json({
     vehicle: {
       id: row.vehicle.id,

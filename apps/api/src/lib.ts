@@ -20,6 +20,32 @@ export async function userExists(id: number): Promise<boolean> {
   return !!row;
 }
 
+/**
+ * The return leg of a route: the same stops in reverse. Fares are symmetric (what you pay depends on the distance
+ * between two stops), so each stop's fare from the new origin is the route total minus its old fare, and each leg
+ * keeps the time it took the other way.
+ */
+export function reverseStops(stops: RouteStop[]): RouteStop[] {
+  const n = stops.length;
+  const total = stops[n - 1]!.fare;
+  return stops
+    .slice()
+    .reverse()
+    .map((s, i) => ({ ...s, fare: i === 0 ? 0 : round2(total - s.fare), etaMinutes: i === 0 ? 0 : stops[n - i]!.etaMinutes }));
+}
+
+/** "Circle → Kasoa via Kaneshie" becomes "Kasoa → Circle via Kaneshie". */
+export function reverseRouteName(name: string): string {
+  const m = name.match(/^(.*?) → (.*?)( via .*)?$/);
+  return m ? `${m[2]} → ${m[1]}${m[3] ?? ""}` : name;
+}
+
+/** Lays a vehicle's direction over its route (after fares): inbound runs the stops, names and ends the other way. */
+export function applyDirection<T extends { routeName: string; origin: string; destination: string; stopsJson: RouteStop[] }>(route: T, direction: string): T {
+  if (direction !== "inbound") return route;
+  return { ...route, routeName: reverseRouteName(route.routeName), origin: route.destination, destination: route.origin, stopsJson: reverseStops(route.stopsJson) };
+}
+
 export async function vehicleWithRoute(shortCode: string) {
   const [row] = await db
     .select({ vehicle: vehiclesTable, route: routesTable })
@@ -28,7 +54,7 @@ export async function vehicleWithRoute(shortCode: string) {
     .where(eq(vehiclesTable.shortCode, shortCode.toUpperCase()))
     .limit(1);
   // Prices always come from the fare table in force, never from the seeded fares alone.
-  return row ? { vehicle: row.vehicle, route: await withFares(row.route) } : null;
+  return row ? { vehicle: row.vehicle, route: applyDirection(await withFares(row.route), row.vehicle.direction) } : null;
 }
 
 /** A vehicle the union has suspended (and the suspension has not run out) cannot take payments. */

@@ -66,6 +66,8 @@ export const vehiclesTable = pgTable("vehicles", {
   status: text("status").$type<"active" | "suspended">().notNull().default("active"),
   suspendedUntil: timestamp("suspended_until", { withTimezone: true }),
   suspensionReason: text("suspension_reason"),
+  /** Which way the vehicle is running on its route: `inbound` is the return leg (the stops in reverse). */
+  direction: text("direction").$type<"outbound" | "inbound">().notNull().default("outbound"),
   /** Where the union's warning SMS goes. */
   driverPhone: text("driver_phone"),
   /** The owner agreed that the union may share their verified income statement (e.g. with a lender). */
@@ -301,5 +303,17 @@ export const unregisteredReportsTable = pgTable("unregistered_reports", {
   lat: numeric("lat", { precision: 9, scale: 6 }),
   lng: numeric("lng", { precision: 9, scale: 6 }),
   status: text("status").$type<(typeof disputeStatuses)[number]>().notNull().default("open"),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+});
+
+/** Every time a conductor turns a vehicle round or moves it to another route, so the union can see it. */
+export const routeChangesTable = pgTable("route_changes", {
+  id: serial("id").primaryKey(),
+  vehicleId: integer("vehicle_id").notNull().references(() => vehiclesTable.id),
+  kind: text("kind").$type<"direction" | "route">().notNull(),
+  fromRoute: text("from_route").notNull(),
+  toRoute: text("to_route").notNull(),
+  fromDirection: text("from_direction").notNull(),
+  toDirection: text("to_direction").notNull(),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
 });

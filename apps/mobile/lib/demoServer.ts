@@ -23,6 +23,8 @@ type Db = {
   conductors: Record<string, { pin: string; failed: number; lockedUntil?: number }>;
   sessions: Record<string, { vehicleCode: string; expiresAt: number }>;
   ratings: Array<{ tripId: string; vehicleCode: string; driver: number; conductor: number; comment?: string; at: number }>;
+  /** Direction and route chosen by the conductor, per vehicle (the demo's version of the vehicles table). */
+  vehicleCfg?: Record<string, { routeId?: string; direction?: 'outbound' | 'inbound' }>;
   splits: Array<Record<string, unknown>>; disputes: Array<Record<string, unknown>>; events: Array<Record<string, unknown>>;
 };
 
@@ -83,7 +85,21 @@ const guestId = (deviceId: string) => {
 };
 
 const VEHICLES = SEED_ROUTES.flatMap((r, ri) => r.vehicles.map((v, vi) => ({ ...v, id: ri * 10 + vi + 1, route: r })));
-const vehicle = (code: string) => VEHICLES.find((v) => v.shortCode === code.toUpperCase());
+/** The return leg: the same stops reversed, with each stop's fare from the new origin and each leg's time kept. */
+function reversed(route: (typeof SEED_ROUTES)[number]) {
+  const st = route.stops; const n = st.length; const total = st[n - 1]!.fare;
+  const stops = st.slice().reverse().map((s, i) => ({ ...s, fare: i === 0 ? 0 : round2(total - s.fare), etaMinutes: i === 0 ? 0 : st[n - i]!.etaMinutes }));
+  const m = route.routeName.match(/^(.*?) → (.*?)( via .*)?$/);
+  return { ...route, routeName: m ? `${m[2]} → ${m[1]}${m[3] ?? ''}` : route.routeName, origin: route.destination, destination: route.origin, stops };
+}
+/** A vehicle with its current route and direction laid over the seed data. */
+const vehicle = (code: string) => {
+  const base = VEHICLES.find((v) => v.shortCode === code.toUpperCase());
+  if (!base) return undefined;
+  const cfg = db?.vehicleCfg?.[base.shortCode];
+  const route = SEED_ROUTES.find((r) => r.routeId === cfg?.routeId) ?? base.route;
+  return { ...base, route: cfg?.direction === 'inbound' ? reversed(route) : route };
+};
 const idx = (stops: RouteStop[], name: string) => stops.findIndex((s) => s.name.toLowerCase() === name.trim().toLowerCase());
 const eta = (stops: RouteStop[], from: number, to: number) => stops.slice(from + 1, to + 1).reduce((a, s) => a + s.etaMinutes, 0);
 
@@ -360,6 +376,24 @@ async function route(method: string, path: string, query: URLSearchParams, body:
     if (t!.deviceId !== body.deviceId) fail(403, 'This is not your trip');
     d.disputes.push({ id: d.disputes.length + 1, type: body.reason, description: body.description ?? null, amountAsked: body.amountAsked ?? null, urgent: body.reason === 'accident' || body.reason === 'careless_driving', at: Date.now(), reply: null, status: 'open', lat: body.lat ?? null, lng: body.lng ?? null, trip: { ...t }, events: d.events.filter((e) => e.vehicle === t!.vehicleCode).slice(-40), filedAt: new Date().toISOString() });
     await save(); return { ok: true, disputeId: d.disputes.length };
+  }
+  if (path === '/conductor/route' || path === '/conductor/direction') {
+    const own = authed(d, headers);
+    const cfg = (d.vehicleCfg ??= {}); cfg[own] ??= {};
+    const base = VEHICLES.find((v) => v.shortCode === own)!;
+    const onBoard = d.trips.filter((t) => t.active && t.vehicleCode === own).length;
+    const snap = () => {
+      const v = vehicle(own)!;
+      return { current: { routeId: v.route.routeId, name: v.route.routeName, origin: v.route.origin, destination: v.route.destination, direction: cfg[own]!.direction ?? 'outbound' }, routes: SEED_ROUTES.map((r) => ({ routeId: r.routeId, name: r.routeName, origin: r.origin, destination: r.destination })), onBoard };
+    };
+    if (!post) return snap();
+    if (onBoard > 0) fail(409, `${onBoard} paid passenger${onBoard === 1 ? ' is' : 's are'} still on board. Change direction or route once everyone has got off.`, { onBoard });
+    if (path === '/conductor/direction') cfg[own]!.direction = (cfg[own]!.direction ?? 'outbound') === 'outbound' ? 'inbound' : 'outbound';
+    else {
+      const target = SEED_ROUTES.find((r) => r.routeId === body.routeId); if (!target) fail(404, 'Unknown route');
+      cfg[own] = { routeId: target!.routeId === base.route.routeId ? undefined : target!.routeId, direction: 'outbound' };
+    }
+    await save(); return snap();
   }
   if (post && path === '/reports/unregistered') {
     d.disputes.push({ id: d.disputes.length + 1, type: 'unregistered_vehicle', code: body.code ?? null, description: body.note ?? null, filedAt: new Date().toISOString() });

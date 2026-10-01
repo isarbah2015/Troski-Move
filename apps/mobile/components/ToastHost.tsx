@@ -5,20 +5,22 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useColors } from '@/hooks/useColors';
 import { subscribeToast } from '@/lib/toast';
 
-const VISIBLE_MS = 2200;
+const VISIBLE_MS = 3200;
 
 export function ToastHost() {
   const colors = useColors();
   const insets = useSafeAreaInsets();
   const [message, setMessage] = useState<string | null>(null);
+  const [kind, setKind] = useState<'success' | 'error'>('success');
   const anim = useRef(new Animated.Value(0)).current;
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(
     () =>
-      subscribeToast((next) => {
+      subscribeToast((next, nextKind) => {
         if (timer.current) clearTimeout(timer.current);
         setMessage(next);
+        setKind(nextKind);
         Animated.timing(anim, { toValue: 1, duration: 180, useNativeDriver: true }).start();
         timer.current = setTimeout(() => {
           Animated.timing(anim, { toValue: 0, duration: 220, useNativeDriver: true }).start(() => setMessage(null));
@@ -39,14 +41,14 @@ export function ToastHost() {
         {
           top: insets.top + 12,
           backgroundColor: colors.card,
-          borderColor: colors.primary,
+          borderColor: kind === 'error' ? colors.destructive : colors.primary,
           borderRadius: colors.radiusPill,
           opacity: anim,
           transform: [{ translateY: anim.interpolate({ inputRange: [0, 1], outputRange: [-16, 0] }) }],
         },
       ]}
     >
-      <Feather name="check-circle" size={18} color={colors.primary} />
+      <Feather name={kind === 'error' ? 'alert-circle' : 'check-circle'} size={18} color={kind === 'error' ? colors.destructive : colors.primary} />
       <Text style={[styles.text, { color: colors.foreground }]}>{message}</Text>
     </Animated.View>
   );
