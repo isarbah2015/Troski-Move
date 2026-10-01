@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { KeyboardProvider } from 'react-native-keyboard-controller';
@@ -9,6 +9,7 @@ import { restoreTheme } from '@/lib/theme';
 import { restoreLanguage } from '@/lib/i18n';
 import { restoreCurrency } from '@/lib/currencyPref';
 import { registerForPush } from '@/lib/notify';
+import { AnimatedSplash } from '@/components/AnimatedSplash';
 import { SyncBanner } from '@/components/SyncBanner';
 import { ToastHost } from '@/components/ToastHost';
 import { useSyncLoop } from '@/lib/sync';
@@ -64,6 +65,9 @@ export default function RootLayout() {
     PlusJakartaSans_800ExtraBold,
   });
 
+  const [splashDone, setSplashDone] = useState(false);
+  const finishSplash = useCallback(() => setSplashDone(true), []);
+
   useEffect(() => {
     void restoreTheme();
     void restoreLanguage();
@@ -89,6 +93,7 @@ export default function RootLayout() {
               <ThemedStatusBar />
               <SyncBanner />
               <ToastHost />
+              {splashDone ? null : <AnimatedSplash onDone={finishSplash} />}
             </KeyboardProvider>
           </GestureHandlerRootView>
         </QueryClientProvider>
