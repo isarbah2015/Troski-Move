@@ -141,7 +141,7 @@ export default function MyQrScreen() {
             <Feather name="alert-triangle" size={18} color={colors.accent} />
             <View style={styles.warningText}>
               <Text style={[styles.warningTitle, { color: colors.accent }]}>Hold 5–10 cm from the camera</Text>
-              <Text style={[styles.warningBody, { color: colors.accent }]}>Place the sticker on the dashboard where passengers can reach it.</Text>
+              <Text style={[styles.warningBody, { color: colors.accent }]}>Print it as a sticker for the dashboard. Sticker torn or lost? Show this screen: it works the same.</Text>
             </View>
           </View>
 

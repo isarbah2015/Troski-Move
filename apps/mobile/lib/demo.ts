@@ -58,6 +58,11 @@ export async function seedDemoActiveTrip() {
     const mallam = resolved.route.stops.find((s) => s.name === 'Mallam');
     if (!mallam) return;
     await seedTrip({ tripId, deviceId: await getDeviceId(), vehicleCode: 'CIR01', alighting: 'Mallam', current: 'Kaneshie', minutesAgo: 6 });
+    // Other paid passengers on the same trotro, so the conductor's board has something to show.
+    const others: Array<[string, string]> = [['TRX-261001-K9QA', 'Odorkor'], ['TRX-261001-AM2E', 'Odorkor'], ['TRX-261001-YW7C', 'Mallam'], ['TRX-261001-ES4D', 'Kasoa']];
+    for (const [i, [id, to]] of others.entries()) {
+      await seedTrip({ tripId: id, deviceId: `demo-pax-${i + 1}`, vehicleCode: 'CIR01', alighting: to, current: 'Kaneshie', minutesAgo: 6 + i });
+    }
     const base = buildTrip(resolved, mallam, tripId, undefined, new Date(Date.now() - 6 * 60_000));
     const names = base.stops.map((s) => s.name);
     const at = names.indexOf('Kaneshie');
