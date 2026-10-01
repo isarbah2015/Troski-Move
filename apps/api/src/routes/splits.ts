@@ -2,12 +2,13 @@ import { Router, type IRouter } from "express";
 import { SplitBody } from "@trotrolink/shared";
 import { db } from "../db";
 import { dailySplitsTable } from "../db/schema";
+import { ownsVehicle, requireConductor } from "../auth";
 import { round2, vehicleWithRoute } from "../lib";
 
 const router: IRouter = Router();
 
 /** The conductor closes the day: upserts that vehicle's split and returns what the driver keeps. */
-router.post("/splits", async (req, res): Promise<void> => {
+router.post("/splits", requireConductor, async (req, res): Promise<void> => {
   const parsed = SplitBody.safeParse(req.body);
   if (!parsed.success) {
     res.status(400).json({ error: "Invalid body", issues: parsed.error.issues });
@@ -19,6 +20,7 @@ router.post("/splits", async (req, res): Promise<void> => {
     res.status(404).json({ error: "Vehicle not found" });
     return;
   }
+  if (!ownsVehicle(res, found.vehicle.shortCode)) return;
   // The table's `driver_net` holds what is left of the day's fares after owner drop, conductor wage and fuel.
   const driverNet = round2(b.totalFares - (b.ownerDrop + b.conductorWage + b.fuelCost));
   const values = {

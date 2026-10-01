@@ -3,6 +3,7 @@ import { and, desc, eq, sql } from "drizzle-orm";
 import { AlightBody, GuestBody, StartTripBody, StopMarkBody, type HistoryTrip, type ServerTrip } from "@trotrolink/shared";
 import { db } from "../db";
 import { activeTripsTable, ratingsTable, routesTable, transactionsTable, tripEventsTable, vehiclesTable } from "../db/schema";
+import { conductorFromRequest, conductorOf, ownsVehicle, requireConductor } from "../auth";
 import { checkTrip, etaBetween, guestUserId, insertTrip, newTripRef, stopIndex, userExists, vehicleWithRoute } from "../lib";
 
 const router: IRouter = Router();
@@ -74,8 +75,8 @@ router.post("/trips/start", async (req, res): Promise<void> => {
  * Conductor marks the anchor the vehicle is at. Every active trip on the vehicle whose boarding stop is
  * behind it moves forward (never backward, and never past the passenger's own stop).
  */
-// TODO(MUST FIX before launch): authenticate the conductor and check they work this vehicle. Today anyone can post a stop mark.
-router.post("/trips/stop", async (req, res): Promise<void> => {
+/** Conductor-only: the signed-in conductor can mark stops for their own vehicle and nobody else's. */
+router.post("/trips/stop", requireConductor, async (req, res): Promise<void> => {
   const parsed = StopMarkBody.safeParse(req.body);
   if (!parsed.success) {
     res.status(400).json({ error: "Invalid body", issues: parsed.error.issues });
@@ -95,16 +96,8 @@ router.post("/trips/stop", async (req, res): Promise<void> => {
     return;
   }
 
-  let conductorId: number | null = null;
-  if (body.conductorId !== undefined) {
-    if (!(await userExists(body.conductorId))) {
-      res.status(404).json({ error: "Conductor not found" });
-      return;
-    }
-    conductorId = body.conductorId;
-  } else if (body.deviceId) {
-    conductorId = await guestUserId(body.deviceId, "conductor");
-  }
+  if (!ownsVehicle(res, found.vehicle.shortCode)) return;
+  const conductorId = conductorOf(res).id;
 
   const passengersNotified = await db.transaction(async (tx) => {
     const now = new Date();
@@ -149,6 +142,19 @@ router.get("/trips/active", async (req, res): Promise<void> => {
   if (!vehicleCode && !tripId && !(passengerId && Number.isInteger(passengerId))) {
     res.status(400).json({ error: "Provide vehicleCode, tripId or passengerId" });
     return;
+  }
+
+  if (vehicleCode) {
+    // The passenger list for a vehicle is for that vehicle's conductor only.
+    const conductor = await conductorFromRequest(req);
+    if (!conductor) {
+      res.status(401).json({ error: "Sign in as a conductor" });
+      return;
+    }
+    if (conductor.vehicleCode !== vehicleCode) {
+      res.status(403).json({ error: "This is not your vehicle" });
+      return;
+    }
   }
 
   const filter = vehicleCode

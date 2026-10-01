@@ -266,3 +266,23 @@ export const PaymentStatusResponse = z.object({
   reason: z.string().optional(),
 });
 export type PaymentStatusResponse = z.infer<typeof PaymentStatusResponse>;
+
+// ---- Conductor auth ---------------------------------------------------------------------------------
+
+const pin = z.string().regex(/^\d{4}$/, 'PIN must be 4 digits');
+
+/** First launch in conductor mode: choose a PIN for the vehicle. `setupCode` is the activation code the union gives out. */
+export const ConductorSetupBody = z.object({ vehicleCode: shortCode, pin, setupCode: z.string().max(64).optional() });
+export type ConductorSetupBody = z.infer<typeof ConductorSetupBody>;
+
+export const ConductorLoginBody = z.object({ vehicleCode: shortCode, pin });
+export type ConductorLoginBody = z.infer<typeof ConductorLoginBody>;
+
+export const ConductorLoginResponse = z.object({
+  token: z.string(),
+  expiresAt: z.string(),
+  conductorId: z.number().int(),
+  vehicleCode: z.string(),
+  conductorName: z.string(),
+});
+export type ConductorLoginResponse = z.infer<typeof ConductorLoginResponse>;

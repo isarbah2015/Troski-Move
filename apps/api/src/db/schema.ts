@@ -24,6 +24,12 @@ export const usersTable = pgTable("users", {
   role: text("role").$type<UserRole>().notNull().default("passenger"),
   languagePref: text("language_pref").notNull().default("en"),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  /** Conductor sign-in: scrypt hash of the 4-digit PIN, and the one vehicle this conductor works. */
+  conductorPinHash: text("conductor_pin_hash"),
+  conductorVehicleCode: text("conductor_vehicle_code").unique(),
+  lastLoginAt: timestamp("last_login_at", { withTimezone: true }),
+  failedPinAttempts: integer("failed_pin_attempts").notNull().default(0),
+  lockedUntil: timestamp("locked_until", { withTimezone: true }),
 });
 
 export type User = typeof usersTable.$inferSelect;
@@ -209,3 +215,12 @@ export const paymentsTable = pgTable(
 );
 
 export type Payment = typeof paymentsTable.$inferSelect;
+
+/** A conductor's signed-in session. Only a SHA-256 of the token is stored, so a database leak cannot be replayed. */
+export const conductorSessionsTable = pgTable("conductor_sessions", {
+  id: serial("id").primaryKey(),
+  conductorId: integer("conductor_id").notNull().references(() => usersTable.id),
+  tokenHash: text("token_hash").notNull().unique(),
+  expiresAt: timestamp("expires_at", { withTimezone: true }).notNull(),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+});
