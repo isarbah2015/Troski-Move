@@ -22,6 +22,7 @@ import {
   getRole,
   getTripHistory,
   getTripRatings,
+  getTripReports,
   getUser,
   setRole as saveRole,
   type Role,
@@ -40,11 +41,13 @@ export default function ProfileScreen() {
   const [role, setRoleState] = useState<Role>('passenger');
   const [selected, setSelected] = useState<TripRecord | null>(null);
   const [ratings, setRatings] = useState<Record<string, TripRating>>({});
+  const [reports, setReports] = useState<Record<string, string>>({});
   const [rateTarget, setRateTarget] = useState<RatingTarget | null>(null);
 
   const load = useCallback(async () => {
-    const [u, t, r, rt] = await Promise.all([getUser(), getTripHistory(), getRole(), getTripRatings()]);
+    const [u, t, r, rt, rp] = await Promise.all([getUser(), getTripHistory(), getRole(), getTripRatings(), getTripReports()]);
     setRatings(rt);
+    setReports(rp);
     setUser(u);
     setTrips(t);
     setRoleState(r);
@@ -138,6 +141,12 @@ export default function ProfileScreen() {
             <View style={styles.tripMain}>
               <Text style={[styles.tripRoute, { color: colors.foreground }]}>{t.boardingStop} → {t.alightingStop}</Text>
               <Text style={[styles.tripMeta, { color: colors.mutedForeground }]}>{formatWhen(t.startedAt)} · {formatCedis(t.amountPaid)}</Text>
+              {reports[t.tripId] ? (
+                <View style={[styles.reported, { borderColor: colors.mutedForeground, borderRadius: colors.radiusPill }]}>
+                  <Feather name="flag" size={11} color={colors.mutedForeground} />
+                  <Text style={[styles.reportedText, { color: colors.mutedForeground }]}>Reported</Text>
+                </View>
+              ) : null}
               <View style={{ marginTop: 6 }}>
                 {(ratings[t.tripId]?.driverRating ?? t.rating) !== null && (ratings[t.tripId]?.driverRating ?? t.rating) !== undefined ? (
                   <Stars rating={ratings[t.tripId]?.driverRating ?? t.rating} />
@@ -241,6 +250,8 @@ const styles = StyleSheet.create({
   statLabel: { fontFamily: 'Inter_500Medium', fontSize: 12, marginTop: 4 },
   emptyHistory: { borderWidth: 1, padding: 24, alignItems: 'center', gap: 10 },
   emptyText: { fontFamily: 'Inter_500Medium', fontSize: 14, textAlign: 'center' },
+  reported: { alignSelf: 'flex-start', flexDirection: 'row', alignItems: 'center', gap: 5, borderWidth: 1, paddingHorizontal: 8, height: 22, marginTop: 6 },
+  reportedText: { fontFamily: 'Inter_600SemiBold', fontSize: 11 },
   rateChip: { alignSelf: 'flex-start', flexDirection: 'row', alignItems: 'center', gap: 6, borderWidth: 1, paddingHorizontal: 10, height: 26 },
   rateChipText: { fontFamily: 'Inter_700Bold', fontSize: 12 },
   tripRow: { flexDirection: 'row', alignItems: 'center', borderWidth: 1, padding: 16, marginBottom: 10 },

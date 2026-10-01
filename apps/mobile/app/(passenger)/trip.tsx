@@ -6,16 +6,20 @@ import * as Haptics from 'expo-haptics';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import type { ActiveTrip, TripRecord } from '@trotrolink/shared';
 import { RatingSheet, type RatingTarget } from '@/components/RatingSheet';
-import { ReportSheet, type ReportReason } from '@/components/ReportSheet';
+import { OverstaySheet } from '@/components/OverstaySheet';
+import { PaymentSheet, type PaymentPhase } from '@/components/PaymentSheet';
+import { ReportSheet } from '@/components/ReportSheet';
+import { PulseDot } from '@/components/PulseDot';
 import { useColors } from '@/hooks/useColors';
-import { formatCedis } from '@/lib/api';
+import { api, formatCedis } from '@/lib/api';
 import { RATING_PROMPT_WINDOW_MS, submitTripRating } from '@/lib/ratings';
-import { clearActiveTrip, getActiveTrip, getTripHistory, getTripRatings, markTripArrived, saveActiveTrip } from '@/lib/storage';
+import { getDeviceId } from '@/lib/identity';
+import { waitForPayment } from '@/lib/payment';
+import { clearActiveTrip, getActiveTrip, getTripHistory, getTripRatings, markTripArrived, saveActiveTrip, saveTripReport, updateTripRecord } from '@/lib/storage';
 import { showToast } from '@/lib/toast';
 import { useFocusPolling } from '@/lib/polling';
 import { sendOrQueue } from '@/lib/sync';
 import { applyServerTrip, tripProgress } from '@/lib/trip';
-import { api } from '@/lib/api';
 
 function LiveBadge() {
   const colors = useColors();
@@ -74,6 +78,12 @@ function ActiveTripView({ trip, onCleared, onConfirmAlighting }: { trip: ActiveT
       <View style={styles.headRow}>
         <Text style={[styles.kicker, { color: colors.mutedForeground }]}>TRIP IN PROGRESS</Text>
         <LiveBadge />
+      </View>
+
+      <View style={[styles.paid, { backgroundColor: colors.secondary, borderColor: colors.primary, borderRadius: colors.radiusPill }]} accessibilityLabel={`Paid, trip ${trip.tripId}`}>
+        <PulseDot color={colors.primary} size={8} />
+        <Feather name="shield" size={14} color={colors.primary} />
+        <Text style={[styles.paidText, { color: colors.foreground }]}>PAID · {trip.tripId}</Text>
       </View>
 
       <Text style={[styles.to, { color: colors.foreground }]}>To {trip.alightingStop}</Text>
@@ -174,10 +184,12 @@ function ActiveTripView({ trip, onCleared, onConfirmAlighting }: { trip: ActiveT
       <ReportSheet
         visible={reportOpen}
         onClose={() => setReportOpen(false)}
-        onSelect={(_reason: ReportReason) => {
-          // TODO: persist as a dispute via the API (disputes table) once auth and trips exist.
+        onSubmit={async (reason, description) => {
+          // Queued if offline; the server attaches the trip, vehicle and stop history as evidence.
+          await sendOrQueue({ type: 'dispute', body: { tripId: trip.tripId, deviceId: await getDeviceId(), reason, description } });
+          await saveTripReport(trip.tripId, reason);
           setReportOpen(false);
-          showToast('Report sent');
+          showToast('Report sent. Union will review within 24h.');
         }}
       />
     </ScrollView>
@@ -239,6 +251,9 @@ export default function TripScreen() {
   const [recent, setRecent] = useState<TripRecord | null>(null);
   const [target, setTarget] = useState<RatingTarget | null>(null);
   const [loaded, setLoaded] = useState(false);
+  const [overstay, setOverstay] = useState<{ stop: string; extraFare: number; deadline: string } | null>(null);
+  const [extPay, setExtPay] = useState<{ phase: PaymentPhase; simulator: boolean; message?: string } | null>(null);
+  const confirmRef = useRef<(notifyServer: boolean) => Promise<void>>(async () => undefined);
 
   /** The newest trip the passenger confirmed alighting from in the last 24h and has not rated. */
   const loadRecent = useCallback(async () => {
@@ -256,9 +271,22 @@ export default function TripScreen() {
     try {
       const { trips } = await api.activeTrips({ tripId: current.tripId });
       const server = trips[0];
-      if (!server) return;
+      if (!server) {
+        // The conductor closed this trip (they confirmed we got off here): finish it and ask for the rating.
+        if (!current.arrivedAt) {
+          showToast('Your trip was ended by the conductor');
+          await confirmRef.current(false);
+        }
+        return;
+      }
+      setOverstay(server.overstay ?? null);
       const next = applyServerTrip(current, server);
-      if (next.currentStop !== current.currentStop || next.etaMinutes !== current.etaMinutes) {
+      if (next.alightingStop !== current.alightingStop) {
+        // An overstay extension went through (we paid, or the 60 s auto-charge ran): keep the stored trip in step.
+        await updateTripRecord(next.tripId, { alightingStop: next.alightingStop, amountPaid: next.amountPaid });
+        showToast(`Trip extended to ${next.alightingStop}. ${formatCedis(next.amountPaid - current.amountPaid)} charged.`);
+      }
+      if (next.currentStop !== current.currentStop || next.etaMinutes !== current.etaMinutes || next.alightingStop !== current.alightingStop) {
         await saveActiveTrip(next);
         setTrip(next);
       }
@@ -283,22 +311,39 @@ export default function TripScreen() {
     }, [loadRecent]),
   );
 
-  const confirmAlighting = async () => {
-    if (!trip) return;
+  const confirmAlighting = async (notifyServer = true) => {
+    const t = tripRef.current;
+    if (!t) return;
     const arrivedAt = new Date().toISOString();
     Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
     // The trip already sits in history from payment; stamp it as arrived and open the rating sheet.
-    await Promise.all([saveActiveTrip({ ...trip, arrivedAt }), markTripArrived(trip.tripId, arrivedAt)]);
-    void sendOrQueue({ type: 'alight', body: { tripId: trip.tripId } });
-    setTrip({ ...trip, arrivedAt });
-    setTarget({
-      tripId: trip.tripId,
-      vehicleId: trip.vehicleId,
-      destination: trip.alightingStop,
-      driverName: trip.driverName,
-      conductorName: trip.conductorName ?? 'Conductor',
-      justArrived: true,
-    });
+    await Promise.all([saveActiveTrip({ ...t, arrivedAt }), markTripArrived(t.tripId, arrivedAt)]);
+    if (notifyServer) void sendOrQueue({ type: 'alight', body: { tripId: t.tripId } });
+    setOverstay(null);
+    setTrip({ ...t, arrivedAt });
+    setTarget({ tripId: t.tripId, vehicleId: t.vehicleId, destination: t.alightingStop, driverName: t.driverName, conductorName: t.conductorName ?? 'Conductor', justArrived: true });
+  };
+  confirmRef.current = confirmAlighting;
+
+  /** The passenger chose to pay the difference. Same MoMo flow as the first payment. */
+  const payExtension = async () => {
+    const t = tripRef.current;
+    if (!t) return;
+    setExtPay({ phase: 'sending', simulator: false });
+    try {
+      const started = await api.extendTrip(t.tripId);
+      setExtPay({ phase: 'pending', simulator: started.simulator });
+      const outcome = await waitForPayment(started.referenceId, started.tripId);
+      if (outcome.kind === 'success') {
+        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+        setExtPay(null);
+        await pollTrip();
+      } else {
+        setExtPay({ phase: outcome.kind, simulator: started.simulator, message: outcome.kind === 'failed' ? outcome.reason : undefined });
+      }
+    } catch (e) {
+      setExtPay({ phase: 'failed', simulator: false, message: e instanceof Error ? e.message : "Couldn't start the payment." });
+    }
   };
 
   /** Closing the sheet after arrival ends the trip: it leaves `activeTrip` and lives on in history. */
@@ -329,11 +374,23 @@ export default function TripScreen() {
         <ActiveTripView
           trip={trip}
           onCleared={() => setTrip(null)}
-          onConfirmAlighting={() => void confirmAlighting()}
+          onConfirmAlighting={() => void confirmAlighting(true)}
         />
       ) : (
         <EmptyState recent={recent} onRate={rateRecent} />
       )}
+      {trip ? (
+        <OverstaySheet declaredStop={trip.alightingStop} overstay={extPay ? null : overstay} onPay={() => void payExtension()} onGetOff={() => void confirmAlighting(true)} />
+      ) : null}
+      <PaymentSheet
+        phase={extPay?.phase ?? null}
+        amount={overstay?.extraFare ?? 0}
+        destination={overstay?.stop ?? ''}
+        message={extPay?.message}
+        simulator={extPay?.simulator ?? false}
+        onRetry={() => void payExtension()}
+        onClose={() => setExtPay(null)}
+      />
       <RatingSheet
         target={target}
         onSkip={finishTrip}
@@ -356,6 +413,8 @@ const styles = StyleSheet.create({
   live: { flexDirection: 'row', alignItems: 'center', gap: 6, borderWidth: 1, paddingHorizontal: 10, paddingVertical: 4 },
   liveDot: { width: 8, height: 8, borderRadius: 4 },
   liveText: { fontFamily: 'Inter_700Bold', fontSize: 11, letterSpacing: 1 },
+  paid: { alignSelf: 'flex-start', flexDirection: 'row', alignItems: 'center', gap: 8, borderWidth: 1, paddingHorizontal: 12, paddingVertical: 6, marginBottom: 10 },
+  paidText: { fontFamily: 'Inter_700Bold', fontSize: 12, letterSpacing: 0.5 },
   to: { fontFamily: 'Inter_700Bold', fontSize: 32 },
   route: { fontFamily: 'Inter_400Regular', fontSize: 14, lineHeight: 20, marginTop: 4, marginBottom: 20 },
   stats: { flexDirection: 'row', gap: 10, marginBottom: 20 },

@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { AppState } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { ApiError } from '@trotrolink/api-client';
-import type { AlightBody, RatingSubmission, SplitBody, StopMarkBody } from '@trotrolink/shared';
+import type { AlightBody, DisputeBody, RatingSubmission, SplitBody, StopMarkBody, UnpaidDisputeBody } from '@trotrolink/shared';
 import { api } from '@/lib/api';
 
 const QUEUE_KEY = 'offlineQueue';
@@ -13,7 +13,9 @@ export type SyncAction =
   | { type: 'stop'; body: StopMarkBody }
   | { type: 'alight'; body: AlightBody }
   | { type: 'rating'; body: RatingSubmission }
-  | { type: 'split'; body: SplitBody };
+  | { type: 'split'; body: SplitBody }
+  | { type: 'dispute'; body: DisputeBody }
+  | { type: 'unpaid'; body: UnpaidDisputeBody };
 
 type QueueItem = { id: string; action: SyncAction; queuedAt: string; waitingForSignIn?: boolean };
 
@@ -31,6 +33,12 @@ async function perform(action: SyncAction): Promise<void> {
       return;
     case 'split':
       await api.saveSplit((action as Extract<SyncAction, { type: 'split' }>).body);
+      return;
+    case 'dispute':
+      await api.reportTrip((action as Extract<SyncAction, { type: 'dispute' }>).body);
+      return;
+    case 'unpaid':
+      await api.reportUnpaid((action as Extract<SyncAction, { type: 'unpaid' }>).body);
       return;
   }
 }

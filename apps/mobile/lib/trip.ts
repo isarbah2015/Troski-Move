@@ -74,6 +74,8 @@ export function applyServerTrip(trip: ActiveTrip, server: ServerTrip): ActiveTri
   if (currentIdx < 0) return trip;
   return {
     ...trip,
+    alightingStop: server.alightingStop,
+    amountPaid: server.amountPaid,
     currentStop: server.currentStop,
     stopsRemaining: server.stopsRemaining,
     etaMinutes: server.etaMinutes,

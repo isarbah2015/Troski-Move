@@ -16,6 +16,9 @@ import {
   type AlightBody,
   type ConductorLoginBody,
   type ConductorSetupBody,
+  type DisputeBody,
+  DisputeResponse,
+  type UnpaidDisputeBody,
   type InitiatePaymentBody,
   type RatingSubmission,
   type SplitBody,
@@ -125,6 +128,31 @@ export function createApiClient(baseUrl: string, options: ApiClientOptions = {})
     async activeTrips(filter: { vehicleCode: string } | { tripId: string } | { passengerId: number }) {
       const q = new URLSearchParams(Object.entries(filter).map(([k, v]) => [k, String(v)]));
       return ActiveTripsResponse.parse(await request(`/trips/active?${q.toString()}`));
+    },
+
+    /** The passenger pays the difference to the stop the vehicle has reached; returns a payment to poll like any other. */
+    async extendTrip(tripId: string) {
+      return InitiatePaymentResponse.parse(await post('/trips/extend', { tripId }));
+    },
+
+    /** "Get off now": ends the trip at the passenger's declared stop. */
+    async getOff(tripId: string) {
+      await post('/trips/getoff', { tripId });
+    },
+
+    /** Conductor: this overstaying passenger is getting off here. Closes the trip. */
+    async confirmAlight(tripId: string) {
+      await post('/trips/confirm-alight', { tripId });
+    },
+
+    /** Passenger reports a trip; the server attaches the evidence. */
+    async reportTrip(body: DisputeBody) {
+      return DisputeResponse.parse(await post('/disputes', body));
+    },
+
+    /** Conductor reports a passenger on board who did not pay. */
+    async reportUnpaid(body: UnpaidDisputeBody) {
+      return DisputeResponse.parse(await post('/disputes/unpaid', body));
     },
 
     /** Passenger confirmed they got off. */

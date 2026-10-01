@@ -195,3 +195,30 @@ export async function markTripArrived(tripId: string, arrivedAt: string): Promis
   const next = list.map((t) => (t.tripId === tripId ? { ...t, arrivedAt } : t));
   await saveTripHistory(next);
 }
+
+// ---- Reports and trip edits -------------------------------------------------------------------------
+
+const TRIP_REPORTS_KEY = 'tripReports';
+
+/** Trips this passenger has reported: `{ [tripId]: reason }`. Drives the "Reported" tag in history. */
+export async function getTripReports(): Promise<Record<string, string>> {
+  try {
+    const raw = await AsyncStorage.getItem(TRIP_REPORTS_KEY);
+    const parsed = raw ? (JSON.parse(raw) as unknown) : {};
+    return parsed && typeof parsed === 'object' ? (parsed as Record<string, string>) : {};
+  } catch {
+    return {};
+  }
+}
+
+export async function saveTripReport(tripId: string, reason: string): Promise<void> {
+  const all = await getTripReports();
+  all[tripId] = reason;
+  await AsyncStorage.setItem(TRIP_REPORTS_KEY, JSON.stringify(all));
+}
+
+/** Patches one history record (for example after an overstay extends the trip). */
+export async function updateTripRecord(tripId: string, patch: Partial<TripRecord>): Promise<void> {
+  const list = await getTripHistory();
+  await saveTripHistory(list.map((t) => (t.tripId === tripId ? { ...t, ...patch } : t)));
+}

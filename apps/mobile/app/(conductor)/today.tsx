@@ -5,7 +5,8 @@ import * as Haptics from 'expo-haptics';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { CONDUCTOR_BONUS } from '@trotrolink/shared';
+import { CONDUCTOR_BONUS, type ServerTrip } from '@trotrolink/shared';
+import { PassengerSheet } from '@/components/PassengerSheet';
 import { PulseDot } from '@/components/PulseDot';
 import { SectionHeader } from '@/components/SectionHeader';
 import { useColors } from '@/hooks/useColors';
@@ -13,6 +14,7 @@ import { api, formatCedis } from '@/lib/api';
 import { colors as tokens } from '@/lib/colors';
 import { bonusFor, formatOnline, MOCK_BONUS, MOCK_TODAY, useConductorVehicle } from '@/lib/conductor';
 import { useFocusPolling } from '@/lib/polling';
+import { showToast } from '@/lib/toast';
 import { sendOrQueue } from '@/lib/sync';
 
 const GUTTER = 24;
@@ -27,7 +29,10 @@ export default function TodayScreen() {
 
   const [currentStop, setCurrentStop] = useState<string | null>(null);
   const [online, setOnline] = useState(true);
-  const [onBoard, setOnBoard] = useState<number | null>(null);
+  const [passengers, setPassengers] = useState<ServerTrip[] | null>(null);
+  const [selected, setSelected] = useState<ServerTrip | null>(null);
+  const onBoard = passengers === null ? null : passengers.length;
+  const pastStop = (passengers ?? []).filter((p) => p.overstay);
 
   const stops = data?.route.stops ?? [];
   const current = currentStop ?? stops[0]?.name ?? null;
@@ -40,7 +45,7 @@ export default function TodayScreen() {
   const refreshOnBoard = useCallback(async () => {
     if (!vehicleCode) return;
     try {
-      setOnBoard((await api.activeTrips({ vehicleCode })).trips.length);
+      setPassengers((await api.activeTrips({ vehicleCode })).trips);
     } catch {
       // Offline: keep the last count.
     }
@@ -172,10 +177,63 @@ export default function TodayScreen() {
             })}
           </View>
 
-          <View style={styles.onBoard}>
-            <Feather name="users" size={16} color={colors.mutedForeground} />
-            <Text style={[styles.onBoardText, { color: colors.mutedForeground }]}>{onBoard === null ? '–' : onBoard} {onBoard === 1 ? 'passenger' : 'passengers'} on board</Text>
-          </View>
+          <SectionHeader>{`Paid passengers on board (${onBoard ?? '–'})`}</SectionHeader>
+          {pastStop.length > 0 ? (
+            <View style={[styles.pastBadge, { borderColor: colors.accent, borderRadius: colors.radiusPill }]} accessibilityRole="alert">
+              <Feather name="alert-triangle" size={14} color={colors.accent} />
+              <Text style={[styles.pastText, { color: colors.accent }]}>
+                {pastStop.length} {pastStop.length === 1 ? 'passenger' : 'passengers'} past stop
+              </Text>
+            </View>
+          ) : null}
+          {passengers && passengers.length === 0 ? (
+            <Text style={[styles.empty, { color: colors.mutedForeground }]}>No paid passengers yet.</Text>
+          ) : (
+            (passengers ?? []).map((p) => (
+              <Pressable
+                key={p.tripId}
+                onPress={() => {
+                  Haptics.selectionAsync();
+                  setSelected(p);
+                }}
+                accessibilityRole="button"
+                accessibilityLabel={`Passenger to ${p.alightingStop}, paid ${formatCedis(p.amountPaid)}${p.overstay ? ', past their stop' : ''}`}
+                style={[styles.pRow, { backgroundColor: colors.card, borderColor: p.overstay ? colors.accent : colors.border, borderRadius: colors.radius }]}
+              >
+                <Feather name={p.overstay ? 'alert-triangle' : 'user-check'} size={18} color={p.overstay ? colors.accent : colors.primary} />
+                <View style={styles.pMain}>
+                  <Text style={[styles.pName, { color: colors.foreground }]}>Guest · to {p.alightingStop}</Text>
+                  <Text style={[styles.pMeta, { color: colors.mutedForeground }]}>
+                    {formatCedis(p.amountPaid)} · {p.tripId}
+                    {p.overstay ? ` · past stop (at ${p.overstay.stop})` : ''}
+                  </Text>
+                </View>
+                <Feather name="chevron-right" size={18} color={colors.mutedForeground} />
+              </Pressable>
+            ))
+          )}
+
+          <Pressable
+            onPress={() =>
+              Alert.alert('Report an unpaid passenger?', 'Use this if someone is on board who is not in the paid list. The union will review it.', [
+                { text: 'Cancel', style: 'cancel' },
+                {
+                  text: 'Report',
+                  style: 'destructive',
+                  onPress: () => {
+                    Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
+                    void sendOrQueue({ type: 'unpaid', body: { description: `Unpaid passenger reported at ${current ?? 'unknown stop'}` } });
+                    showToast('Report sent to the union');
+                  },
+                },
+              ])
+            }
+            accessibilityRole="button"
+            style={[styles.unpaid, { borderColor: colors.border, borderRadius: colors.radiusPill }]}
+          >
+            <Feather name="user-x" size={16} color={colors.foreground} />
+            <Text style={[styles.unpaidText, { color: colors.foreground }]}>Add unpaid passenger</Text>
+          </Pressable>
 
           <Pressable onPress={endShift} accessibilityRole="button" style={[styles.endShift, { borderColor: colors.destructive, borderRadius: colors.radiusPill }]}>
             <Feather name="power" size={18} color={colors.destructive} />
@@ -184,6 +242,20 @@ export default function TodayScreen() {
         </>
       )}
 
+      <PassengerSheet
+        trip={selected}
+        onClose={() => setSelected(null)}
+        onConfirmAlight={async (t) => {
+          setSelected(null);
+          try {
+            await api.confirmAlight(t.tripId);
+            showToast('Passenger closed out');
+            void refreshOnBoard();
+          } catch {
+            showToast("Couldn't close the trip. Try again.");
+          }
+        }}
+      />
     </ScrollView>
   );
 }
@@ -220,6 +292,15 @@ const styles = StyleSheet.create({
   stopBtn: { minHeight: 80, borderWidth: 1, padding: 14, justifyContent: 'center' },
   stopIndex: { fontFamily: 'Inter_600SemiBold', fontSize: 11, letterSpacing: 1 },
   stopName: { fontFamily: 'Inter_700Bold', fontSize: 20, marginTop: 4 },
+  pastBadge: { alignSelf: 'flex-start', flexDirection: 'row', alignItems: 'center', gap: 8, borderWidth: 1, paddingHorizontal: 12, paddingVertical: 6, marginBottom: 10 },
+  pastText: { fontFamily: 'Inter_700Bold', fontSize: 12 },
+  empty: { fontFamily: 'Inter_500Medium', fontSize: 14, marginBottom: 6 },
+  pRow: { flexDirection: 'row', alignItems: 'center', gap: 12, borderWidth: 1, padding: 14, marginBottom: 8 },
+  pMain: { flex: 1 },
+  pName: { fontFamily: 'Inter_600SemiBold', fontSize: 15 },
+  pMeta: { fontFamily: 'Inter_400Regular', fontSize: 12, marginTop: 2 },
+  unpaid: { height: 48, marginTop: 8, marginBottom: 20, borderWidth: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8 },
+  unpaidText: { fontFamily: 'Inter_600SemiBold', fontSize: 14 },
   onBoard: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, marginTop: 24, marginBottom: 20 },
   onBoardText: { fontFamily: 'Inter_500Medium', fontSize: 14 },
   endShift: { height: 56, borderWidth: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 10 },
